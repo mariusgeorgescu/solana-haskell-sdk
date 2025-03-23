@@ -62,8 +62,12 @@ library
 
   -- Modules exported by the library.
   exposed-modules:
-    Account.Types
-    Transaction.Types
+    Core.Account
+    Core.Block
+    Core.Crypto
+    Core.Instruction
+    Core.Transaction
+    Core.TransactionBuilder
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -76,6 +80,8 @@ library
     , base               ^>=4.20.0.0
     , base58-bytestring
     , bytestring
+    , ed25519
+    , mtl
     , vector
 
   -- Directories containing source files.
