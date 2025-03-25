@@ -68,6 +68,7 @@ library
     Core.Crypto
     Core.Message
     Core.TransactionBuilder
+    NativePrograms.SystemProgram
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -79,6 +80,7 @@ library
   build-depends:
     , base               ^>=4.20.0.0
     , base58-bytestring
+    , base64
     , binary
     , bytestring
     , ed25519

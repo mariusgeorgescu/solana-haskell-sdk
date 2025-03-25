@@ -12,18 +12,42 @@ module Core.Crypto
     SolanaPrivateKey,
     SolanaSignature,
     toBase58String,
+    unsafeSolanaPublicKey,
   )
 where
 
 import Crypto.Sign.Ed25519 qualified as Ed25519
 import Data.Bifunctor (Bifunctor (bimap))
 import Data.Binary
+import Data.Binary.Get (getByteString)
+import Data.Binary.Put (putByteString)
 import Data.ByteString qualified as S
-import Data.ByteString.Base58 (bitcoinAlphabet, encodeBase58)
+import Data.ByteString.Base58
+import Data.Maybe (fromJust)
 import GHC.Generics (Generic)
 
 toBase58String :: S.ByteString -> String
 toBase58String = show . encodeBase58 (bitcoinAlphabet)
+
+s :: S.ByteString
+s = "AddressLookupTab1e1111111111111111111111111"
+
+--- >>> S.length <$>  decodeBase58 (bitcoinAlphabet) s
+-- Just 32
+
+secretKeyFromBS :: S.ByteString -> Either String SolanaPublicKey
+secretKeyFromBS bs =
+  let result = decodeBase58 (bitcoinAlphabet) bs
+   in case result of
+        Nothing -> Left "failed base58 decoding"
+        Just pk ->
+          if S.length bs == 32
+            then
+              Right (SolanaPublicKey (Ed25519.PublicKey pk))
+            else Left "invalid length"
+
+unsafeSolanaPublicKey :: S.ByteString -> SolanaPublicKey
+unsafeSolanaPublicKey = SolanaPublicKey . Ed25519.PublicKey . fromJust . decodeBase58 (bitcoinAlphabet)
 
 ------------------------------------------------------------------------------------------------
 
@@ -40,9 +64,9 @@ instance Show SolanaSignature where
 
 instance Binary SolanaSignature where
   put :: SolanaSignature -> Put
-  put (SolanaSignature (Ed25519.Signature bs)) = put bs
+  put (SolanaSignature (Ed25519.Signature bs)) = putByteString bs
   get :: Get SolanaSignature
-  get = SolanaSignature . Ed25519.Signature <$> get
+  get = SolanaSignature . Ed25519.Signature <$> getByteString 32
 
 ------------------------------------------------------------------------------------------------
 
@@ -60,9 +84,9 @@ instance Show SolanaPublicKey where
 
 instance Binary SolanaPublicKey where
   put :: SolanaPublicKey -> Put
-  put (SolanaPublicKey (Ed25519.PublicKey bs)) = put bs
+  put (SolanaPublicKey (Ed25519.PublicKey bs)) = putByteString bs
   get :: Get SolanaPublicKey
-  get = SolanaPublicKey . Ed25519.PublicKey <$> get
+  get = SolanaPublicKey . Ed25519.PublicKey <$> getByteString 32
 
 ------------------------------------------------------------------------------------------------
 

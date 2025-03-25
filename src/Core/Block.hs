@@ -3,6 +3,7 @@
 module Core.Block where
 
 import Data.Binary
+import Data.Binary.Put (putByteString)
 import Data.ByteString qualified as S
 import GHC.Generics (Generic)
 
@@ -13,6 +14,6 @@ newtype BlockHash = BlockHash S.ByteString
 
 instance Binary BlockHash where
   put :: BlockHash -> Put
-  put (BlockHash bs) = put bs
+  put (BlockHash bs) = putByteString bs -- not default Binary instance (wo length)
   get :: Get BlockHash
   get = BlockHash <$> get

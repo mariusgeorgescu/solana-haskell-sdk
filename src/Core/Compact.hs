@@ -43,13 +43,7 @@ instance (Binary a) => Binary (CompactArray a) where
   put :: (Binary a) => CompactArray a -> Put
   put (CompactArray i xs) = do
     putCompactU16 i
-    put xs
-
-  get :: (Binary a) => Get (CompactArray a)
-  get = do
-    i <- getCompactU16
-    xs <- get
-    return $ CompactArray i xs
+    mapM_ put xs -- not default putList
 
 mkCompact :: [a] -> CompactArray a
 mkCompact xs = CompactArray (fromIntegral $ length xs) xs

@@ -2,7 +2,8 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Core.Message
-  ( Instruction,
+  ( Instruction (..),
+    AccountMeta (..),
     CompileException,
     updateMessageWithInstructions,
     compileMessage,
@@ -17,6 +18,7 @@ import Core.Block (BlockHash)
 import Core.Compact
 import Core.Crypto (SolanaPublicKey)
 import Data.Binary
+import Data.Binary.Put (putByteString)
 import Data.ByteString qualified as S
 import Data.Either.Combinators (maybeToRight)
 import Data.List (elemIndex)
@@ -268,7 +270,7 @@ compileInstruction keys (Instruction {..}) = do
     CompiledInstruction
       { ciProgramIdIndex = (fromIntegral programIdIndex),
         ciAccounts = (mkCompact (fromIntegral <$> accIndices)),
-        ciData = iData
+        ciData = mkCompact . S.unpack $ iData
       }
 
 keyToIndex :: SolanaPublicKey -> [SolanaPublicKey] -> Either CompileException Int
@@ -289,10 +291,10 @@ data CompiledInstruction = CompiledInstruction
     ciProgramIdIndex :: Word8,
     -- |  Compact array of indexes that point to the account addresses required for this instruction..
     ciAccounts :: CompactArray Word8,
-    {-  Byte array specifying the instruction on the program to invoke
+    {-  Compact byte array specifying the instruction on the program to invoke
         and any function arguments required by the instruction.
     -}
-    ciData :: S.ByteString
+    ciData :: CompactArray Word8
   }
   deriving (Show, Eq, Generic)
 
