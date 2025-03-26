@@ -13,6 +13,8 @@ module Core.Crypto
     SolanaSignature,
     toBase58String,
     unsafeSolanaPublicKey,
+    getSolanaPublicKeyRawByteString
+    
   )
 where
 
@@ -49,6 +51,11 @@ secretKeyFromBS bs =
 unsafeSolanaPublicKey :: S.ByteString -> SolanaPublicKey
 unsafeSolanaPublicKey = SolanaPublicKey . Ed25519.PublicKey . fromJust . decodeBase58 (bitcoinAlphabet)
 
+
+getSolanaPublicKeyRawByteString :: SolanaPublicKey -> S.ByteString
+getSolanaPublicKeyRawByteString (SolanaPublicKey (Ed25519.PublicKey bs)) = bs
+
+
 ------------------------------------------------------------------------------------------------
 
 -- *** SolanaSignature
@@ -77,6 +84,7 @@ instance Binary SolanaSignature where
 newtype SolanaPublicKey
   = SolanaPublicKey Ed25519.PublicKey
   deriving (Eq, Ord, Generic)
+
 
 instance Show SolanaPublicKey where
   show :: SolanaPublicKey -> String

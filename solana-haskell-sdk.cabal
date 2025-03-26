@@ -87,6 +87,8 @@ library
     , either
     , mtl
     , vector
+    , text
+    , hex-text
 
   -- Directories containing source files.
   hs-source-dirs:   src

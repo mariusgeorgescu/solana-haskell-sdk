@@ -27,18 +27,18 @@ data SystemInstruction
 instance Binary SystemInstruction where
   put :: SystemInstruction -> Put
   put (CreateAccount lamports space owner) = do
-    put (0 :: Word8)
-    put lamports
-    put space
-    put owner
+    putWord32le (0 :: Word32)
+    putWord64le lamports
+    putWord64le space
+    put (getSolanaPublicKeyRawByteString owner)
   put (Assign owner) =
     do
-      put (1 :: Word8)
-      put owner
+      putWord32le (1 :: Word32)
+      put (getSolanaPublicKeyRawByteString owner)
   put (Transfer lamports) =
     do
-      put (2 :: Word8)
-      put lamports
+      putWord32le (2 :: Word32)
+      putWord64le lamports
 
 transfer :: SolanaPublicKey -> SolanaPublicKey -> Int -> Instruction
 transfer fundingAccount recipientAccount amount =
@@ -54,7 +54,12 @@ transfer fundingAccount recipientAccount amount =
             { accountPubKey = recipientAccount,
               isSigner = False,
               isWritable = True
+            },
+          AccountMeta ----- S-ar putea sa nu fie nevoie
+            { accountPubKey = systemProgramId,
+              isSigner = False,
+              isWritable = False
             }
         ],
-      iData = S.toStrict $ encode (Transfer (fromIntegral amount))
+      iData = InstructionData $ S.toStrict $ encode (Transfer (fromIntegral amount))
     }

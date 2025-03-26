@@ -1,16 +1,9 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Core.Message
-  ( Instruction (..),
-    AccountMeta (..),
-    CompileException,
-    updateMessageWithInstructions,
-    compileMessage,
-    newMessage,
-  )
-where
+module Core.Message where
 
+import Control.Exception
 import Control.Monad.Error.Class (MonadError)
 import Control.Monad.Except (liftEither)
 import Control.Monad.Reader
@@ -20,9 +13,13 @@ import Core.Crypto (SolanaPublicKey)
 import Data.Binary
 import Data.Binary.Put (putByteString)
 import Data.ByteString qualified as S
+import Data.ByteString.Base58
+import Data.ByteString.Base64 (encodeBase64, encodeBase64')
 import Data.Either.Combinators (maybeToRight)
 import Data.List (elemIndex)
+import Data.Text qualified as Text
 import GHC.Generics (Generic)
+import Text.Hex qualified as Text.Hex
 
 ------------------------------------------------------------------------------------------------
 
@@ -45,11 +42,10 @@ data Message = Message
   }
   deriving (Show, Eq, Generic)
 
-newMessage :: (MonadReader BlockHash m, MonadError CompileException m) => [Instruction] -> m S.ByteString
-newMessage is = do
-  bh <- ask
-  m <- liftEither $ compileMessage (mkNewMessage bh is)
-  return $ S.toStrict . Data.Binary.encode $ m
+newMessage :: BlockHash -> [Instruction] -> Either CompileException S.ByteString
+newMessage bh is = do
+  compiled <- compileMessage (mkNewMessage bh is)
+  return $ S.toStrict . Data.Binary.encode $ compiled
 
 mkNewMessage :: BlockHash -> [Instruction] -> Message
 mkNewMessage bh is = updateMessageWithInstructions (Message mempty mempty bh mempty) is
@@ -197,9 +193,16 @@ data Instruction = Instruction
     {-  Byte array specifying the instruction on the program to invoke
         and any function arguments required by the instruction.
     -}
-    iData :: S.ByteString
+    iData :: InstructionData
   }
   deriving (Show, Eq, Generic)
+
+data InstructionData = InstructionData {instrData :: S.ByteString}
+  deriving (Eq, Generic)
+
+instance Show InstructionData where
+  show :: InstructionData -> String
+  show (InstructionData bs) = show $ encodeBase64' bs
 
 -- | Each account required by an instruction must be provided as an AccountMeta that contains:
 data AccountMeta = AccountMeta
@@ -243,8 +246,6 @@ instance Binary CompiledMessage where
     put cmAccountKeys
     put cmRecentBlockhash
     put cmInstructions
-  get :: Get CompiledMessage
-  get = CompiledMessage <$> get <*> get <*> get <*> get
 
 ------------------------------------------------------------------------------------------------
 
@@ -270,7 +271,7 @@ compileInstruction keys (Instruction {..}) = do
     CompiledInstruction
       { ciProgramIdIndex = (fromIntegral programIdIndex),
         ciAccounts = (mkCompact (fromIntegral <$> accIndices)),
-        ciData = mkCompact . S.unpack $ iData
+        ciData = mkCompact . S.unpack $ (instrData iData)
       }
 
 keyToIndex :: SolanaPublicKey -> [SolanaPublicKey] -> Either CompileException Int
@@ -313,4 +314,4 @@ instance Binary CompiledInstruction where
 
 ------------------------------------------------------------------------------------------------
 data CompileException = MissingIndex String
-  deriving (Show)
+  deriving (Show, Exception)

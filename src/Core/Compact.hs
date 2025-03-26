@@ -45,6 +45,7 @@ instance (Binary a) => Binary (CompactArray a) where
     putCompactU16 i
     mapM_ put xs -- not default putList
 
+
 mkCompact :: [a] -> CompactArray a
 mkCompact xs = CompactArray (fromIntegral $ length xs) xs
 
