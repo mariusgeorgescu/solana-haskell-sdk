@@ -27,6 +27,7 @@ import Data.ByteString qualified as S
 import Data.ByteString.Base58
 import Data.Maybe (fromJust)
 import GHC.Generics (Generic)
+import Data.Aeson
 
 toBase58String :: S.ByteString -> String
 toBase58String = show . encodeBase58 (bitcoinAlphabet)
@@ -85,7 +86,6 @@ newtype SolanaPublicKey
   = SolanaPublicKey Ed25519.PublicKey
   deriving (Eq, Ord, Generic)
 
-
 instance Show SolanaPublicKey where
   show :: SolanaPublicKey -> String
   show (SolanaPublicKey (Ed25519.PublicKey bs)) = toBase58String bs
@@ -95,6 +95,13 @@ instance Binary SolanaPublicKey where
   put (SolanaPublicKey (Ed25519.PublicKey bs)) = putByteString bs
   get :: Get SolanaPublicKey
   get = SolanaPublicKey . Ed25519.PublicKey <$> getByteString 32
+
+
+instance ToJSON SolanaPublicKey where
+    -- this generates a Value
+    toJSON pk= toJSON (show pk)
+
+
 
 ------------------------------------------------------------------------------------------------
 

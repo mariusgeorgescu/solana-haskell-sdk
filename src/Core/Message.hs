@@ -20,6 +20,7 @@ import Data.List (elemIndex)
 import Data.Text qualified as Text
 import GHC.Generics (Generic)
 import Text.Hex qualified as Text.Hex
+import Data.Foldable
 
 ------------------------------------------------------------------------------------------------
 

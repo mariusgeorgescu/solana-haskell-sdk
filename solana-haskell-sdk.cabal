@@ -69,6 +69,7 @@ library
     Core.Message
     Core.TransactionBuilder
     NativePrograms.SystemProgram
+    RPC.HTTP
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -78,23 +79,25 @@ library
 
   -- Other library packages from which modules are imported.
   build-depends:
-    , base               ^>=4.20.0.0
+    , base                ^>=4.18.0.0
     , base58-bytestring
     , base64
     , binary
     , bytestring
     , ed25519
     , either
-    , mtl
-    , vector
-    , text
     , hex-text
+    , jsonrpc-tinyclient
+    , mtl
+    , text
+    , vector
+    , aeson
 
   -- Directories containing source files.
   hs-source-dirs:   src
 
   -- Base language which the package is written in.
-  default-language: GHC2024
+  default-language: GHC2021
 
 executable solana-haskell-sdk
   -- Import common warning flags.
@@ -111,21 +114,22 @@ executable solana-haskell-sdk
 
   -- Other library packages from which modules are imported.
   build-depends:
-    , base                ^>=4.20.0.0
+    , base                ^>=4.18.0.0
     , solana-haskell-sdk
+    , web3-provider
 
   -- Directories containing source files.
   hs-source-dirs:   app
 
   -- Base language which the package is written in.
-  default-language: GHC2024
+  default-language: GHC2021
 
 test-suite solana-haskell-sdk-test
   -- Import common warning flags.
   import:           warnings
 
   -- Base language which the package is written in.
-  default-language: GHC2024
+  default-language: GHC2021
 
   -- Modules included in this executable, other than Main.
   -- other-modules:
@@ -144,5 +148,5 @@ test-suite solana-haskell-sdk-test
 
   -- Test dependencies.
   build-depends:
-    , base                ^>=4.20.0.0
+    , base                ^>=4.18.0.0
     , solana-haskell-sdk

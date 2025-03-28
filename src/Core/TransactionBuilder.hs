@@ -18,6 +18,7 @@ import Data.ByteString.Base64.URL qualified as U
 import Data.Either (fromRight)
 import GHC.Generics
 import NativePrograms.SystemProgram
+import Data.Aeson (ToJSON(..))
 
 ------------------------------------------------------------------------------------------------
 
@@ -99,6 +100,7 @@ newMsg = runNewMessage blockhash instr --
 --- >>>  encodeBase64' $ newMsg
 -- "AQABAyfgZ//LagyLlniL71M0M81bKx26tMzIYFAvhppWUoIQn9JCVsDCwdrk/xbn6uKc/byb5E5+K4CvHoU7gH8dfzsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAs9Y86y3JrlY4X/BoOsd79OhyFfvknN4Gx9q4B/HX87AQIDAAECDAIAAAAAypo7AAAAAA=="
 
+
 normallist = encode (([1, 2, 4, 5, 6, 7, 8] :: [Word8]))
 
 compactlist = encode (mkCompact $ ([1, 2, 4, 5, 6, 7, 8] :: [Word8]))
@@ -109,3 +111,9 @@ compactlist = encode (mkCompact $ ([1, 2, 4, 5, 6, 7, 8] :: [Word8]))
 -- "\NUL\NUL\NUL\NUL\NUL\NUL\NUL\b\a\SOH\STX\EOT\ENQ\ACK\a\b"
 
 compiled = "AQABAz1/AORqAMJK+uQvTafb9umEAGizV0aBNfFKv+xozAJxyqUklSlTmRgk+Qci7TBxmpJ3Agda2RdolwXr3uX0YjkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJ/SQlbAwsHa5P8W5+rinP28m+ROfiuArx6FO4B/HX87AQICAAEMAgAAAADKmjsAAAAA"
+
+x = toJSON user1
+--- >>> x
+-- String "\"3gfNF1r7CUow2SdVj9L8j66KAdZFBqvsgYUB7GH7cSNs\""
+
+-- Variable not in scope: toJSON :: SolanaPublicKey -> t_avnW[sk:1]
