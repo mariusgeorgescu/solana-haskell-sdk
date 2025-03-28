@@ -5,7 +5,7 @@ module Main where
 import Control.Monad.IO.Class (MonadIO (..))
 import Core.Crypto
 import Network.Web3.Provider
-import RPC.HTTP (getLatestBlockhash)
+import RPC.HTTP
 import RPC.Providers
 
 main :: IO ()
