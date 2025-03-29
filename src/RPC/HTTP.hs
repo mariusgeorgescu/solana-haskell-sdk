@@ -14,14 +14,20 @@
 -- Solana JSON-RPC API methods
 module RPC.HTTP where
 
-import Core.Account (Lamport)
-import Core.Block (BlockHash)
+import Core.Account (AccountInfo, Lamport)
+import Core.Block (BlockCommitment, BlockHash, BlockHeight, BlockProduction, Slot)
 import Core.Crypto (SolanaPublicKey)
 import Data.Aeson
 import Data.Aeson.Types (Parser)
 import Data.Text
 import GHC.Generics
 import Network.JsonRpc.TinyClient (JsonRpc (..))
+
+------------------------------------------------------------------------------------------------
+
+-- * HTTP Methods
+
+------------------------------------------------------------------------------------------------
 
 data Context = Context
   { apiVersion :: Text,
@@ -46,26 +52,112 @@ instance (FromJSON a) => FromJSON (RPCResponse a) where
 
 ------------------------------------------------------------------------------------------------
 
--- * HTTP Methods
+-- ** getAccountInfo
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns the lamport balance of the account of provided SolanaPubkey.
-getBalance :: (JsonRpc m) => SolanaPublicKey -> m (RPCResponse Lamport)
-{-# INLINE getBalance #-}
-getBalance = do
+-- | Returns all information associated with the account of provided 'SolanaPubkey'
+-- Returns 'RpcResponse (Maybe AccountInfo)' with value field set to the 'Nothing' if the requested account doesn't exist.
+getAccountInfo' :: (JsonRpc m) => SolanaPublicKey -> m (RPCResponse (Maybe AccountInfo))
+getAccountInfo' = do
+  remote "getAccountInfo"
+{-# INLINE getAccountInfo' #-}
+
+-- | Returns all information associated with the account of provided 'SolanaPubkey'
+-- Returns '(Maybe AccountInfo)' with value field set to the 'Nothing' if the requested account doesn't exist.
+getAccountInfo :: (JsonRpc m) => SolanaPublicKey -> m (Maybe AccountInfo)
+getAccountInfo pubKey = value <$> getAccountInfo' pubKey
+{-# INLINE getAccountInfo #-}
+
+------------------------------------------------------------------------------------------------
+
+-- ** getBalance
+
+------------------------------------------------------------------------------------------------
+
+-- | Get the lamport balance of the account of provided 'SolanaPubkey'.
+-- Returns 'RpcResponse Lamport' with value field set to the 'Lamport' balance.
+getBalance' :: (JsonRpc m) => SolanaPublicKey -> m (RPCResponse Lamport)
+getBalance' = do
   remote "getBalance"
+{-# INLINE getBalance' #-}
+
+-- | Get the lamport balance of the account of provided 'SolanaPubkey'.
+-- Returns 'Lamport' the balance.
+getBalance :: (JsonRpc m) => SolanaPublicKey -> m Lamport
+getBalance pubKey = value <$> getBalance' pubKey
+{-# INLINE getBalance #-}
+
+------------------------------------------------------------------------------------------------
+
+-- ** getBlock
+
+------------------------------------------------------------------------------------------------
+
+--- TODO
+--- TODO
+--- TODO
+--- TODO
+--- TODO
+
+------------------------------------------------------------------------------------------------
+
+-- ** getBlockCommitment
+
+------------------------------------------------------------------------------------------------
+
+-- | Get the block commitment based on the block number 'Solt'.
+-- Returns 'BlockCommitment' for particular block
+getBlockCommitment :: (JsonRpc m) => Slot -> m BlockCommitment
+getBlockCommitment = do
+  remote "getBlockCommitment"
+{-# INLINE getBlockCommitment #-}
+
+------------------------------------------------------------------------------------------------
+
+-- ** getBlockHeight
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns the current block height of the node
+getBlockHeight :: (JsonRpc m) => m BlockHeight
+getBlockHeight = do
+  remote "getBlockHeight"
+{-# INLINE getBlockHeight #-}
+
+------------------------------------------------------------------------------------------------
+
+-- ** getBlockProduction
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns recent block production information from the current or previous epoch.
+-- Returns 'RpcResponse BlockProduction' with value field set to the 'BlockProduction'.
+getBlockProduction' :: (JsonRpc m) => m (RPCResponse BlockProduction)
+getBlockProduction' = do
+  remote "getBlockProduction"
+{-# INLINE getBlockProduction' #-}
+
+-- | Returns recent block production information from the current or previous epoch.
+getBlockProduction :: (JsonRpc m) => m BlockProduction
+getBlockProduction = value <$> getBlockProduction'
+{-# INLINE getBlockProduction #-}
 
 ------------------------------------------------------------------------------------------------
 
 -- * HTTP Methods
 
 ------------------------------------------------------------------------------------------------
+
 type LastValidBlockHeight = Int
 
-data LatestBlockHashResp = LatestBlockHashResp BlockHash LastValidBlockHeight
+data LatestBlockHashResp
+  = LatestBlockHashResp
+      BlockHash
+      LastValidBlockHeight
 
 instance FromJSON LatestBlockHashResp where
+  parseJSON :: Value -> Parser LatestBlockHashResp
   parseJSON = withObject "LatestBlockHashResp" $ \v ->
     LatestBlockHashResp
       <$> v .: "blockhash"

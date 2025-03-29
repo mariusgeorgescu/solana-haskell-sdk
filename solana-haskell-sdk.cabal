@@ -62,11 +62,13 @@ library
 
   -- Modules exported by the library.
   exposed-modules:
+    Constants
     Core.Account
     Core.Block
     Core.Compact
     Core.Crypto
     Core.Instruction
+    Core.Message
     Core.Transaction
     NativePrograms.SystemProgram
     RPC.HTTP
@@ -86,6 +88,7 @@ library
     , base64
     , binary
     , bytestring
+    , containers
     , ed25519
     , either
     , hex-text

@@ -18,11 +18,13 @@ module Core.Crypto
     getSolanaPublicKeyRaw,
     getSolanaPrivateKeyRaw,
     getSolanaSignatureRaw,
+    toBase58String,
   )
 where
 
 import Crypto.Sign.Ed25519 qualified as Ed25519
-import Data.Aeson (ToJSON (toJSON))
+import Data.Aeson
+import Data.Aeson.Types
 import Data.Bifunctor (Bifunctor (bimap))
 import Data.Binary
 import Data.Binary.Get (getByteString)
@@ -31,6 +33,7 @@ import Data.ByteString qualified as S
 import Data.ByteString.Base58
 import Data.Maybe (fromJust)
 import Data.String (fromString)
+import Data.Text qualified as Text
 import GHC.Generics (Generic)
 
 toBase58String :: S.ByteString -> String
@@ -76,8 +79,20 @@ instance Binary SolanaPublicKey where
   get = SolanaPublicKey . Ed25519.PublicKey <$> getByteString 32
 
 instance ToJSON SolanaPublicKey where
-  -- this generates a Value
+  toJSON :: SolanaPublicKey -> Value
   toJSON pk = toJSON (tail . init . show $ pk)
+
+instance FromJSON SolanaPublicKey where
+  parseJSON :: Value -> Parser SolanaPublicKey
+  parseJSON = withText "SolanaPublicKey" $ return . unsafeSolanaPublicKey . Text.unpack
+
+instance FromJSONKey SolanaPublicKey where
+  fromJSONKey :: FromJSONKeyFunction SolanaPublicKey
+  fromJSONKey = FromJSONKeyText (unsafeSolanaPublicKey . Text.unpack)
+
+instance ToJSONKey SolanaPublicKey where
+  toJSONKey :: ToJSONKeyFunction SolanaPublicKey
+  toJSONKey = toJSONKeyText (Text.pack . tail . init . show)
 
 ------------------------------------------------------------------------------------------------
 
