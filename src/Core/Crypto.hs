@@ -109,13 +109,7 @@ unsafeKeyFromString cstr str =
           error "Invalid string length for key"
 
 unsafeKeyFromWords :: forall f. (S.ByteString -> f) -> [Word8] -> f
-unsafeKeyFromWords cstr ws =
-  let bs = fromJust . decodeBase58 bitcoinAlphabet . S.pack $ ws
-   in if S.length bs == 32
-        then
-          cstr bs
-        else
-          error "Invalid string length for key"
+unsafeKeyFromWords cstr ws = cstr (S.pack ws)
 
 unsafeSolanaPublicKey :: String -> SolanaPublicKey
 unsafeSolanaPublicKey = unsafeKeyFromString (SolanaPublicKey . Ed25519.PublicKey)

@@ -40,12 +40,13 @@ mkInstruction programid accmetas instrData =
   Instruction
     { iProgramId = programid,
       iAccounts =
-        AccountMeta
-          { accountPubKey = programid,
-            isSigner = False,
-            isWritable = False
-          }
-          : accmetas,
+        accmetas
+          <> [ AccountMeta
+                 { accountPubKey = programid,
+                   isSigner = False,
+                   isWritable = False
+                 }
+             ],
       iData = InstructionData $ S.toStrict (Binary.encode instrData)
     }
 
