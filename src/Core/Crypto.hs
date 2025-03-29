@@ -11,14 +11,18 @@ module Core.Crypto
     SolanaPublicKey,
     SolanaPrivateKey,
     SolanaSignature,
-    toBase58String,
     unsafeSolanaPublicKey,
-    getSolanaPublicKeyRawByteString
-    
+    unsafeSolanaPublicKeyRaw,
+    unsafeSolanaPrivateKey,
+    unsafeSolanaPrivateKeyRaw,
+    getSolanaPublicKeyRaw,
+    getSolanaPrivateKeyRaw,
+    getSolanaSignatureRaw,
   )
 where
 
 import Crypto.Sign.Ed25519 qualified as Ed25519
+import Data.Aeson (ToJSON (toJSON))
 import Data.Bifunctor (Bifunctor (bimap))
 import Data.Binary
 import Data.Binary.Get (getByteString)
@@ -26,40 +30,15 @@ import Data.Binary.Put (putByteString)
 import Data.ByteString qualified as S
 import Data.ByteString.Base58
 import Data.Maybe (fromJust)
+import Data.String (fromString)
 import GHC.Generics (Generic)
-import Data.Aeson
 
 toBase58String :: S.ByteString -> String
-toBase58String = show . encodeBase58 (bitcoinAlphabet)
-
-s :: S.ByteString
-s = "AddressLookupTab1e1111111111111111111111111"
-
---- >>> S.length <$>  decodeBase58 (bitcoinAlphabet) s
--- Just 32
-
-secretKeyFromBS :: S.ByteString -> Either String SolanaPublicKey
-secretKeyFromBS bs =
-  let result = decodeBase58 (bitcoinAlphabet) bs
-   in case result of
-        Nothing -> Left "failed base58 decoding"
-        Just pk ->
-          if S.length bs == 32
-            then
-              Right (SolanaPublicKey (Ed25519.PublicKey pk))
-            else Left "invalid length"
-
-unsafeSolanaPublicKey :: S.ByteString -> SolanaPublicKey
-unsafeSolanaPublicKey = SolanaPublicKey . Ed25519.PublicKey . fromJust . decodeBase58 (bitcoinAlphabet)
-
-
-getSolanaPublicKeyRawByteString :: SolanaPublicKey -> S.ByteString
-getSolanaPublicKeyRawByteString (SolanaPublicKey (Ed25519.PublicKey bs)) = bs
-
+toBase58String = show . encodeBase58 bitcoinAlphabet
 
 ------------------------------------------------------------------------------------------------
 
--- *** SolanaSignature
+-- * SolanaSignature
 
 ------------------------------------------------------------------------------------------------
 
@@ -96,12 +75,9 @@ instance Binary SolanaPublicKey where
   get :: Get SolanaPublicKey
   get = SolanaPublicKey . Ed25519.PublicKey <$> getByteString 32
 
-
 instance ToJSON SolanaPublicKey where
-    -- this generates a Value
-    toJSON pk= toJSON (show pk)
-
-
+  -- this generates a Value
+  toJSON pk = toJSON (tail . init . show $ pk)
 
 ------------------------------------------------------------------------------------------------
 
@@ -115,13 +91,52 @@ newtype SolanaPrivateKey
 
 instance Show SolanaPrivateKey where
   show :: SolanaPrivateKey -> String
-  show (SolanaPrivateKey (Ed25519.SecretKey bs)) = show $ encodeBase58 (bitcoinAlphabet) bs
+  show (SolanaPrivateKey (Ed25519.SecretKey bs)) = toBase58String bs
 
 ------------------------------------------------------------------------------------------------
 
 -- *** Functions
 
 ------------------------------------------------------------------------------------------------
+
+unsafeKeyFromString :: forall f. (S.ByteString -> f) -> String -> f
+unsafeKeyFromString cstr str =
+  let bs = fromJust . decodeBase58 bitcoinAlphabet . fromString $ str
+   in if S.length bs == 32
+        then
+          cstr bs
+        else
+          error "Invalid string length for key"
+
+unsafeKeyFromWords :: forall f. (S.ByteString -> f) -> [Word8] -> f
+unsafeKeyFromWords cstr ws =
+  let bs = fromJust . decodeBase58 bitcoinAlphabet . S.pack $ ws
+   in if S.length bs == 32
+        then
+          cstr bs
+        else
+          error "Invalid string length for key"
+
+unsafeSolanaPublicKey :: String -> SolanaPublicKey
+unsafeSolanaPublicKey = unsafeKeyFromString (SolanaPublicKey . Ed25519.PublicKey)
+
+unsafeSolanaPublicKeyRaw :: [Word8] -> SolanaPublicKey
+unsafeSolanaPublicKeyRaw = unsafeKeyFromWords (SolanaPublicKey . Ed25519.PublicKey)
+
+unsafeSolanaPrivateKey :: String -> SolanaPrivateKey
+unsafeSolanaPrivateKey = unsafeKeyFromString (SolanaPrivateKey . Ed25519.SecretKey)
+
+unsafeSolanaPrivateKeyRaw :: [Word8] -> SolanaPrivateKey
+unsafeSolanaPrivateKeyRaw = unsafeKeyFromWords (SolanaPrivateKey . Ed25519.SecretKey)
+
+getSolanaPublicKeyRaw :: SolanaPublicKey -> S.ByteString
+getSolanaPublicKeyRaw (SolanaPublicKey (Ed25519.PublicKey bs)) = bs
+
+getSolanaPrivateKeyRaw :: SolanaPrivateKey -> S.ByteString
+getSolanaPrivateKeyRaw (SolanaPrivateKey (Ed25519.SecretKey bs)) = bs
+
+getSolanaSignatureRaw :: SolanaSignature -> S.ByteString
+getSolanaSignatureRaw (SolanaSignature (Ed25519.Signature bs)) = bs
 
 createSolanaKeyPair :: IO (SolanaPublicKey, SolanaPrivateKey)
 createSolanaKeyPair = bimap SolanaPublicKey SolanaPrivateKey <$> Ed25519.createKeypair
@@ -133,10 +148,10 @@ toSolanaPublicKey :: SolanaPrivateKey -> SolanaPublicKey
 toSolanaPublicKey (SolanaPrivateKey pv) = SolanaPublicKey $ Ed25519.toPublicKey pv
 
 sign :: SolanaPrivateKey -> S.ByteString -> S.ByteString
-sign (SolanaPrivateKey sk) bs = Ed25519.sign sk bs
+sign (SolanaPrivateKey sk) = Ed25519.sign sk
 
 verify :: SolanaPublicKey -> S.ByteString -> Bool
-verify (SolanaPublicKey pk) bs = Ed25519.verify pk bs
+verify (SolanaPublicKey pk) = Ed25519.verify pk
 
 dsign :: SolanaPrivateKey -> S.ByteString -> SolanaSignature
 dsign (SolanaPrivateKey sk) bs = SolanaSignature $ Ed25519.dsign sk bs

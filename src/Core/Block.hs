@@ -2,14 +2,12 @@
 
 module Core.Block where
 
-import Data.Aeson (FromJSON (parseJSON), fromJSON)
 import Data.Aeson.Types
 import Data.Binary
 import Data.Binary.Put (putByteString)
 import Data.ByteString qualified as S
 import Data.ByteString.Base58
 import Data.Maybe (fromJust)
-import Data.Text qualified as T
 import Data.Text.Encoding
 import GHC.Generics (Generic)
 

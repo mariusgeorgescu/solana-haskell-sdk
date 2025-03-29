@@ -1,30 +1,37 @@
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Core.Message where
+module Core.Message (newTransactionIntent) where
 
 import Control.Exception
-import Control.Monad.Error.Class (MonadError)
-import Control.Monad.Except (liftEither)
-import Control.Monad.Reader
 import Core.Block (BlockHash)
 import Core.Compact
-import Core.Crypto (SolanaPublicKey)
+import Core.Crypto (SolanaPrivateKey, SolanaPublicKey, dsign)
+import Core.Instruction
 import Data.Binary
-import Data.Binary.Put (putByteString)
 import Data.ByteString qualified as S
-import Data.ByteString.Base58
-import Data.ByteString.Base64 (encodeBase64, encodeBase64')
+import Data.ByteString.Base64 (encodeBase64')
 import Data.Either.Combinators (maybeToRight)
-import Data.List (elemIndex)
-import Data.Text qualified as Text
-import GHC.Generics (Generic)
-import Text.Hex qualified as Text.Hex
 import Data.Foldable
+import Data.List (elemIndex)
+import GHC.Generics (Generic)
 
 ------------------------------------------------------------------------------------------------
 
--- ** Message (Unsigned transaction)
+-- * Transaction
+
+------------------------------------------------------------------------------------------------
+
+type SignedTransactionIntent = (BlockHash -> Either CompileException String)
+
+newTransactionIntent :: [SolanaPrivateKey] -> [Instruction] -> SignedTransactionIntent
+newTransactionIntent signers instructions blockhash = do
+  msg <- newMessage blockhash instructions -- make the binary message
+  let signatures = S.toStrict . encode $ mkCompact $ flip dsign msg <$> signers -- sign the binary message
+  return $ tail . init . show $ encodeBase64' $ S.append signatures msg -- return signed transaction
+
+------------------------------------------------------------------------------------------------
+
+-- ** Message
 
 ------------------------------------------------------------------------------------------------
 
@@ -49,7 +56,7 @@ newMessage bh is = do
   return $ S.toStrict . Data.Binary.encode $ compiled
 
 mkNewMessage :: BlockHash -> [Instruction] -> Message
-mkNewMessage bh is = updateMessageWithInstructions (Message mempty mempty bh mempty) is
+mkNewMessage bh = updateMessageWithInstructions (Message mempty mempty bh mempty)
 
 updateMessageWithInstructions :: Message -> [Instruction] -> Message
 updateMessageWithInstructions = foldl' updateMessageWithInstruction
@@ -59,38 +66,38 @@ updateMessageWithInstruction (Message header accountKeys bh instrs) newInstr =
   let (newHeader, newAccountKeys) =
         foldl' updateHeaderAndKeys (header, accountKeys) (iAccounts newInstr)
       newInstrucionsList = instrs <> [newInstr]
-   in (Message newHeader newAccountKeys bh newInstrucionsList)
+   in Message newHeader newAccountKeys bh newInstrucionsList
 
 updateHeaderAndKeys :: (MessageHeader, [SolanaPublicKey]) -> AccountMeta -> (MessageHeader, [SolanaPublicKey])
 updateHeaderAndKeys (currentHeader, currentKeys) (AccountMeta newKey isSigner isWritable) =
   let (rws, ros, rwus, rous) = splitAccountsByPurpose currentHeader currentKeys
-      alreadySignable = newKey `elem` (rws <> ros)
-      alreadyWritable = newKey `elem` (rwus <> rous)
+      alreadySignable = newKey `elem` rws <> ros
+      alreadyWritable = newKey `elem` rwus <> rous
       (rws', ros', rwus', rous') =
         case (isSigner || alreadySignable, isWritable || alreadyWritable) of
           (True, True) ->
-            ( (addIfNotExists newKey rws),
-              (removeAll newKey ros),
-              (removeAll newKey rwus),
-              (removeAll newKey rous)
+            ( addIfNotExists newKey rws,
+              removeAll newKey ros,
+              removeAll newKey rwus,
+              removeAll newKey rous
             )
           (True, False) ->
             ( rws,
-              (addIfNotExists newKey ros),
+              addIfNotExists newKey ros,
               rwus,
-              (removeAll newKey rous)
+              removeAll newKey rous
             )
           (False, True) ->
             ( rws,
               ros,
-              (addIfNotExists newKey rwus),
-              (removeAll newKey rous)
+              addIfNotExists newKey rwus,
+              removeAll newKey rous
             )
           (False, False) ->
             ( rws,
               ros,
               rwus,
-              (addIfNotExists newKey rous)
+              addIfNotExists newKey rous
             )
       updatedMessage = mkMessageHeaderFromSplittedAccounts (rws', ros', rwus', rous')
       updatedKeys = (rws' <> ros' <> rwus' <> rous')
@@ -180,48 +187,6 @@ instance Monoid MessageHeader where
 
 ------------------------------------------------------------------------------------------------
 
--- *** Instruction
-
-------------------------------------------------------------------------------------------------
-
-data Instruction = Instruction
-  { {-  Pubkey of the program that executes this instruction.
-        The program being invoked to execute the instruction.
-    -}
-    iProgramId :: SolanaPublicKey,
-    -- |  List of metadata describing accounts that should be passed to the program.
-    iAccounts :: [AccountMeta],
-    {-  Byte array specifying the instruction on the program to invoke
-        and any function arguments required by the instruction.
-    -}
-    iData :: InstructionData
-  }
-  deriving (Show, Eq, Generic)
-
-data InstructionData = InstructionData {instrData :: S.ByteString}
-  deriving (Eq, Generic)
-
-instance Show InstructionData where
-  show :: InstructionData -> String
-  show (InstructionData bs) = show $ encodeBase64' bs
-
--- | Each account required by an instruction must be provided as an AccountMeta that contains:
-data AccountMeta = AccountMeta
-  { -- | Account's address
-    accountPubKey :: SolanaPublicKey,
-    {-  Whether the account must sign the transaction.
-        True if an 'Instruction' requires a 'Transaction' signature matching 'SolanaPublicKey'.
-    -}
-    isSigner :: Bool,
-    {-  Whether the instruction will modify the account's data.
-        True if the account data or metadata may be mutated during program execution.
-    -}
-    isWritable :: Bool
-  }
-  deriving (Show, Eq, Generic)
-
-------------------------------------------------------------------------------------------------
-
 -- ** Compiled Message
 
 ------------------------------------------------------------------------------------------------
@@ -255,7 +220,7 @@ instance Binary CompiledMessage where
 ------------------------------------------------------------------------------------------------
 compileMessage :: Message -> Either CompileException CompiledMessage
 compileMessage Message {..} = do
-  compiledInstrctions <- sequence $ compileInstruction mAccountKeys <$> mInstructions
+  compiledInstrctions <- mapM (compileInstruction mAccountKeys) mInstructions
   return $
     CompiledMessage
       { cmHeader = mHeader,
@@ -265,14 +230,14 @@ compileMessage Message {..} = do
       }
 
 compileInstruction :: [SolanaPublicKey] -> Instruction -> Either CompileException CompiledInstruction
-compileInstruction keys (Instruction {..}) = do
-  programIdIndex <- keyToIndex iProgramId keys
-  accIndices <- sequence $ ((`keyToIndex` keys) . accountPubKey) <$> iAccounts
+compileInstruction keys instruction = do
+  programIdIndex <- keyToIndex (iProgramId instruction) keys
+  accIndices <- mapM ((`keyToIndex` keys) . accountPubKey) (iAccounts instruction)
   return $
     CompiledInstruction
-      { ciProgramIdIndex = (fromIntegral programIdIndex),
-        ciAccounts = (mkCompact (fromIntegral <$> accIndices)),
-        ciData = mkCompact . S.unpack $ (instrData iData)
+      { ciProgramIdIndex = fromIntegral programIdIndex,
+        ciAccounts = mkCompact (fromIntegral <$> accIndices),
+        ciData = mkCompact . S.unpack $ instrData (iData instruction)
       }
 
 keyToIndex :: SolanaPublicKey -> [SolanaPublicKey] -> Either CompileException Int
@@ -314,5 +279,7 @@ instance Binary CompiledInstruction where
 -- *** CompileException
 
 ------------------------------------------------------------------------------------------------
-data CompileException = MissingIndex String
-  deriving (Show, Exception)
+newtype CompileException = MissingIndex String
+  deriving (Show)
+
+instance Exception CompileException

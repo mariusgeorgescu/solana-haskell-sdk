@@ -66,6 +66,7 @@ library
     Core.Block
     Core.Compact
     Core.Crypto
+    Core.Instruction
     Core.Message
     Core.TransactionBuilder
     NativePrograms.SystemProgram
@@ -116,7 +117,9 @@ executable solana-haskell-sdk
 
   -- Other library packages from which modules are imported.
   build-depends:
+    , aeson
     , base                ^>=4.18.0.0
+    , base64
     , solana-haskell-sdk
     , web3-provider
 

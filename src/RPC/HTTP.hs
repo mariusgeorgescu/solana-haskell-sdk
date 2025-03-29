@@ -1,5 +1,3 @@
-{-# LANGUAGE DatatypeContexts #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -17,7 +15,7 @@ module RPC.HTTP where
 
 import Core.Account (Lamport)
 import Core.Block (BlockHash)
-import Core.Crypto
+import Core.Crypto (SolanaPublicKey)
 import Data.Aeson
 import Data.Aeson.Types (Parser)
 import Data.Text
@@ -52,7 +50,7 @@ instance (FromJSON a) => FromJSON (RPCResponse a) where
 ------------------------------------------------------------------------------------------------
 
 -- | Returns the lamport balance of the account of provided SolanaPubkey.
-getBalance :: (JsonRpc m) => String -> m (RPCResponse Lamport)
+getBalance :: (JsonRpc m) => SolanaPublicKey -> m (RPCResponse Lamport)
 {-# INLINE getBalance #-}
 getBalance = do
   remote "getBalance"
@@ -67,12 +65,10 @@ type LastValidBlockHeight = Int
 data LatestBlockHashResp = LatestBlockHashResp BlockHash LastValidBlockHeight
 
 instance FromJSON LatestBlockHashResp where
-
   parseJSON = withObject "LatestBlockHashResp" $ \v ->
     LatestBlockHashResp
       <$> v .: "blockhash"
       <*> v .: "lastValidBlockHeight"
-
 
 getLatestBlockhash' :: (JsonRpc m) => m (RPCResponse LatestBlockHashResp)
 {-# INLINE getLatestBlockhash' #-}
@@ -83,3 +79,7 @@ getLatestBlockhash :: (JsonRpc m) => m (RPCResponse BlockHash)
 getLatestBlockhash = do
   RPCResponse v (LatestBlockHashResp bh _) <- getLatestBlockhash'
   return $ RPCResponse v bh
+
+requestAirdrop :: (JsonRpc m) => SolanaPublicKey -> Lamport -> m String
+requestAirdrop = do
+  remote "requestAirdrop"
