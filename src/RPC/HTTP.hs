@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -83,3 +84,29 @@ getLatestBlockhash = do
 requestAirdrop :: (JsonRpc m) => SolanaPublicKey -> Lamport -> m String
 requestAirdrop = do
   remote "requestAirdrop"
+
+data RpcSendTransactionConfig = RpcSendTransactionConfig
+  { encoding :: String,
+    skipPreflight :: Bool,
+    preflightCommitment :: String,
+    maxRetries :: Int,
+    minContextSlot :: Int
+  }
+  deriving (Eq, Show, Generic, ToJSON)
+
+defaultRpcSendTransactionConfig :: RpcSendTransactionConfig
+defaultRpcSendTransactionConfig =
+  RpcSendTransactionConfig
+    { encoding = "base64",
+      skipPreflight = True,
+      preflightCommitment = "finalized",
+      maxRetries = 0,
+      minContextSlot = 0
+    }
+
+sendTransaction :: (JsonRpc m) => String -> m String
+sendTransaction tx = sendTransaction' tx defaultRpcSendTransactionConfig
+
+sendTransaction' :: (JsonRpc m) => String -> RpcSendTransactionConfig -> m String
+sendTransaction' = do
+  remote "sendTransaction"

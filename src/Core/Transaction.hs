@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Core.Message (newTransactionIntent) where
+module Core.Transaction (newTransactionIntent) where
 
 import Control.Exception
 import Core.Block (BlockHash)
