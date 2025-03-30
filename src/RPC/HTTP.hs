@@ -400,6 +400,18 @@ getMaxShredInsertSlot = do
 
 ------------------------------------------------------------------------------------------------
 
+-- * getMinimumBalanceForRentExemption
+
+------------------------------------------------------------------------------------------------
+
+-- | Get the max slot seen from after shred insert.
+getMinimumBalanceForRentExemption :: (JsonRpc m) => Int -> m Lamport
+getMinimumBalanceForRentExemption = do
+  remote "getMinimumBalanceForRentExemption"
+{-# INLINE getMinimumBalanceForRentExemption #-}
+
+------------------------------------------------------------------------------------------------
+
 ------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------
 

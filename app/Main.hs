@@ -126,6 +126,10 @@ main = do
     mis <- getMaxShredInsertSlot
     liftIO $ print mis
 
+    liftIO $ putStrLn "Get Minimum Balance For Rent Exemption"
+    mb <- getMinimumBalanceForRentExemption 50
+    liftIO $ print mb
+
     return ()
 
   -- --

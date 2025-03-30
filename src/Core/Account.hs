@@ -37,7 +37,7 @@ instance Show Lamport where
         (sol :: Double) = fromIntegral n / fromIntegral lamportsPerSol
      in if n'int > lamportsPerSol
           then printf "%.9f SOL" sol
-          else printf "% lamports" n
+          else printf "%d lamports" n
 
 {- Solana Account structure.
     Accounts have a max size of 10MiB and every account on Solana has the same base Account type.
