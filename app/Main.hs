@@ -94,60 +94,60 @@ main = do
     -- identity <- getIdentity
     -- liftIO $ print identity
 
-    -- liftIO $ putStrLn "Get Inflation Governor"
-    -- igov <- getInflationGovernor
-    -- liftIO $ print igov
+    liftIO $ putStrLn "Get Inflation Governor"
+    igov <- getInflationGovernor
+    liftIO $ print igov
 
-    -- liftIO $ putStrLn "Get Inflation Rate"
-    -- inrate <- getInflationRate
-    -- liftIO $ print inrate
+    liftIO $ putStrLn "Get Inflation Rate"
+    inrate <- getInflationRate
+    liftIO $ print inrate
 
-    -- liftIO $ putStrLn "Get Inflation Reward"
-    -- infrw <- getInflationReward [show $ myPubKey1]
-    -- liftIO $ print infrw
+    liftIO $ putStrLn "Get Inflation Reward"
+    infrw <- getInflationReward [show $ myPubKey1]
+    liftIO $ print infrw
 
-    -- return ()
+    return ()
 
     -- --
-    liftIO $ putStrLn ("Requesting airdrop ..." :: String)
-    r <- requestAirdrop myPubKey1 10_000_000_000
-    liftIO $ putStrLn r
-    liftIO $ threadDelay (15 * 1000000)
-    liftIO $ putStrLn ("Checking balance ..." <> show myPubKey1)
-    bal <- getBalance myPubKey1
-    liftIO $ print bal
-    --
-    liftIO $ putStrLn ("Requesting airdrop ..." :: String)
-    r <- requestAirdrop myPubKey2 1_000_000_000
-    liftIO $ print r
-    liftIO $ threadDelay (15 * 1000000)
-    liftIO $ putStrLn ("Checking balance ..." <> show myPubKey2)
-    bal <- getBalance myPubKey2
-    liftIO $ print bal
+    -- liftIO $ putStrLn ("Requesting airdrop ..." :: String)
+    -- r <- requestAirdrop myPubKey1 10_000_000_000
+    -- liftIO $ putStrLn r
+    -- liftIO $ threadDelay (15 * 1000000)
+    -- liftIO $ putStrLn ("Checking balance ..." <> show myPubKey1)
+    -- bal <- getBalance myPubKey1
+    -- liftIO $ print bal
+    -- --
+    -- liftIO $ putStrLn ("Requesting airdrop ..." :: String)
+    -- r <- requestAirdrop myPubKey2 1_000_000_000
+    -- liftIO $ print r
+    -- liftIO $ threadDelay (15 * 1000000)
+    -- liftIO $ putStrLn ("Checking balance ..." <> show myPubKey2)
+    -- bal <- getBalance myPubKey2
+    -- liftIO $ print bal
 
-    --
-    liftIO $ putStrLn ("Getting latest blockhash ..." :: String)
-    bh <- getLatestBlockhash
-    liftIO $ print bh
+    -- --
+    -- liftIO $ putStrLn ("Getting latest blockhash ..." :: String)
+    -- bh <- getLatestBlockhash
+    -- liftIO $ print bh
 
-    let newTx =
-          newTransactionIntent
-            [myPrivKey1]
-            [ SystemProgram.transfer myPubKey1 myPubKey2 1_000_000_000
-            ]
+    -- let newTx =
+    --       newTransactionIntent
+    --         [myPrivKey1]
+    --         [ SystemProgram.transfer myPubKey1 myPubKey2 1_000_000_000
+    --         ]
 
-    signedTx <- liftIO $ either throw return (newTx (value bh))
-    liftIO $ putStrLn ("Signed tx: " <> signedTx)
+    -- signedTx <- liftIO $ either throw return (newTx (value bh))
+    -- liftIO $ putStrLn ("Signed tx: " <> signedTx)
 
-    liftIO $ putStrLn "Submiting tx"
-    tId <- sendTransaction signedTx
-    liftIO $ putStrLn ("Transaction id: " <> tId)
+    -- liftIO $ putStrLn "Submiting tx"
+    -- tId <- sendTransaction signedTx
+    -- liftIO $ putStrLn ("Transaction id: " <> tId)
 
-    liftIO $ threadDelay (25 * 1000000)
-    liftIO $ putStrLn ("Checking balance ..." <> show myPubKey1)
-    bal <- getBalance myPubKey1
-    liftIO $ print bal
-    liftIO $ putStrLn ("Checking balance ..." <> show myPubKey2)
-    bal <- getBalance myPubKey2
-    liftIO $ print bal
+    -- liftIO $ threadDelay (25 * 1000000)
+    -- liftIO $ putStrLn ("Checking balance ..." <> show myPubKey1)
+    -- bal <- getBalance myPubKey1
+    -- liftIO $ print bal
+    -- liftIO $ putStrLn ("Checking balance ..." <> show myPubKey2)
+    -- bal <- getBalance myPubKey2
+    -- liftIO $ print bal
   return ()
