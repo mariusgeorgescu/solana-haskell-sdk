@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module RPC.Types where
@@ -57,7 +58,8 @@ data BlockCommitment = BlockCommitment
     -- | Total active stake, in lamports, of the current epoch.
     totalStake :: Integer
   }
-  deriving (Generic, Eq, Show, ToJSON, FromJSON)
+  deriving (Generic, Eq, Show)
+  deriving anyclass (FromJSON)
 
 type BlockHeight = Word64
 
@@ -176,7 +178,8 @@ data HighestSnapshotSlot = HighestSnapshotSlot
 newtype NodeIdentity = NodeIdentity
   { identity :: SolanaPublicKey
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic)
+  deriving anyclass (FromJSON)
 
 ------------------------------------------------------------------------------------------------
 
@@ -348,11 +351,17 @@ instance FromJSON PrioritizationFee where
 ------------------------------------------------------------------------------------------------
 
 data TransactionSignatureInformation = TransactionSignatureInformation
-  { signature :: SolanaSignature,
+  { -- | Transaction signature
+    signature :: SolanaSignature,
+    -- | The slot that contains the block with the transaction
     slotTxSig :: Slot,
+    -- | Error if transaction failed, 'Nothing' if transaction succeeded.
     err :: Maybe String,
+    -- | Memo associated with the transaction, 'Nothing' if no memo is present
     memo :: Maybe String,
+    -- | Estimated production time, as Unix timestamp (seconds since the Unix epoch) of when transaction was processed. 'Nothing' if not available.
     blockTime :: Maybe Int64,
+    -- | The transaction's cluster confirmation status;
     confirmationStatus :: Maybe String
   }
   deriving (Generic, Show, Eq)
@@ -367,3 +376,35 @@ instance FromJSON TransactionSignatureInformation where
       <*> v .: "memo"
       <*> v .: "blockTime"
       <*> v .: "confirmationStatus"
+
+------------------------------------------------------------------------------------------------
+
+-- *  TransactionSignatureInformation
+
+------------------------------------------------------------------------------------------------
+
+data TransactionSignatureStatus = TransactionSignatureStatus
+  { -- | The slot the transaction was processed
+    slotTxStatus :: Slot,
+    -- | Number of blocks since signature confirmation, 'Nothing' if rooted, as well as finalized by a supermajority of the cluster.
+    confirmationsTxStatus :: Maybe Int,
+    -- | Error if transaction failed, 'Nothing' if transaction succeeded.
+    errTxStatus :: Maybe String,
+    -- | The transaction's cluster confirmation status.
+    confirmationStatusTxStatus :: Maybe String
+  }
+  deriving (Generic, Show, Eq)
+
+instance FromJSON TransactionSignatureStatus where
+  parseJSON :: Value -> Parser TransactionSignatureStatus
+  parseJSON = withObject "TransactionSignatureStatus" $ \v ->
+    TransactionSignatureStatus
+      <$> v .: "slot"
+      <*> v .: "confirmations"
+      <*> v .: "err"
+      <*> v .: "confirmationStatus"
+
+newtype SearchTransactionHistory = SearchTransactionHistory
+  {searchTransactionHistory :: Bool}
+  deriving (Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)

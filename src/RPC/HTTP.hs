@@ -17,7 +17,7 @@ module RPC.HTTP where
 import Control.Exception (throw)
 import Core.Account (Account, AccountInfo, Lamport)
 import Core.Block
-import Core.Crypto (SolanaPrivateKey, SolanaPublicKey)
+import Core.Crypto (SolanaPrivateKey, SolanaPublicKey, SolanaSignature)
 import Core.Instruction
 import Core.Message (newMessageToBase64String)
 import Data.Aeson
@@ -496,6 +496,27 @@ getSignaturesForAddress :: (JsonRpc m) => SolanaPublicKey -> m [TransactionSigna
 getSignaturesForAddress = do
   remote "getSignaturesForAddress"
 {-# INLINE getSignaturesForAddress #-}
+
+------------------------------------------------------------------------------------------------
+
+-- * getSignatureStatuses
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns the statuses of a list of @TransactionSignatureStatus@.
+-- Each signature must be a TxId (the first signature in a transaction, which can be used to uniquely identify
+-- the transaction across the complete ledger).
+getSignatureStatuses' :: (JsonRpc m) => [SolanaSignature] -> SearchTransactionHistory -> m (RPCResponse [Maybe TransactionSignatureStatus])
+getSignatureStatuses' = do
+  remote "getSignatureStatuses"
+{-# INLINE getSignatureStatuses' #-}
+
+-- | Returns the statuses of a list of @TransactionSignatureStatus@.
+-- Each signature must be a TxId (the first signature in a transaction, which can be used to uniquely identify
+-- the transaction across the complete ledger).
+getSignatureStatuses :: (JsonRpc m) => [SolanaSignature] -> m [Maybe TransactionSignatureStatus]
+getSignatureStatuses sigs = value <$> getSignatureStatuses' sigs (SearchTransactionHistory True)
+{-# INLINE getSignatureStatuses #-}
 
 ------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------

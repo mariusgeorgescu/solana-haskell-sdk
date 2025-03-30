@@ -17,8 +17,8 @@ import RPC.HTTP
 import RPC.Providers
 import RPC.Types (RPCResponse (..))
 
-testTx :: IO ()
-testTx = void $ runWeb3' localHttpProvider $ do
+testTx :: IO (Either Web3Error SolanaSignature)
+testTx = runWeb3' localHttpProvider $ do
   (myPubKey1, myPrivKey1) <- liftIO createSolanaKeyPair
   (myPubKey2, myPrivKey2) <- liftIO createSolanaKeyPair
 
@@ -54,15 +54,17 @@ testTx = void $ runWeb3' localHttpProvider $ do
 
   liftIO $ putStrLn "Submiting tx"
   tId <- sendTransaction signedTx
-  liftIO $ putStrLn ("Transaction id: " <> tId)
+  let txId = unsafeSigFromString tId
+  liftIO $ putStrLn ("Transaction id: " <> show txId)
 
-  liftIO $ threadDelay (25 * 1000000)
+  liftIO $ threadDelay (15 * 1000000)
   liftIO $ putStrLn ("Checking balance ..." <> show myPubKey1)
   bal <- getBalance myPubKey1
   liftIO $ print bal
   liftIO $ putStrLn ("Checking balance ..." <> show myPubKey2)
   bal <- getBalance myPubKey2
   liftIO $ print bal
+  return txId
 
 main :: IO ()
 main = do
@@ -201,5 +203,14 @@ main = do
     -- liftIO $ putStrLn "Get Signatures For Address"
     -- sigs <- getSignaturesForAddress (unsafeSolanaPublicKey "Vote111111111111111111111111111111111111111")
     -- liftIO $ print sigs
+
+    let txId1 = unsafeSigFromString "2bvMvz7c9qvYGoCXyRErTyC2BLGGNd3ayfPiP2j8aKwCUurnV2KXJ4WAt6geg7a9MZAQkAEHxb4kAbPKLCFgsXoc"
+    let txId2 = unsafeSigFromString "3pywXYUaZgFbgs3yFKK6VZ8VSXMzwrDZzgnbsqcxMwetQRGvVvwDxARm2y8DUD7vCgwjPh3CmJCWtz65oiRbWANQ"
+    liftIO $ print txId1
+    liftIO $ print txId2
+
+    liftIO $ putStrLn "Get Signature Statuses"
+    sigsstats <- getSignatureStatuses [txId1, txId2]
+    liftIO $ print sigsstats
 
     return ()
