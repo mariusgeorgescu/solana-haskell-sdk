@@ -320,6 +320,18 @@ getInflationReward = do
 
 ------------------------------------------------------------------------------------------------
 
+-- * getLargestAccounts
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns the 20 largest accounts, by lamport balance (results may be cached up to two hours).
+getLargestAccounts :: (JsonRpc m) => m ([RPCResponse (SolanaPublicKey, Lamport)])
+getLargestAccounts = do
+  remote "getLargestAccounts"
+{-# INLINE getLargestAccounts #-}
+
+------------------------------------------------------------------------------------------------
+
 -- * HTTP Methods
 
 ------------------------------------------------------------------------------------------------
