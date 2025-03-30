@@ -190,7 +190,7 @@ getEpochInfo = do
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns information about the current epoch.
+-- | Returns the epoch schedule information from this cluster's genesis config.
 getEpochSchedule :: (JsonRpc m) => m EpochSchedule
 getEpochSchedule = do
   remote "getEpochSchedule"
@@ -202,16 +202,121 @@ getEpochSchedule = do
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns information about the current epoch.
+-- | Get the fee the network will charge for a particular Message.
+-- Returns 'RpcResponse Lamport' with value field set  to the fee corresponding to the message at the specified blockhash
 getFeeForMessage' :: (JsonRpc m) => String -> m (RPCResponse (Maybe Int))
 getFeeForMessage' = do
   remote "getFeeForMessage"
 {-# INLINE getFeeForMessage' #-}
 
--- | Returns information about the current epoch.
+-- | Get the fee the network will charge for a particular Message.
+-- Returns the fee corresponding to the message at the specified blockhash
 getFeeForMessage :: (JsonRpc m) => String -> m (Maybe Int)
 getFeeForMessage = fmap value . getFeeForMessage'
 {-# INLINE getFeeForMessage #-}
+
+------------------------------------------------------------------------------------------------
+
+-- * getFirstAvailableBlock
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns the slot of the lowest confirmed block that has not been purged from the ledger.
+getFirstAvailableBlock :: (JsonRpc m) => m Slot
+getFirstAvailableBlock = do
+  remote "getFirstAvailableBlock"
+{-# INLINE getFirstAvailableBlock #-}
+
+------------------------------------------------------------------------------------------------
+
+-- * getGenesisHash
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns the genesis hash.
+getGenesisHash :: (JsonRpc m) => m BlockHash
+getGenesisHash = do
+  remote "getGenesisHash"
+{-# INLINE getGenesisHash #-}
+
+------------------------------------------------------------------------------------------------
+
+-- * getHealth
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns the current health of the node.
+-- A healthy node is one that is within HEALTH_CHECK_SLOT_DISTANCE slots of the latest cluster confirmed slot.
+getHealth :: (JsonRpc m) => m String
+getHealth = do
+  remote "getHealth"
+{-# INLINE getHealth #-}
+
+------------------------------------------------------------------------------------------------
+
+-- * getHighestSnapshotSlot
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns the highest slot information that the node has snapshots for.
+-- This will find the highest full snapshot slot, and the highest incremental snapshot slot based on the full snapshot slot, if there is one.
+getHighestSnapshotSlot :: (JsonRpc m) => m HighestSnapshotSlot
+getHighestSnapshotSlot = do
+  remote "getHighestSnapshotSlot"
+{-# INLINE getHighestSnapshotSlot #-}
+
+------------------------------------------------------------------------------------------------
+
+-- * getIdentity
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns the 'NodeIdentity'for the current node.
+getIdentity' :: (JsonRpc m) => m NodeIdentity
+getIdentity' = do
+  remote "getIdentity"
+{-# INLINE getIdentity' #-}
+
+-- | Returns the identity pubkey for the current node.
+getIdentity :: (JsonRpc m) => m SolanaPublicKey
+getIdentity = identity <$> getIdentity'
+{-# INLINE getIdentity #-}
+
+------------------------------------------------------------------------------------------------
+
+-- * getInflationGovernor
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns the current inflation governor.
+getInflationGovernor :: (JsonRpc m) => m InflationGovernor
+getInflationGovernor = do
+  remote "getInflationGovernor"
+{-# INLINE getInflationGovernor #-}
+
+------------------------------------------------------------------------------------------------
+
+-- * getInflationRate
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns the specific inflation values for the current epoch.
+getInflationRate :: (JsonRpc m) => m InflationRate
+getInflationRate = do
+  remote "getInflationRate"
+{-# INLINE getInflationRate #-}
+
+------------------------------------------------------------------------------------------------
+
+-- * getInflationReward
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns the inflation / staking reward for a list of addresses for an epoch.
+getInflationReward :: (JsonRpc m) => [String] -> m [Maybe InflationReward]
+getInflationReward = do
+  remote "getInflationReward"
+{-# INLINE getInflationReward #-}
 
 ------------------------------------------------------------------------------------------------
 

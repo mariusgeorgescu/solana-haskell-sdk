@@ -3,6 +3,7 @@
 
 module RPC.Types where
 
+import Core.Account (Lamport)
 import Core.Crypto
 import Data.Aeson.Types
 import Data.Map
@@ -142,3 +143,110 @@ data EpochSchedule = EpochSchedule
     firstNormalSlot :: Word64
   }
   deriving (Show, Generic, ToJSON, FromJSON)
+
+------------------------------------------------------------------------------------------------
+
+-- * HighestSnapshotSlot
+
+------------------------------------------------------------------------------------------------
+
+-- | Contains the highest slot information that the node has snapshots for.
+data HighestSnapshotSlot = HighestSnapshotSlot
+  { -- |  The highest full snapshot slot
+    full :: Word64,
+    -- | The highest incremental snapshot slot based on full
+    incremental :: Maybe Word64
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+------------------------------------------------------------------------------------------------
+
+-- * NodeIdentity
+
+------------------------------------------------------------------------------------------------
+
+-- | Contains the identity of a node.
+newtype NodeIdentity = NodeIdentity
+  { identity :: SolanaPublicKey
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+------------------------------------------------------------------------------------------------
+
+-- * InflationGovernor
+
+------------------------------------------------------------------------------------------------
+
+-- | Contains the identity of a node.
+data InflationGovernor = InflationGovernor
+  { -- | Percentage of total inflation allocated to the foundation
+    foundation :: Double,
+    -- | Duration of foundation pool inflation in years
+    foundationTerm :: Double,
+    -- | Initial inflation percentage from time 0
+    initial :: Double,
+    -- | Rate per year at which inflation is lowered. (Rate reduction is derived using the target slot time in genesis config)
+    taper :: Double,
+    -- |  Terminal inflation percentage
+    terminal :: Double
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+------------------------------------------------------------------------------------------------
+
+-- * InflationRate
+
+------------------------------------------------------------------------------------------------
+
+-- | Contains the inflation values for the given epoch.
+data InflationRate = InflationRate
+  { -- | Total inflation.
+    totalInflation :: Double,
+    -- | Inflation allocated to validators.
+    validatorInflation :: Double,
+    -- | Inflation allocated to the foundation.
+    foundationInflation :: Double,
+    -- | Epoch for which these values are valid.
+    epochInflation :: Double
+  }
+  deriving (Show, Generic)
+
+instance FromJSON InflationRate where
+  parseJSON :: Value -> Parser InflationRate
+  parseJSON = withObject "InflationRate" $ \v ->
+    InflationRate
+      <$> v .: "total"
+      <*> v .: "validator"
+      <*> v .: "foundation"
+      <*> v .: "epoch"
+
+------------------------------------------------------------------------------------------------
+
+-- * InflationReward
+
+------------------------------------------------------------------------------------------------
+
+-- | Contains the inflation / staking reward for a list of addresses for an epoch
+data InflationReward = InflationReward
+  { -- | Epoch for which reward occurred.
+    epochReward :: Word64,
+    -- | The slot in which the rewards are effective.
+    effectiveSlot :: Slot,
+    -- | Reward amount in lamports.
+    amountReward :: Lamport,
+    -- | Post balance of the account in lamports.
+    postBalance :: Lamport,
+    -- | Vote account commission when the reward was credited.
+    commission :: Maybe Word8
+  }
+  deriving (Show, Generic)
+
+instance FromJSON InflationReward where
+  parseJSON :: Value -> Parser InflationReward
+  parseJSON = withObject "InflationReward" $ \v ->
+    InflationReward
+      <$> v .: "epoch"
+      <*> v .: "effectiveSlot"
+      <*> v .: "amount"
+      <*> v .: "postBalance"
+      <*> v .: "commission"

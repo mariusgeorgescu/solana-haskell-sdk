@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Core.Account where
@@ -17,6 +18,7 @@ newtype Lamport = Lamport
   { unLamport :: Word64
   }
   deriving (Eq, Ord, Generic)
+  deriving newtype (Num)
 
 instance ToJSON Lamport where
   toJSON :: Lamport -> Value
@@ -86,7 +88,7 @@ instance Show AccountData where
 
 instance ToJSON AccountData where
   toJSON :: AccountData -> Value
-  toJSON ac = toJSON (tail . init . show $ ac)
+  toJSON ac = toJSON (show ac)
 
 instance FromJSON AccountData where
   parseJSON :: Value -> Parser AccountData

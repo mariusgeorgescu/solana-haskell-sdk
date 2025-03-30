@@ -19,6 +19,7 @@ module Core.Crypto
     getSolanaPrivateKeyRaw,
     getSolanaSignatureRaw,
     toBase58String,
+    toBase64String,
   )
 where
 
@@ -31,13 +32,17 @@ import Data.Binary.Get (getByteString)
 import Data.Binary.Put (putByteString)
 import Data.ByteString qualified as S
 import Data.ByteString.Base58
+import Data.ByteString.Base64 (encodeBase64')
 import Data.Maybe (fromJust)
 import Data.String (fromString)
 import Data.Text qualified as Text
 import GHC.Generics (Generic)
 
 toBase58String :: S.ByteString -> String
-toBase58String = show . encodeBase58 bitcoinAlphabet
+toBase58String = tail . init . show . encodeBase58 bitcoinAlphabet
+
+toBase64String :: S.ByteString -> String
+toBase64String = tail . init . show . encodeBase64'
 
 ------------------------------------------------------------------------------------------------
 
@@ -80,7 +85,7 @@ instance Binary SolanaPublicKey where
 
 instance ToJSON SolanaPublicKey where
   toJSON :: SolanaPublicKey -> Value
-  toJSON pk = toJSON (tail . init . show $ pk)
+  toJSON pk = toJSON (show pk)
 
 instance FromJSON SolanaPublicKey where
   parseJSON :: Value -> Parser SolanaPublicKey
@@ -92,7 +97,7 @@ instance FromJSONKey SolanaPublicKey where
 
 instance ToJSONKey SolanaPublicKey where
   toJSONKey :: ToJSONKeyFunction SolanaPublicKey
-  toJSONKey = toJSONKeyText (Text.pack . tail . init . show)
+  toJSONKey = toJSONKeyText (Text.pack . show)
 
 ------------------------------------------------------------------------------------------------
 

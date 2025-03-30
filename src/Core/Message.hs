@@ -11,7 +11,7 @@ where
 import Control.Exception
 import Core.Block (BlockHash)
 import Core.Compact
-import Core.Crypto (SolanaPrivateKey, SolanaPublicKey, dsign)
+import Core.Crypto (SolanaPrivateKey, SolanaPublicKey, dsign, toBase64String)
 import Core.Instruction
 import Data.Binary
 import Data.ByteString qualified as S
@@ -33,7 +33,7 @@ newTransactionIntent :: [SolanaPrivateKey] -> [Instruction] -> SignedTransaction
 newTransactionIntent signers instructions blockhash = do
   msg <- newMessage blockhash instructions -- make the binary message
   let signatures = S.toStrict . encode $ mkCompact $ flip dsign msg <$> signers -- sign the binary message
-  return $ tail . init . show $ encodeBase64' $ S.append signatures msg -- return signed transaction
+  return $ toBase64String $ S.append signatures msg -- return signed transaction
 
 ------------------------------------------------------------------------------------------------
 
@@ -60,7 +60,7 @@ newMessage :: BlockHash -> [Instruction] -> Either CompileException S.ByteString
 newMessage bh is = compileMessageToBinary (mkNewMessage bh is)
 
 newMessageToBase64String :: BlockHash -> [Instruction] -> Either CompileException String
-newMessageToBase64String = fmap (fmap (tail . init . show . encodeBase64')) . newMessage
+newMessageToBase64String = fmap (fmap toBase64String) . newMessage
 
 compileMessageToBinary :: Message -> Either CompileException S.ByteString
 compileMessageToBinary = fmap (S.toStrict . Data.Binary.encode) . compileMessage

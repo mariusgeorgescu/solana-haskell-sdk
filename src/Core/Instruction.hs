@@ -9,7 +9,7 @@ module Core.Instruction
   )
 where
 
-import Core.Crypto (SolanaPublicKey)
+import Core.Crypto (SolanaPublicKey, toBase64String)
 import Data.Binary qualified as Binary
 import Data.ByteString qualified as S
 import Data.ByteString.Base64 (encodeBase64')
@@ -82,4 +82,4 @@ newtype InstructionData = InstructionData {instrData :: S.ByteString}
 
 instance Show InstructionData where
   show :: InstructionData -> String
-  show (InstructionData bs) = init . tail . show $ encodeBase64' bs
+  show (InstructionData bs) = toBase64String bs
