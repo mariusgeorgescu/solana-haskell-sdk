@@ -17,7 +17,7 @@ module RPC.HTTP where
 import Control.Exception (throw)
 import Core.Account (AccountInfo, Lamport)
 import Core.Block
-import Core.Crypto (SolanaPublicKey)
+import Core.Crypto (SolanaPrivateKey, SolanaPublicKey)
 import Core.Instruction
 import Core.Message (newMessageToBase64String)
 import Data.Aeson
@@ -325,40 +325,87 @@ getInflationReward = do
 ------------------------------------------------------------------------------------------------
 
 -- | Returns the 20 largest accounts, by lamport balance (results may be cached up to two hours).
-getLargestAccounts :: (JsonRpc m) => m ([RPCResponse (SolanaPublicKey, Lamport)])
-getLargestAccounts = do
+-- Returns 'RpcResponse [AddressAndLamports]' with value field set to a list of 'AddressAndLamports'.
+getLargestAccounts' :: (JsonRpc m) => m (RPCResponse [AddressAndLamports])
+getLargestAccounts' = do
   remote "getLargestAccounts"
+{-# INLINE getLargestAccounts' #-}
+
+-- | Returns the 20 largest accounts, by lamport balance (results may be cached up to two hours).
+-- | Returns a list of pairs of address and balance.
+getLargestAccounts :: (JsonRpc m) => m [(SolanaPublicKey, Lamport)]
+getLargestAccounts = fmap (liftA2 (,) address lamports) . value <$> getLargestAccounts'
 {-# INLINE getLargestAccounts #-}
 
 ------------------------------------------------------------------------------------------------
 
--- * HTTP Methods
+-- * getLatestBlockhash
 
 ------------------------------------------------------------------------------------------------
 
-type LastValidBlockHeight = Int
-
-data LatestBlockHashResp
-  = LatestBlockHashResp
-      BlockHash
-      LastValidBlockHeight
-
-instance FromJSON LatestBlockHashResp where
-  parseJSON :: Value -> Parser LatestBlockHashResp
-  parseJSON = withObject "LatestBlockHashResp" $ \v ->
-    LatestBlockHashResp
-      <$> v .: "blockhash"
-      <*> v .: "lastValidBlockHeight"
-
-getLatestBlockhash' :: (JsonRpc m) => m (RPCResponse LatestBlockHashResp)
-{-# INLINE getLatestBlockhash' #-}
+-- | Get the hash and the height of the latest block.
+-- Returns 'RpcResponse LatestBlockHash' with value field set to a list of 'LatestBlockHash'.
+getLatestBlockhash' :: (JsonRpc m) => m (RPCResponse LatestBlockHash)
 getLatestBlockhash' = do
   remote "getLatestBlockhash"
+{-# INLINE getLatestBlockhash' #-}
 
-getLatestBlockhash :: (JsonRpc m) => m (RPCResponse BlockHash)
-getLatestBlockhash = do
-  RPCResponse v (LatestBlockHashResp bh _) <- getLatestBlockhash'
-  return $ RPCResponse v bh
+-- | Get the hash and the height of the latest block as 'LatestBlockHash'.
+getLatestBlockhash :: (JsonRpc m) => m LatestBlockHash
+getLatestBlockhash = value <$> getLatestBlockhash'
+{-# INLINE getLatestBlockhash #-}
+
+-- | Get the 'BlockHash' of the latest block.
+geTheLatestBlockhash :: (JsonRpc m) => m BlockHash
+geTheLatestBlockhash = blockhash <$> getLatestBlockhash
+{-# INLINE geTheLatestBlockhash #-}
+
+------------------------------------------------------------------------------------------------
+
+-- * getLatestBlockhagetLeaderSchedulesh
+
+------------------------------------------------------------------------------------------------
+
+-- | Get the leader schedule for an epoch.
+-- Fetch the leader schedule for the epoch that corresponds to the provided slot.
+-- If unspecified, the leader schedule for the current epoch is fetched.
+getLeaderSchedule :: (JsonRpc m) => Maybe Slot -> m (Maybe LeaderSchedule)
+getLeaderSchedule = do
+  remote "getLeaderSchedule"
+{-# INLINE getLeaderSchedule #-}
+
+------------------------------------------------------------------------------------------------
+
+-- * getMaxRetransmitSlot
+
+------------------------------------------------------------------------------------------------
+
+-- | Get the max slot seen from retransmit stage.
+getMaxRetransmitSlot :: (JsonRpc m) => m Slot
+getMaxRetransmitSlot = do
+  remote "getMaxRetransmitSlot"
+{-# INLINE getMaxRetransmitSlot #-}
+
+------------------------------------------------------------------------------------------------
+
+-- * getMaxShredInsertSlot
+
+------------------------------------------------------------------------------------------------
+
+-- | Get the max slot seen from after shred insert.
+getMaxShredInsertSlot :: (JsonRpc m) => m Slot
+getMaxShredInsertSlot = do
+  remote "getMaxShredInsertSlot"
+{-# INLINE getMaxShredInsertSlot #-}
+
+------------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------
+
+-- * requestAirdrop
+
+------------------------------------------------------------------------------------------------
 
 requestAirdrop :: (JsonRpc m) => SolanaPublicKey -> Lamport -> m String
 requestAirdrop = do

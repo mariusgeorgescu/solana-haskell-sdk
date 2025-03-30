@@ -4,6 +4,7 @@
 module RPC.Types where
 
 import Core.Account (Lamport)
+import Core.Block (BlockHash)
 import Core.Crypto
 import Data.Aeson.Types
 import Data.Map
@@ -250,3 +251,45 @@ instance FromJSON InflationReward where
       <*> v .: "amount"
       <*> v .: "postBalance"
       <*> v .: "commission"
+
+------------------------------------------------------------------------------------------------
+
+-- * AddressAndLamports
+
+------------------------------------------------------------------------------------------------
+
+-- | Contains the address and value of an account.
+data AddressAndLamports
+  = AddressAndLamports
+  { -- | Account address
+    address :: SolanaPublicKey,
+    -- | Number of lamports in the account
+    lamports :: Lamport
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+
+------------------------------------------------------------------------------------------------
+
+-- * AddressAndLamports
+
+------------------------------------------------------------------------------------------------
+
+-- | Contains the  hash as base-58 encoded string and the height of the latest block.
+data LatestBlockHash
+  = LatestBlockHash
+  { -- | A Hash as base-58 encoded string
+    blockhash :: BlockHash,
+    -- | Last block height at which the blockhash will be valid
+    lastValidBlockHeight :: BlockHeight
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+
+------------------------------------------------------------------------------------------------
+
+-- * AddressAndLamports
+
+------------------------------------------------------------------------------------------------
+
+-- | 'Map' where the keys are validator identities and values are arrays of leader slot indices
+-- relative to the first slot in the requested epoch.
+type LeaderSchedule = Map SolanaPublicKey [Word64]

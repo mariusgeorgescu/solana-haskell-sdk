@@ -31,7 +31,7 @@ main = do
   putStrLn $ "Private key :" <> show myPrivKey1
   putStrLn $ "Public key :" <> show myPubKey1
 
-  ret <- runWeb3' localHttpProvider $ do
+  ret <- runWeb3' devnetHttpProvider $ do
     -- liftIO $ putStrLn "Get Account Info"
     -- maybeAccountInfo <- getAccountInfo myPubKey1
     -- liftIO $ print maybeAccountInfo
@@ -106,9 +106,25 @@ main = do
     -- infrw <- getInflationReward [show myPubKey1]
     -- liftIO $ print infrw
 
-    liftIO $ putStrLn "Get Largest Accounts"
-    laccs <- getLargestAccounts
-    liftIO $ print laccs
+    -- liftIO $ putStrLn "Get Largest Accounts"
+    -- laccs <- getLargestAccounts
+    -- liftIO $ print laccs
+
+    liftIO $ putStrLn "Get Latest Blockhash"
+    lbh <- geTheLatestBlockhash
+    liftIO $ print lbh
+
+    -- liftIO $ putStrLn "Get Leader Schedule"
+    -- ldsc <- getLeaderSchedule Nothing
+    -- liftIO $ print ldsc
+
+    liftIO $ putStrLn "Get Max Retransmit Slot"
+    mrs <- getMaxRetransmitSlot
+    liftIO $ print mrs
+
+    liftIO $ putStrLn "Get Max Shred Insert Slot"
+    mis <- getMaxShredInsertSlot
+    liftIO $ print mis
 
     return ()
 
