@@ -15,7 +15,7 @@
 module RPC.HTTP where
 
 import Control.Exception (throw)
-import Core.Account (AccountInfo, Lamport)
+import Core.Account (Account, AccountInfo, Lamport)
 import Core.Block
 import Core.Crypto (SolanaPrivateKey, SolanaPublicKey)
 import Core.Instruction
@@ -417,8 +417,8 @@ getMinimumBalanceForRentExemption = do
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns all information associated with list of accounts based on their 'SolanaPubkey'
--- Returns 'RpcResponse [(Maybe AccountInfo)]' with value field set to '[(Maybe AccountInfo)]'
+-- | Returns list of accounts based on their 'SolanaPubkey'
+-- Returns @RpcResponse [(Maybe AccountInfo)]@ with value field set to @[(Maybe AccountInfo)]@
 -- If the account of a given 'SolanaPubkey' doesn't exist, the coresponding element in the list is 'Nothing'.
 getMultipleAccounts' :: (JsonRpc m) => [SolanaPublicKey] -> m (RPCResponse [Maybe AccountInfo])
 getMultipleAccounts' = do
@@ -427,11 +427,75 @@ getMultipleAccounts' = do
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns all information associated with list of accounts based on their 'SolanaPubkey'
+-- | Returns list of accounts based on their 'SolanaPubkey'
 -- If the account of a given 'SolanaPubkey' doesn't exist, the coresponding element in the list is 'Nothing'.
 getMultipleAccounts :: (JsonRpc m) => [SolanaPublicKey] -> m [Maybe AccountInfo]
 getMultipleAccounts = fmap value . getMultipleAccounts'
 {-# INLINE getMultipleAccounts #-}
+
+------------------------------------------------------------------------------------------------
+
+-- * getProgramAccounts
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns list of accounts owned by the provided program 'SolanaPubkey'
+-- Returns a list of 'Account.
+-- If the account of a given 'SolanaPubkey' doesn't exist, the list is empty.
+getProgramAccounts :: (JsonRpc m) => SolanaPublicKey -> m [Account]
+getProgramAccounts = do
+  remote "getProgramAccounts"
+{-# INLINE getProgramAccounts #-}
+
+------------------------------------------------------------------------------------------------
+
+-- * getRecentPerformanceSamples
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns a list of recent 'PerformanceSample', in reverse slot order.
+-- Performance samples are taken every 60 seconds
+-- and include the number of transactions and slots that occur in a given time window.
+-- Takes as optional parameter the number of samples to return (throws exception if is > 720).
+getRecentPerformanceSamples' :: (JsonRpc m) => Maybe Int -> m [PerformanceSample]
+getRecentPerformanceSamples' = do
+  remote "getRecentPerformanceSamples"
+{-# INLINE getRecentPerformanceSamples' #-}
+
+-- | Returns a list of recent 'PerformanceSample', in reverse slot order.
+-- Performance samples are taken every 60 seconds
+-- and include the number of transactions and slots that occur in a given time window.
+-- Takes as optional parameter the number of samples to return (value capped at 720).
+getRecentPerformanceSamples :: (JsonRpc m) => Maybe Int -> m [PerformanceSample]
+getRecentPerformanceSamples mi = getRecentPerformanceSamples' (min 720 <$> mi)
+{-# INLINE getRecentPerformanceSamples #-}
+
+------------------------------------------------------------------------------------------------
+
+-- * getRecentPrioritizationFees
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns a list of prioritization fees from recent blocks.
+-- Takes and optional list of account addresses (up to a maximum of 128 addresses) @[SolanaPublicKey]@ .
+-- If this parameter is provided, the response will reflect a fee to land a transaction locking all of the provided accounts as writable.
+getRecentPrioritizationFees :: (JsonRpc m) => Maybe [SolanaPublicKey] -> m [PrioritizationFee]
+getRecentPrioritizationFees = do
+  remote "getRecentPrioritizationFees"
+{-# INLINE getRecentPrioritizationFees #-}
+
+------------------------------------------------------------------------------------------------
+
+-- * getSignaturesForAddress
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns signatures for confirmed transactions that include the given address in their 'accountKeys' list.
+-- Returns signatures backwards in time from the provided signature or most recent confirmed block
+getSignaturesForAddress :: (JsonRpc m) => SolanaPublicKey -> m [TransactionSignatureInformation]
+getSignaturesForAddress = do
+  remote "getSignaturesForAddress"
+{-# INLINE getSignaturesForAddress #-}
 
 ------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------

@@ -7,6 +7,7 @@ import Core.Account (Lamport)
 import Core.Block (BlockHash)
 import Core.Crypto
 import Data.Aeson.Types
+import Data.Int (Int64)
 import Data.Map
 import Data.Text
 import Data.Word
@@ -20,11 +21,16 @@ import GHC.Generics
 
 data Context = Context
   { apiVersion :: Text,
-    slot :: Slot
+    contextSlot :: Slot
   }
   deriving (Show, Generic)
 
-instance FromJSON Context
+instance FromJSON Context where
+  parseJSON :: Value -> Parser Context
+  parseJSON = withObject "Context" $ \v ->
+    Context
+      <$> v .: "apiVersion"
+      <*> v .: "slot"
 
 data RPCResponse a = RPCResponse
   { context :: Context,
@@ -293,3 +299,71 @@ data LatestBlockHash
 -- | 'Map' where the keys are validator identities and values are arrays of leader slot indices
 -- relative to the first slot in the requested epoch.
 type LeaderSchedule = Map SolanaPublicKey [Word64]
+
+------------------------------------------------------------------------------------------------
+
+-- * PerformanceSample
+
+------------------------------------------------------------------------------------------------
+
+data PerformanceSample = PerformanceSample
+  { -- | Slot in which sample was taken at
+    slot :: Slot,
+    -- | Number of transactions processed during the sample period
+    numTransactions :: Word64,
+    -- | Number of slots completed during the sample period
+    numSlots :: Word64,
+    -- | Number of seconds in a sample window
+    samplePeriodSecs :: Word16,
+    -- | Number of non-vote transactions processed during the sample period
+    numNonVoteTransactions :: Word64
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+
+------------------------------------------------------------------------------------------------
+
+-- * PrioritizationFee
+
+------------------------------------------------------------------------------------------------
+
+data PrioritizationFee = PrioritizationFee
+  { -- | Slot in which the fee was observed
+    pfSlot :: Slot,
+    -- | The per-compute-unit fee paid by at least one successfully landed transaction, specified in increments of micro-lamports (0.000001 lamports)
+    prioritizationFee :: Word64
+  }
+  deriving (Generic, Show, Eq)
+
+instance FromJSON PrioritizationFee where
+  parseJSON :: Value -> Parser PrioritizationFee
+  parseJSON = withObject "PrioritizationFee" $ \v ->
+    PrioritizationFee
+      <$> v .: "slot"
+      <*> v .: "prioritizationFee"
+
+------------------------------------------------------------------------------------------------
+
+-- *  TransactionSignatureInformation
+
+------------------------------------------------------------------------------------------------
+
+data TransactionSignatureInformation = TransactionSignatureInformation
+  { signature :: SolanaSignature,
+    slotTxSig :: Slot,
+    err :: Maybe String,
+    memo :: Maybe String,
+    blockTime :: Maybe Int64,
+    confirmationStatus :: Maybe String
+  }
+  deriving (Generic, Show, Eq)
+
+instance FromJSON TransactionSignatureInformation where
+  parseJSON :: Value -> Parser TransactionSignatureInformation
+  parseJSON = withObject "TransactionSignatureInformation" $ \v ->
+    TransactionSignatureInformation
+      <$> v .: "signature"
+      <*> v .: "slot"
+      <*> v .: "err"
+      <*> v .: "memo"
+      <*> v .: "blockTime"
+      <*> v .: "confirmationStatus"

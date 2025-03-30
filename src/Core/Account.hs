@@ -11,7 +11,6 @@ import Data.Aeson.Types
 import Data.ByteString qualified as S
 import Data.Maybe (fromJust)
 import Data.Text qualified as T
-import Data.Text.Encoding (encodeUtf8)
 import Data.Vector qualified as V
 import Data.Word (Word64)
 import GHC.Base (Alternative (..))
@@ -40,6 +39,24 @@ instance Show Lamport where
   show (Lamport n) =
     let (sol :: Double) = fromIntegral n / fromIntegral lamportsPerSol
      in printf "%.9f SOL ◎" sol
+
+------------------------------------------------------------------------------------------------
+
+-- ** Account
+
+------------------------------------------------------------------------------------------------
+
+data Account = Account
+  { pubkey :: SolanaPublicKey,
+    account :: AccountInfo
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+------------------------------------------------------------------------------------------------
+
+-- ** Account Info
+
+------------------------------------------------------------------------------------------------
 
 {- Solana Account structure.
     Accounts have a max size of 10MiB and every account on Solana has the same base Account type.
@@ -74,7 +91,7 @@ instance FromJSON AccountInfo where
 
 ------------------------------------------------------------------------------------------------
 
--- ** Instruction Data
+-- ** Account Data
 
 ------------------------------------------------------------------------------------------------
 

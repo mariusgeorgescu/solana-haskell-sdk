@@ -79,7 +79,7 @@ main = do
   putStrLn $ "Private key :" <> show myPrivKey1
   putStrLn $ "Public key :" <> show myPubKey1
 
-  runWeb3' localHttpProvider $ do
+  void $ runWeb3' localHttpProvider $ do
     -- liftIO $ putStrLn "Get Account Info"
     -- maybeAccountInfo <- getAccountInfo myPubKey1
     -- liftIO $ print maybeAccountInfo
@@ -178,8 +178,28 @@ main = do
     -- mb <- getMinimumBalanceForRentExemption 50
     -- liftIO $ print mb
 
-    liftIO $ putStrLn "Get Multiple Accounts"
-    accs <- getMultipleAccounts [myPubKey1, myPubKey2]
-    liftIO $ print accs
+    -- liftIO $ putStrLn "Get Multiple Accounts"
+    -- accs <- getMultipleAccounts [myPubKey1, myPubKey2]
+    -- liftIO $ print accs
 
-  return ()
+    -- liftIO $ putStrLn "Get Program Accounts"
+    -- paccs <- getProgramAccounts (unsafeSolanaPublicKey "11111111111111111111111111111111")
+    -- liftIO $ print paccs
+
+    -- liftIO $ putStrLn "Get Recent Performance Samples"
+    -- perfsamples <- getRecentPerformanceSamples Nothing
+    -- liftIO $ print perfsamples
+
+    -- liftIO $ putStrLn "Get Prioritization Fee"
+    -- priofee1 <- getRecentPrioritizationFees Nothing
+    -- liftIO $ print priofee1
+
+    -- liftIO $ putStrLn "Get Prioritization Fee"
+    -- priofee2 <- getRecentPrioritizationFees (Just [])
+    -- liftIO $ print priofee2
+
+    -- liftIO $ putStrLn "Get Signatures For Address"
+    -- sigs <- getSignaturesForAddress (unsafeSolanaPublicKey "Vote111111111111111111111111111111111111111")
+    -- liftIO $ print sigs
+
+    return ()

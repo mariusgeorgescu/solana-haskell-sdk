@@ -15,6 +15,7 @@ module Core.Crypto
     unsafeSolanaPublicKeyRaw,
     unsafeSolanaPrivateKey,
     unsafeSolanaPrivateKeyRaw,
+    unsafeSigFromString,
     getSolanaPublicKeyRaw,
     getSolanaPrivateKeyRaw,
     getSolanaSignatureRaw,
@@ -76,6 +77,14 @@ instance Binary SolanaSignature where
   get :: Get SolanaSignature
   get = SolanaSignature . Ed25519.Signature <$> getByteString 32
 
+instance ToJSON SolanaSignature where
+  toJSON :: SolanaSignature -> Value
+  toJSON pk = toJSON (show pk)
+
+instance FromJSON SolanaSignature where
+  parseJSON :: Value -> Parser SolanaSignature
+  parseJSON = withText "SolanaSignature" $ return . unsafeSigFromString . Text.unpack
+
 ------------------------------------------------------------------------------------------------
 
 -- *** SolanaPublicKey
@@ -132,9 +141,18 @@ instance Show SolanaPrivateKey where
 
 ------------------------------------------------------------------------------------------------
 
+unsafeSigFromString :: String -> SolanaSignature
+unsafeSigFromString str =
+  let bs = fromJust . fromBase58String $ str
+   in if S.length bs == 64
+        then
+          (SolanaSignature . Ed25519.Signature) bs
+        else
+          error "Invalid string length for sig"
+
 unsafeKeyFromString :: forall f. (S.ByteString -> f) -> String -> f
 unsafeKeyFromString cstr str =
-  let bs = fromJust . decodeBase58 bitcoinAlphabet . fromString $ str
+  let bs = fromJust . fromBase58String $ str
    in if S.length bs == 32
         then
           cstr bs
