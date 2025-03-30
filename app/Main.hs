@@ -1,11 +1,15 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
 import Control.Concurrent (threadDelay)
 import Control.Exception (throw)
 import Control.Monad.Except
 import Control.Monad.IO.Class (MonadIO (..))
+import Core.Block (unsafeBlockHash)
 import Core.Crypto
-import Core.Message (newTransactionIntent)
+import Core.Message (newMessage, newMessageToBase64String, newTransactionIntent)
+import Data.Either (fromRight)
 import NativePrograms.SystemProgram qualified as SystemProgram
 import Network.Web3.Provider
 import RPC.HTTP
@@ -43,6 +47,31 @@ main = do
     bp <- getBlockProduction
     liftIO $ print bp
 
+    liftIO $ putStrLn "Get Blocks"
+    lb <- getBlocks 370656000 (Just 370656010)
+    liftIO $ print lb
+    liftIO $ putStrLn "Get Blocks With Limit"
+    lbl <- getBlocksWithLimit 370656000 11
+    liftIO $ print lbl
+    liftIO $ putStrLn "Get Blocks POSIX Time"
+    bt <- getBlockTime 370656000
+    liftIO $ print bt
+    liftIO $ putStrLn "Get Cluster Nodes"
+    cn <- getClusterNodes
+    liftIO $ print cn
+    liftIO $ putStrLn "Get Epoch Info"
+    ei <- getEpochInfo
+    liftIO $ print ei
+    liftIO $ putStrLn "Get Epoch Schedule"
+    es <- getEpochSchedule
+    liftIO $ print es
+    liftIO $ putStrLn "Get Fee For Message"
+    fee <- getFeeForMessage "AQABAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQAA"
+    liftIO $ print fee
+    let sampleBlockHash = unsafeBlockHash "J2Ce6VFKAffo4UxaZHdLexEYgHaDXdMbPdTinmU74b5N"
+    let sampleMessage = fromRight mempty $ newMessageToBase64String sampleBlockHash [SystemProgram.transfer myPubKey1 myPubKey2 1_000_000_000]
+    fee2 <- getFeeForMessage sampleMessage
+    liftIO $ print fee2
     return ()
 
   -- -- --

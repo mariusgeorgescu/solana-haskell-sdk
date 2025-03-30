@@ -73,6 +73,7 @@ library
     NativePrograms.SystemProgram
     RPC.HTTP
     RPC.Providers
+    RPC.Types
 
   -- Modules included in this library but not exported.
   -- other-modules:

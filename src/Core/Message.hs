@@ -3,6 +3,8 @@
 module Core.Message
   ( newTransactionIntent,
     Message,
+    newMessage,
+    newMessageToBase64String,
   )
 where
 
@@ -55,9 +57,13 @@ data Message = Message
   deriving (Show, Eq, Generic)
 
 newMessage :: BlockHash -> [Instruction] -> Either CompileException S.ByteString
-newMessage bh is = do
-  compiled <- compileMessage (mkNewMessage bh is)
-  return $ S.toStrict . Data.Binary.encode $ compiled
+newMessage bh is = compileMessageToBinary (mkNewMessage bh is)
+
+newMessageToBase64String :: BlockHash -> [Instruction] -> Either CompileException String
+newMessageToBase64String = fmap (fmap (tail . init . show . encodeBase64')) . newMessage
+
+compileMessageToBinary :: Message -> Either CompileException S.ByteString
+compileMessageToBinary = fmap (S.toStrict . Data.Binary.encode) . compileMessage
 
 mkNewMessage :: BlockHash -> [Instruction] -> Message
 mkNewMessage bh = updateMessageWithInstructions (Message mempty mempty bh mempty)
