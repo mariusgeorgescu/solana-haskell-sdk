@@ -20,6 +20,8 @@ module Core.Crypto
     getSolanaSignatureRaw,
     toBase58String,
     toBase64String,
+    fromBase64String,
+    fromBase58String,
   )
 where
 
@@ -32,7 +34,7 @@ import Data.Binary.Get (getByteString)
 import Data.Binary.Put (putByteString)
 import Data.ByteString qualified as S
 import Data.ByteString.Base58
-import Data.ByteString.Base64 (encodeBase64')
+import Data.ByteString.Base64 (decodeBase64Lenient, encodeBase64')
 import Data.Maybe (fromJust)
 import Data.String (fromString)
 import Data.Text qualified as Text
@@ -43,6 +45,17 @@ toBase58String = tail . init . show . encodeBase58 bitcoinAlphabet
 
 toBase64String :: S.ByteString -> String
 toBase64String = tail . init . show . encodeBase64'
+
+fromBase58String :: String -> Maybe S.ByteString
+fromBase58String = decodeBase58 bitcoinAlphabet . fromString
+
+fromBase64String :: String -> S.ByteString
+fromBase64String = decodeBase64Lenient . fromString
+
+--- >>> fromBase64String $ toBase64String "Sun"
+--- >>> fromBase58String $ toBase58String "Sun"
+-- "Sun"
+-- Just "Sun"
 
 ------------------------------------------------------------------------------------------------
 

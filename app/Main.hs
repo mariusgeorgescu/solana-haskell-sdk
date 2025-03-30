@@ -10,11 +10,59 @@ import Core.Block (unsafeBlockHash)
 import Core.Crypto
 import Core.Message (newMessage, newMessageToBase64String, newTransactionIntent)
 import Data.Either (fromRight)
+import Data.Functor (void)
 import NativePrograms.SystemProgram qualified as SystemProgram
 import Network.Web3.Provider
 import RPC.HTTP
 import RPC.Providers
 import RPC.Types (RPCResponse (..))
+
+testTx :: IO ()
+testTx = void $ runWeb3' localHttpProvider $ do
+  (myPubKey1, myPrivKey1) <- liftIO createSolanaKeyPair
+  (myPubKey2, myPrivKey2) <- liftIO createSolanaKeyPair
+
+  liftIO $ putStrLn ("Requesting airdrop ..." :: String)
+  r <- requestAirdrop myPubKey1 10_000_000_000
+  liftIO $ putStrLn r
+  liftIO $ threadDelay (15 * 1000000)
+  liftIO $ putStrLn ("Checking balance ..." <> show myPubKey1)
+  bal <- getBalance myPubKey1
+  liftIO $ print bal
+  --
+  liftIO $ putStrLn ("Requesting airdrop ..." :: String)
+  r <- requestAirdrop myPubKey2 1_000_000_000
+  liftIO $ print r
+  liftIO $ threadDelay (15 * 1000000)
+  liftIO $ putStrLn ("Checking balance ..." <> show myPubKey2)
+  bal <- getBalance myPubKey2
+  liftIO $ print bal
+
+  --
+  liftIO $ putStrLn ("Getting latest blockhash ..." :: String)
+  bh <- getTheLatestBlockhash
+  liftIO $ print bh
+
+  let newTx =
+        newTransactionIntent
+          [myPrivKey1]
+          [ SystemProgram.transfer myPubKey1 myPubKey2 1_000_000_000
+          ]
+
+  signedTx <- liftIO $ either throw return (newTx bh)
+  liftIO $ putStrLn ("Signed tx: " <> signedTx)
+
+  liftIO $ putStrLn "Submiting tx"
+  tId <- sendTransaction signedTx
+  liftIO $ putStrLn ("Transaction id: " <> tId)
+
+  liftIO $ threadDelay (25 * 1000000)
+  liftIO $ putStrLn ("Checking balance ..." <> show myPubKey1)
+  bal <- getBalance myPubKey1
+  liftIO $ print bal
+  liftIO $ putStrLn ("Checking balance ..." <> show myPubKey2)
+  bal <- getBalance myPubKey2
+  liftIO $ print bal
 
 main :: IO ()
 main = do
@@ -31,7 +79,7 @@ main = do
   putStrLn $ "Private key :" <> show myPrivKey1
   putStrLn $ "Public key :" <> show myPubKey1
 
-  ret <- runWeb3' devnetHttpProvider $ do
+  runWeb3' localHttpProvider $ do
     -- liftIO $ putStrLn "Get Account Info"
     -- maybeAccountInfo <- getAccountInfo myPubKey1
     -- liftIO $ print maybeAccountInfo
@@ -110,68 +158,28 @@ main = do
     -- laccs <- getLargestAccounts
     -- liftIO $ print laccs
 
-    liftIO $ putStrLn "Get Latest Blockhash"
-    lbh <- geTheLatestBlockhash
-    liftIO $ print lbh
+    -- liftIO $ putStrLn "Get Latest Blockhash"
+    -- lbh <- geTheLatestBlockhash
+    -- liftIO $ print lbh
 
     -- liftIO $ putStrLn "Get Leader Schedule"
     -- ldsc <- getLeaderSchedule Nothing
     -- liftIO $ print ldsc
 
-    liftIO $ putStrLn "Get Max Retransmit Slot"
-    mrs <- getMaxRetransmitSlot
-    liftIO $ print mrs
+    -- liftIO $ putStrLn "Get Max Retransmit Slot"
+    -- mrs <- getMaxRetransmitSlot
+    -- liftIO $ print mrs
 
-    liftIO $ putStrLn "Get Max Shred Insert Slot"
-    mis <- getMaxShredInsertSlot
-    liftIO $ print mis
+    -- liftIO $ putStrLn "Get Max Shred Insert Slot"
+    -- mis <- getMaxShredInsertSlot
+    -- liftIO $ print mis
 
-    liftIO $ putStrLn "Get Minimum Balance For Rent Exemption"
-    mb <- getMinimumBalanceForRentExemption 50
-    liftIO $ print mb
+    -- liftIO $ putStrLn "Get Minimum Balance For Rent Exemption"
+    -- mb <- getMinimumBalanceForRentExemption 50
+    -- liftIO $ print mb
 
-    return ()
+    liftIO $ putStrLn "Get Multiple Accounts"
+    accs <- getMultipleAccounts [myPubKey1, myPubKey2]
+    liftIO $ print accs
 
-  -- --
-  -- liftIO $ putStrLn ("Requesting airdrop ..." :: String)
-  -- r <- requestAirdrop myPubKey1 10_000_000_000
-  -- liftIO $ putStrLn r
-  -- liftIO $ threadDelay (15 * 1000000)
-  -- liftIO $ putStrLn ("Checking balance ..." <> show myPubKey1)
-  -- bal <- getBalance myPubKey1
-  -- liftIO $ print bal
-  -- --
-  -- liftIO $ putStrLn ("Requesting airdrop ..." :: String)
-  -- r <- requestAirdrop myPubKey2 1_000_000_000
-  -- liftIO $ print r
-  -- liftIO $ threadDelay (15 * 1000000)
-  -- liftIO $ putStrLn ("Checking balance ..." <> show myPubKey2)
-  -- bal <- getBalance myPubKey2
-  -- liftIO $ print bal
-
-  -- --
-  -- liftIO $ putStrLn ("Getting latest blockhash ..." :: String)
-  -- bh <- getLatestBlockhash
-  -- liftIO $ print bh
-
-  -- let newTx =
-  --       newTransactionIntent
-  --         [myPrivKey1]
-  --         [ SystemProgram.transfer myPubKey1 myPubKey2 1_000_000_000
-  --         ]
-
-  -- signedTx <- liftIO $ either throw return (newTx (value bh))
-  -- liftIO $ putStrLn ("Signed tx: " <> signedTx)
-
-  -- liftIO $ putStrLn "Submiting tx"
-  -- tId <- sendTransaction signedTx
-  -- liftIO $ putStrLn ("Transaction id: " <> tId)
-
-  -- liftIO $ threadDelay (25 * 1000000)
-  -- liftIO $ putStrLn ("Checking balance ..." <> show myPubKey1)
-  -- bal <- getBalance myPubKey1
-  -- liftIO $ print bal
-  -- liftIO $ putStrLn ("Checking balance ..." <> show myPubKey2)
-  -- bal <- getBalance myPubKey2
-  -- liftIO $ print bal
   return ()

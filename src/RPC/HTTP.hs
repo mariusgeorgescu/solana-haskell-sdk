@@ -356,9 +356,9 @@ getLatestBlockhash = value <$> getLatestBlockhash'
 {-# INLINE getLatestBlockhash #-}
 
 -- | Get the 'BlockHash' of the latest block.
-geTheLatestBlockhash :: (JsonRpc m) => m BlockHash
-geTheLatestBlockhash = blockhash <$> getLatestBlockhash
-{-# INLINE geTheLatestBlockhash #-}
+getTheLatestBlockhash :: (JsonRpc m) => m BlockHash
+getTheLatestBlockhash = blockhash <$> getLatestBlockhash
+{-# INLINE getTheLatestBlockhash #-}
 
 ------------------------------------------------------------------------------------------------
 
@@ -404,13 +404,34 @@ getMaxShredInsertSlot = do
 
 ------------------------------------------------------------------------------------------------
 
--- | Get the max slot seen from after shred insert.
+-- | Get the minimum balance required to make account rent exempt.
+--  Receives the Account's data length and returns the balance balance in 'Lamport'.
 getMinimumBalanceForRentExemption :: (JsonRpc m) => Int -> m Lamport
 getMinimumBalanceForRentExemption = do
   remote "getMinimumBalanceForRentExemption"
 {-# INLINE getMinimumBalanceForRentExemption #-}
 
 ------------------------------------------------------------------------------------------------
+
+-- * getMultipleAccounts
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns all information associated with list of accounts based on their 'SolanaPubkey'
+-- Returns 'RpcResponse [(Maybe AccountInfo)]' with value field set to '[(Maybe AccountInfo)]'
+-- If the account of a given 'SolanaPubkey' doesn't exist, the coresponding element in the list is 'Nothing'.
+getMultipleAccounts' :: (JsonRpc m) => [SolanaPublicKey] -> m (RPCResponse [Maybe AccountInfo])
+getMultipleAccounts' = do
+  remote "getMultipleAccounts"
+{-# INLINE getMultipleAccounts' #-}
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns all information associated with list of accounts based on their 'SolanaPubkey'
+-- If the account of a given 'SolanaPubkey' doesn't exist, the coresponding element in the list is 'Nothing'.
+getMultipleAccounts :: (JsonRpc m) => [SolanaPublicKey] -> m [Maybe AccountInfo]
+getMultipleAccounts = fmap value . getMultipleAccounts'
+{-# INLINE getMultipleAccounts #-}
 
 ------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------

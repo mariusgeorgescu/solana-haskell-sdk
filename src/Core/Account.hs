@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module Core.Account where
 
@@ -8,8 +9,12 @@ import Constants
 import Core.Crypto
 import Data.Aeson.Types
 import Data.ByteString qualified as S
+import Data.Maybe (fromJust)
+import Data.Text qualified as T
 import Data.Text.Encoding (encodeUtf8)
+import Data.Vector qualified as V
 import Data.Word (Word64)
+import GHC.Base (Alternative (..))
 import GHC.Generics (Generic)
 import Text.Printf (printf)
 
@@ -33,11 +38,8 @@ instance FromJSON Lamport where
 instance Show Lamport where
   show :: Lamport -> String
   show (Lamport n) =
-    let n'int = fromIntegral n
-        (sol :: Double) = fromIntegral n / fromIntegral lamportsPerSol
-     in if n'int > lamportsPerSol
-          then printf "%.9f SOL" sol
-          else printf "%d lamports" n
+    let (sol :: Double) = fromIntegral n / fromIntegral lamportsPerSol
+     in printf "%.9f SOL ◎" sol
 
 {- Solana Account structure.
     Accounts have a max size of 10MiB and every account on Solana has the same base Account type.
@@ -77,14 +79,17 @@ instance FromJSON AccountInfo where
 ------------------------------------------------------------------------------------------------
 
 -- | A byte array that stores arbitrary data for an account.
-newtype AccountData = AccountData
-  { accData :: S.ByteString
-  }
+data AccountData
+  = AccountDataBinary
+      { accData :: S.ByteString
+      }
+  | AccountDataJSON {accDataObj :: String}
   deriving (Eq, Generic)
 
 instance Show AccountData where
   show :: AccountData -> String
-  show (AccountData bs) = toBase58String bs
+  show (AccountDataBinary bs) = toBase58String bs
+  show (AccountDataJSON o) = show o
 
 instance ToJSON AccountData where
   toJSON :: AccountData -> Value
@@ -92,5 +97,27 @@ instance ToJSON AccountData where
 
 instance FromJSON AccountData where
   parseJSON :: Value -> Parser AccountData
-  parseJSON =
-    withText "AccountData" (return . AccountData . encodeUtf8)
+  parseJSON v =
+    let base64StringParser =
+          withText
+            "AccountDataText"
+            (return . AccountDataBinary . fromBase64String . T.unpack)
+
+        base58StringParser =
+          withText
+            "AccountDataText"
+            (return . AccountDataBinary . fromJust . fromBase58String . T.unpack)
+
+        encodedParser =
+          withArray
+            "AccountDataArray"
+            ( \arr -> do
+                case V.last arr of
+                  "base58" -> base58StringParser $ V.head arr
+                  "base64" -> base64StringParser $ V.head arr
+                  "json" -> withText "AccountDataJSON" (return . AccountDataJSON . T.unpack) $ V.head arr
+                  "jsonParsed" -> withText "AccountDataJSON" (return . AccountDataJSON . T.unpack) $ V.head arr
+                  _ -> error "unsupported encoding"
+            )
+            v
+     in base64StringParser v <|> encodedParser
