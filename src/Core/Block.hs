@@ -43,3 +43,5 @@ instance FromJSON BlockHash where
 
 unsafeBlockHash :: String -> BlockHash
 unsafeBlockHash = BlockHash . fromJust . fromBase58String
+
+type BlockHeight = Word64

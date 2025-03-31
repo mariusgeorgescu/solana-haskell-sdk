@@ -71,9 +71,13 @@ library
     Core.Message
     Core.Transaction
     NativePrograms.SystemProgram
-    RPC.HTTP
+    RPC.HTTP.Account
+    RPC.HTTP.Block
+    RPC.HTTP.Chain
+    RPC.HTTP.Token
+    RPC.HTTP.Transaction
+    RPC.HTTP.Types
     RPC.Providers
-    RPC.Types
 
   -- Modules included in this library but not exported.
   -- other-modules:
