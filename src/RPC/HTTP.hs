@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -14,15 +13,10 @@
 -- Solana JSON-RPC API methods
 module RPC.HTTP where
 
-import Control.Exception (throw)
 import Core.Account (Account, AccountInfo, Lamport)
 import Core.Block
-import Core.Crypto (SolanaPrivateKey, SolanaPublicKey, SolanaSignature)
-import Core.Instruction
-import Core.Message (newMessageToBase64String)
+import Core.Crypto (SolanaPublicKey, SolanaSignature)
 import Data.Aeson
-import Data.Aeson.Types (Parser)
-import GHC.Generics
 import Network.JsonRpc.TinyClient (JsonRpc (..))
 import RPC.Types
 
@@ -780,8 +774,9 @@ sendTransaction' = do
 -- * simulateTransaction
 
 ------------------------------------------------------------------------------------------------
---
---
--- TODO
---
---
+simulateTransaction' :: (JsonRpc m) => String -> ConfigurationObject -> m Object
+simulateTransaction' = do
+  remote "simulateTransaction"
+
+simulateTransaction :: (JsonRpc m) => String -> m Object
+simulateTransaction tx = simulateTransaction' tx cfgJustEncodingBase64

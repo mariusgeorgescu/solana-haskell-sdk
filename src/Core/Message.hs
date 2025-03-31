@@ -12,7 +12,6 @@ module Core.Message
   )
 where
 
-import Control.Exception
 import Core.Block (BlockHash)
 import Core.Compact
 import Core.Crypto (SolanaPrivateKey, SolanaPublicKey, dsign, toBase64String)
@@ -21,10 +20,7 @@ import Data.Aeson
 import Data.Aeson.Types (Parser)
 import Data.Binary
 import Data.ByteString qualified as S
-import Data.ByteString.Base64 (encodeBase64')
-import Data.Either.Combinators (maybeToRight)
 import Data.Foldable
-import Data.List (elemIndex)
 import GHC.Generics (Generic)
 
 ------------------------------------------------------------------------------------------------

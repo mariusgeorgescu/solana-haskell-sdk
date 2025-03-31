@@ -18,15 +18,14 @@ where
 import Control.Exception
 import Core.Compact
 import Core.Crypto (SolanaPublicKey, fromBase58String, toBase58String, toBase64String)
-import Data.Aeson (ToJSON)
 import Data.Aeson.Types
 import Data.Binary
 import Data.Binary qualified as Binary
 import Data.ByteString qualified as S
 import Data.Either.Combinators
 import Data.List (elemIndex)
-import GHC.Generics (Generic)
 import Data.Maybe (fromJust)
+import GHC.Generics (Generic)
 
 ------------------------------------------------------------------------------------------------
 

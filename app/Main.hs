@@ -52,6 +52,10 @@ testTx = void $ runWeb3' localHttpProvider $ do
   signedTx <- liftIO $ either throw return (newTx bh)
   liftIO $ putStrLn ("Signed tx: " <> signedTx)
 
+  liftIO $ putStrLn "Simulate tx"
+  result <- simulateTransaction signedTx
+  liftIO $ print result
+
   liftIO $ putStrLn "Submiting tx"
   tId <- sendTransaction signedTx
   let txId = unsafeSigFromString tId
@@ -72,12 +76,15 @@ main = do
   let myPubKey1 = toSolanaPublicKey myPrivKey1
   let myPubKey2 = unsafeSolanaPublicKey "A988FuUtUVk8jMUuVc1ccaoTA3VS9CB4dkEf9EUAUqV4"
 
-  void $ runWeb3' localHttpProvider $ do
-    currentSlot <- getSlot
-    currentBlock <- getBlock currentSlot
-    liftIO $ print currentBlock
-    vac <- getVoteAccounts
-    liftIO $ print vac
+  testTx
+
+-- void $ runWeb3' localHttpProvider $ do
+
+-- currentSlot <- getSlot
+-- currentBlock <- getBlock currentSlot
+-- liftIO $ print currentBlock
+-- vac <- getVoteAccounts
+-- liftIO $ print vac
 
 -- balance1 <- getBalance myPubKey1
 -- balance2 <- getBalance myPubKey2

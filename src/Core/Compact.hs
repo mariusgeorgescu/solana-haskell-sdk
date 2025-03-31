@@ -25,8 +25,6 @@ module Core.Compact
   )
 where
 
-import Data.Aeson
-import Data.Aeson.Types (Parser)
 import Data.Binary
 import Data.Binary.Get
 import Data.Binary.Put
