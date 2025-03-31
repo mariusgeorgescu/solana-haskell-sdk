@@ -254,14 +254,14 @@ main = do
     -- v <- getVersion
     -- liftIO $ print v
 
-    liftIO $ putStrLn "Check Blockhash"
-    bh <- getTheLatestBlockhash
-    liftIO $ print (toJSON bh)
-    ibhv <- isBlockhashValid bh
-    liftIO $ print ibhv
+    -- liftIO $ putStrLn "Check Blockhash"
+    -- bh <- getTheLatestBlockhash
+    -- liftIO $ print (toJSON bh)
+    -- ibhv <- isBlockhashValid bh
+    -- liftIO $ print ibhv
 
-    liftIO $ putStrLn "Minimum ledger slot"
-    mls <- minimumLedgerSlot
-    liftIO $ print mls
+    -- liftIO $ putStrLn "Minimum ledger slot"
+    -- mls <- minimumLedgerSlot
+    -- liftIO $ print mls
 
     return ()

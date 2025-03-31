@@ -735,6 +735,12 @@ requestAirdrop :: (JsonRpc m) => SolanaPublicKey -> Lamport -> m String
 requestAirdrop = do
   remote "requestAirdrop"
 
+------------------------------------------------------------------------------------------------
+
+-- * sendTransaction
+
+------------------------------------------------------------------------------------------------
+
 data RpcSendTransactionConfig = RpcSendTransactionConfig
   { encoding :: String,
     skipPreflight :: Bool,
@@ -760,3 +766,14 @@ sendTransaction tx = sendTransaction' tx defaultRpcSendTransactionConfig
 sendTransaction' :: (JsonRpc m) => String -> RpcSendTransactionConfig -> m String
 sendTransaction' = do
   remote "sendTransaction"
+
+------------------------------------------------------------------------------------------------
+
+-- * simulateTransaction
+
+------------------------------------------------------------------------------------------------
+--
+--
+-- TODO
+--
+--
