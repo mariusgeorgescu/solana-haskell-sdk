@@ -408,3 +408,43 @@ newtype SearchTransactionHistory = SearchTransactionHistory
   {searchTransactionHistory :: Bool}
   deriving (Generic, Show)
   deriving anyclass (FromJSON, ToJSON)
+
+------------------------------------------------------------------------------------------------
+
+-- *  SolanaSupply
+
+------------------------------------------------------------------------------------------------
+
+-- | Contains information about the solana token supply.
+data SolanaSupply = SolanaSupply
+  { -- | Total supply in lamports
+    total :: Lamport,
+    -- | Circulating supply in lamports.
+    circulating :: Lamport,
+    -- | Non-circulating supply in lamports.
+    nonCirculating :: Lamport,
+    -- | An array of account addresses of non-circulating accounts.
+    nonCirculatingAccounts :: [SolanaPublicKey]
+  }
+  deriving (Generic, Show, Eq)
+  deriving anyclass (FromJSON, ToJSON)
+
+------------------------------------------------------------------------------------------------
+
+-- *  TokenAccountBalance
+
+------------------------------------------------------------------------------------------------
+
+-- | Contains information about the solana token supply.
+data TokenAccountBalance = TokenAccountBalance
+  { -- | The raw balance without decimals, a string representation of u64
+    amount :: String,
+    -- | Number of base 10 digits to the right of the decimal place.
+    decimals :: Word8,
+    -- | The balance, using mint-prescribed decimals DEPRECATED.
+    uiAmount :: Maybe Double,
+    -- | The balance as a string, using mint-prescribed decimals.
+    uiAmountString :: String
+  }
+  deriving (Generic, Show, Eq)
+  deriving anyclass (FromJSON, ToJSON)

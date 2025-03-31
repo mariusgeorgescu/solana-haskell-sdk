@@ -81,7 +81,7 @@ main = do
   putStrLn $ "Private key :" <> show myPrivKey1
   putStrLn $ "Public key :" <> show myPubKey1
 
-  void $ runWeb3' localHttpProvider $ do
+  void $ runWeb3' devnetHttpProvider $ do
     -- liftIO $ putStrLn "Get Account Info"
     -- maybeAccountInfo <- getAccountInfo myPubKey1
     -- liftIO $ print maybeAccountInfo
@@ -204,13 +204,37 @@ main = do
     -- sigs <- getSignaturesForAddress (unsafeSolanaPublicKey "Vote111111111111111111111111111111111111111")
     -- liftIO $ print sigs
 
-    let txId1 = unsafeSigFromString "2bvMvz7c9qvYGoCXyRErTyC2BLGGNd3ayfPiP2j8aKwCUurnV2KXJ4WAt6geg7a9MZAQkAEHxb4kAbPKLCFgsXoc"
-    let txId2 = unsafeSigFromString "3pywXYUaZgFbgs3yFKK6VZ8VSXMzwrDZzgnbsqcxMwetQRGvVvwDxARm2y8DUD7vCgwjPh3CmJCWtz65oiRbWANQ"
-    liftIO $ print txId1
-    liftIO $ print txId2
+    -- let txId1 = unsafeSigFromString "2bvMvz7c9qvYGoCXyRErTyC2BLGGNd3ayfPiP2j8aKwCUurnV2KXJ4WAt6geg7a9MZAQkAEHxb4kAbPKLCFgsXoc"
+    -- let txId2 = unsafeSigFromString "3pywXYUaZgFbgs3yFKK6VZ8VSXMzwrDZzgnbsqcxMwetQRGvVvwDxARm2y8DUD7vCgwjPh3CmJCWtz65oiRbWANQ"
+    -- liftIO $ print txId1
+    -- liftIO $ print txId2
 
-    liftIO $ putStrLn "Get Signature Statuses"
-    sigsstats <- getSignatureStatuses [txId1, txId2]
-    liftIO $ print sigsstats
+    -- liftIO $ putStrLn "Get Signature Statuses"
+    -- sigsstats <- getSignatureStatuses [txId1, txId2]
+    -- liftIO $ print sigsstats
+
+    -- liftIO $ putStrLn "Get Slot"
+    -- slot <- getSlot
+    -- liftIO $ print slot
+
+    -- liftIO $ putStrLn "Get Slot Leader"
+    -- slotLeader <- getSlotLeader
+    -- liftIO $ print slotLeader
+
+    -- liftIO $ putStrLn "Get Slot Leaders"
+    -- slotLeaders <- getSlotLeaders 165786 5001
+    -- liftIO $ print slotLeaders
+
+    -- liftIO $ putStrLn "Get Stake Minimum Delegation"
+    -- mindelegamnt <- getStakeMinimumDelegation
+    -- liftIO $ print mindelegamnt
+
+    -- liftIO $ putStrLn "Get Supply"
+    -- supply <- getSupply
+    -- liftIO $ print supply
+
+    liftIO $ putStrLn "Get Token Account Balance"
+    tab <- getTokenAccountBalance (unsafeSolanaPublicKey "AQoKYV7tYpTrFZN6P5oUufbQKAUr9mNYGe1TTJC9wajM")
+    liftIO $ print tab
 
     return ()

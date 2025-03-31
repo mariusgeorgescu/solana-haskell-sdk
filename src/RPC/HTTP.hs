@@ -519,6 +519,82 @@ getSignatureStatuses sigs = value <$> getSignatureStatuses' sigs (SearchTransact
 {-# INLINE getSignatureStatuses #-}
 
 ------------------------------------------------------------------------------------------------
+
+-- * getSlot
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns the slot that has reached the given or default commitment level
+getSlot :: (JsonRpc m) => m Slot
+getSlot = do
+  remote "getSlot"
+
+------------------------------------------------------------------------------------------------
+
+-- * getSlotLeader
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns the current slot leader
+getSlotLeader :: (JsonRpc m) => m SolanaPublicKey
+getSlotLeader = do
+  remote "getSlotLeader"
+
+------------------------------------------------------------------------------------------------
+
+-- * getSlotLeaders
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns the slot leaders for a given slot range
+-- Receives the start 'Slot' and a limit as an 'Int' (between 1 and 5,000).
+getSlotLeaders :: (JsonRpc m) => Slot -> Int -> m [SolanaPublicKey]
+getSlotLeaders = do
+  remote "getSlotLeaders"
+
+------------------------------------------------------------------------------------------------
+
+-- * getStakeMinimumDelegation
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns the stake minimum delegation, in lamports.
+-- Returns @RpcResponse Lamport@ with value field set to @Lamport@.
+getStakeMinimumDelegation' :: (JsonRpc m) => m (RPCResponse Lamport)
+getStakeMinimumDelegation' = do
+  remote "getStakeMinimumDelegation"
+
+-- | Returns the stake minimum delegation, in lamports.
+getStakeMinimumDelegation :: (JsonRpc m) => m Lamport
+getStakeMinimumDelegation = value <$> getStakeMinimumDelegation'
+
+------------------------------------------------------------------------------------------------
+
+-- * getStakeMinimgetSupplyumDelegation
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns information about the current supply.
+-- Returns @RpcResponse SolanaSupply@ with value field set to @SolanaSupply@.
+getSupply' :: (JsonRpc m) => m (RPCResponse SolanaSupply)
+getSupply' = do
+  remote "getSupply"
+
+-- | Returns information about the current supply.
+-- Returns @RpcResponse SolanaSupply@ with value field set to @SolanaSupply@.
+getSupply :: (JsonRpc m) => m SolanaSupply
+getSupply = value <$> getSupply'
+
+------------------------------------------------------------------------------------------------
+
+-- * getTokenAccountBalance
+
+------------------------------------------------------------------------------------------------
+
+getTokenAccountBalance :: (JsonRpc m) => SolanaPublicKey -> m TokenAccountBalance
+getTokenAccountBalance = do
+  remote "getTokenAccountBalance"
+
 ------------------------------------------------------------------------------------------------
 
 -- * requestAirdrop
