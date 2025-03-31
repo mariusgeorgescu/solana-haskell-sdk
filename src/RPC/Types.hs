@@ -90,7 +90,7 @@ data TransactionWithMeta = TransactionWithMeta
     -- | Transaction information.
     transaction :: Transaction
   }
-  deriving (Generic, Show, Eq, FromJSON)
+  deriving (Generic, Show, FromJSON)
 
 ------------------------------------------------------------------------------------------------
 
@@ -136,7 +136,7 @@ data BlockCommitment = BlockCommitment
     -- | Total active stake, in lamports, of the current epoch.
     totalStake :: Integer
   }
-  deriving (Generic, Eq, Show)
+  deriving (Generic, Show)
 
 instance FromJSON BlockCommitment where
   parseJSON :: Value -> Parser BlockCommitment
@@ -165,7 +165,7 @@ data BlockProductionRange = BlockProductionRange
   { firstSlot :: Slot,
     lastSlot :: Slot
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, FromJSON)
 
 data BlockProduction = BlockProduction ByIdentity BlockProductionRange
   deriving (Generic, Show)
@@ -194,7 +194,7 @@ data ClusterNodes = ClusterNodes
     featureSet :: Maybe Word32, --- ^ The unique identifier of the node's feature set
     sharedVersion :: Maybe Word16 ---  ^ The shred version the node has been configured to use
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, FromJSON)
 
 ------------------------------------------------------------------------------------------------
 
@@ -214,7 +214,7 @@ data EpochInfo = EpochInfo
     slotsInEpoch :: Word64, --- ^ The number of slots in this epoch
     transactionCount :: Maybe Word64 --- ^ Total number of transactions processed without error since genesis
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, FromJSON)
 
 ------------------------------------------------------------------------------------------------
 
@@ -235,7 +235,7 @@ data EpochSchedule = EpochSchedule
     -- | Minimum number of slots in an epoch, MINIMUM_SLOTS_PER_EPOCH * (2.pow(firstNormalEpoch) - 1)
     firstNormalSlot :: Word64
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, FromJSON)
 
 ------------------------------------------------------------------------------------------------
 
@@ -250,7 +250,7 @@ data HighestSnapshotSlot = HighestSnapshotSlot
     -- | The highest incremental snapshot slot based on full
     incremental :: Maybe Word64
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, FromJSON)
 
 ------------------------------------------------------------------------------------------------
 
@@ -284,7 +284,7 @@ data InflationGovernor = InflationGovernor
     -- |  Terminal inflation percentage
     terminal :: Double
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, FromJSON)
 
 ------------------------------------------------------------------------------------------------
 
@@ -359,7 +359,7 @@ data AddressAndLamports
     -- | Number of lamports in the account
     lamports :: Lamport
   }
-  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+  deriving (Generic, Show, FromJSON)
 
 ------------------------------------------------------------------------------------------------
 
@@ -375,7 +375,7 @@ data LatestBlockHash
     -- | Last block height at which the blockhash will be valid
     lastValidBlockHeight :: BlockHeight
   }
-  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+  deriving (Generic, Show, FromJSON)
 
 ------------------------------------------------------------------------------------------------
 
@@ -405,7 +405,7 @@ data PerformanceSample = PerformanceSample
     -- | Number of non-vote transactions processed during the sample period
     numNonVoteTransactions :: Word64
   }
-  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+  deriving (Generic, Show, FromJSON)
 
 ------------------------------------------------------------------------------------------------
 
@@ -488,11 +488,6 @@ instance FromJSON TransactionSignatureStatus where
       <*> v .: "err"
       <*> v .: "confirmationStatus"
 
-newtype SearchTransactionHistory = SearchTransactionHistory
-  {searchTransactionHistory :: Bool}
-  deriving (Generic, Show)
-  deriving anyclass (FromJSON, ToJSON)
-
 ------------------------------------------------------------------------------------------------
 
 -- *  SolanaSupply
@@ -511,7 +506,7 @@ data SolanaSupply = SolanaSupply
     nonCirculatingAccounts :: [SolanaPublicKey]
   }
   deriving (Generic, Show, Eq)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON)
 
 ------------------------------------------------------------------------------------------------
 
@@ -531,7 +526,7 @@ data AmmountObject = AmmountObject
     uiAmountString :: String
   }
   deriving (Generic, Show, Eq)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON)
 
 ------------------------------------------------------------------------------------------------
 
@@ -641,7 +636,8 @@ data ConfigurationObject = ConfigurationObject
     skipPreflight :: Maybe Bool,
     preflightCommitment :: Maybe String,
     maxRetries :: Maybe Int,
-    minContextSlot :: Maybe Int
+    minContextSlot :: Maybe Int,
+    searchTransactionHistory :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON)
 
@@ -654,7 +650,8 @@ defaultConfigObject =
       skipPreflight = Nothing,
       preflightCommitment = Nothing,
       maxRetries = Nothing,
-      minContextSlot = Nothing
+      minContextSlot = Nothing,
+      searchTransactionHistory = Nothing
     }
 
 cfgJustEncodingBase64 :: ConfigurationObject

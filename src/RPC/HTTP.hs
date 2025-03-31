@@ -500,7 +500,7 @@ getSignaturesForAddress = do
 -- | Returns the statuses of a list of @TransactionSignatureStatus@.
 -- Each signature must be a TxId (the first signature in a transaction, which can be used to uniquely identify
 -- the transaction across the complete ledger).
-getSignatureStatuses' :: (JsonRpc m) => [SolanaSignature] -> SearchTransactionHistory -> m (RPCResponse [Maybe TransactionSignatureStatus])
+getSignatureStatuses' :: (JsonRpc m) => [SolanaSignature] -> ConfigurationObject -> m (RPCResponse [Maybe TransactionSignatureStatus])
 getSignatureStatuses' = do
   remote "getSignatureStatuses"
 {-# INLINE getSignatureStatuses' #-}
@@ -509,7 +509,7 @@ getSignatureStatuses' = do
 -- Each signature must be a TxId (the first signature in a transaction, which can be used to uniquely identify
 -- the transaction across the complete ledger).
 getSignatureStatuses :: (JsonRpc m) => [SolanaSignature] -> m [Maybe TransactionSignatureStatus]
-getSignatureStatuses sigs = value <$> getSignatureStatuses' sigs (SearchTransactionHistory True)
+getSignatureStatuses sigs = value <$> getSignatureStatuses' sigs (defaultConfigObject {searchTransactionHistory = Just True})
 {-# INLINE getSignatureStatuses #-}
 
 ------------------------------------------------------------------------------------------------
