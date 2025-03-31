@@ -73,15 +73,19 @@ main = do
   let myPubKey2 = unsafeSolanaPublicKey "A988FuUtUVk8jMUuVc1ccaoTA3VS9CB4dkEf9EUAUqV4"
 
   void $ runWeb3' localHttpProvider $ do
-    balance1 <- getBalance myPubKey1
-    balance2 <- getBalance myPubKey2
-    liftIO $ putStrLn $ "Balance for " <> show myPubKey1
-    liftIO $ print balance1
-    liftIO $ putStrLn $ "Balance for " <> show myPubKey2
-    liftIO $ print balance2
+    currentSlot <- getSlot
+    currentBlock <- getBlock currentSlot
+    liftIO $ print currentBlock
 
-    accs <- getTokenAccountsByOwner myPubKey1 (Mint (unsafeSolanaPublicKey "CEk5uWHcwNxFGN9md54dpivZAzY3oYWtubCxJ3XJ518u"))
-    liftIO $ print accs
+-- balance1 <- getBalance myPubKey1
+-- balance2 <- getBalance myPubKey2
+-- liftIO $ putStrLn $ "Balance for " <> show myPubKey1
+-- liftIO $ print balance1
+-- liftIO $ putStrLn $ "Balance for " <> show myPubKey2
+-- liftIO $ print balance2
+
+-- accs <- getTokenAccountsByOwner myPubKey1 (Mint (unsafeSolanaPublicKey "CEk5uWHcwNxFGN9md54dpivZAzY3oYWtubCxJ3XJ518u"))
+-- liftIO $ print accs
 
 --   putStrLn $ "Private key :" <> show myPrivKey1
 --   putStrLn $ "Public key :" <> show myPubKey1

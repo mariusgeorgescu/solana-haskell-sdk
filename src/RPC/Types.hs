@@ -49,6 +49,51 @@ instance (FromJSON a) => FromJSON (RPCResponse a) where
 
 ------------------------------------------------------------------------------------------------
 
+-- * BlockInfo
+
+------------------------------------------------------------------------------------------------
+
+data TransactionWithMeta = TransactionWithMeta
+  { meta :: Maybe Object,
+    -- | Transaction information.
+    transaction :: Transaction
+  }
+  deriving (Generic, Show, Eq, FromJSON)
+
+------------------------------------------------------------------------------------------------
+
+-- * BlockInfo
+
+------------------------------------------------------------------------------------------------
+
+data BlockInfo = BlockInfo
+  { -- | The blockhash of this block,
+    blockhashBI :: BlockHash,
+    -- | The blockhash of this block's parent, if the parent block is not available due to ledger cleanup, this field will return "11111111111111111111111111111111".
+    previousBlockhashBI :: BlockHash,
+    -- | The slot index of this block's parent
+    parentSlotBI :: Slot,
+    transactionsBI :: [TransactionWithMeta],
+    -- | Estimated production time, as Unix timestamp (seconds since the Unix epoch). 'Nothing' if not available.
+    blockTimeBI :: Maybe Int64,
+    -- | The number of blocks beneath this block.
+    blockHeightBI :: Maybe BlockHeight
+  }
+  deriving (Show, Generic)
+
+instance FromJSON BlockInfo where
+  parseJSON :: Value -> Parser BlockInfo
+  parseJSON = withObject "BlockInfo" $ \v ->
+    BlockInfo
+      <$> v .: "blockhash"
+      <*> v .: "previousBlockhash"
+      <*> v .: "parentSlot"
+      <*> v .: "transactions"
+      <*> v .: "blockTime"
+      <*> v .: "blockHeight"
+
+------------------------------------------------------------------------------------------------
+
 -- * BlockCommitment
 
 ------------------------------------------------------------------------------------------------
@@ -522,9 +567,9 @@ data TransactionResult = TransactionResult
     -- | Estimated production time, as Unix timestamp (seconds since the Unix epoch) of when the transaction was processed. 'Nothing' if not available.
     blockTimeTx :: Maybe Int64,
     -- | Transaction status metadata object or 'Nothing'.
-    meta :: Maybe Object,
+    metaTx :: Maybe Object,
     -- | Transaction information.
-    transaction :: Transaction
+    transactionTx :: Transaction
   }
   deriving (Generic, Show, Eq)
 
@@ -578,4 +623,10 @@ defaultConfigObject =
       preflightCommitment = Nothing,
       maxRetries = Nothing,
       minContextSlot = Nothing
+    }
+
+cfgJustEncodingBase64 :: ConfigurationObject
+cfgJustEncodingBase64 =
+  defaultConfigObject
+    { encoding = Just "base64"
     }

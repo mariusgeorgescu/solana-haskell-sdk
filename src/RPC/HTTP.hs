@@ -70,11 +70,11 @@ getBalance pubKey = value <$> getBalance' pubKey
 
 ------------------------------------------------------------------------------------------------
 
---- TODO
---- TODO
---- TODO
---- TODO
---- TODO
+-- | Returns identity and transaction information about a confirmed block in the ledger.
+getBlock :: (JsonRpc m) => Slot -> m BlockInfo
+getBlock = do
+  remote "getBlock"
+{-# INLINE getBlock #-}
 
 ------------------------------------------------------------------------------------------------
 
@@ -608,7 +608,7 @@ getTokenAccountBalance = fmap value . getTokenAccountBalance'
 ------------------------------------------------------------------------------------------------
 
 -- | Returns all SPL Token accounts by approved Delegate.
-getTokenAccountsByDelegate :: (JsonRpc m) => SolanaPublicKey -> SolanaPubKeyWithPurpose -> m [Account]
+getTokenAccountsByDelegate :: (JsonRpc m) => SolanaPublicKey -> SolanaPubKeyWithPurpose -> ConfigurationObject -> m (RPCResponse [Account])
 getTokenAccountsByDelegate = do
   remote "getTokenAccountsByDelegate"
 {-# INLINE getTokenAccountsByDelegate #-}
@@ -618,11 +618,6 @@ getTokenAccountsByDelegate = do
 -- * getTokenAccountsByOwner
 
 ------------------------------------------------------------------------------------------------
-cfgJustEncodingBase64 :: ConfigurationObject
-cfgJustEncodingBase64 =
-  defaultConfigObject
-    { encoding = Just "base64"
-    }
 
 -- | Returns all SPL Token accounts by token owner.
 getTokenAccountsByOwner' :: (JsonRpc m) => SolanaPublicKey -> SolanaPubKeyWithPurpose -> ConfigurationObject -> m (RPCResponse [Account])
@@ -634,6 +629,16 @@ getTokenAccountsByOwner' = do
 getTokenAccountsByOwner :: (JsonRpc m) => SolanaPublicKey -> SolanaPubKeyWithPurpose -> m [Account]
 getTokenAccountsByOwner pk pkwv = value <$> getTokenAccountsByOwner' pk pkwv cfgJustEncodingBase64
 {-# INLINE getTokenAccountsByOwner #-}
+
+-- | Returns all SPL Token accounts by token owner and mint.
+getTokenAccountsByOwnerAndMint :: (JsonRpc m) => SolanaPublicKey -> SolanaPublicKey -> m [Account]
+getTokenAccountsByOwnerAndMint pk pkwv = value <$> getTokenAccountsByOwner' pk (Mint pkwv) cfgJustEncodingBase64
+{-# INLINE getTokenAccountsByOwnerAndMint #-}
+
+-- | Returns all SPL Token accounts by token owner and program.
+getTokenAccountsByOwnerAndProgram :: (JsonRpc m) => SolanaPublicKey -> SolanaPublicKey -> m [Account]
+getTokenAccountsByOwnerAndProgram pk pkwv = value <$> getTokenAccountsByOwner' pk (Program pkwv) cfgJustEncodingBase64
+{-# INLINE getTokenAccountsByOwnerAndProgram #-}
 
 ------------------------------------------------------------------------------------------------
 
