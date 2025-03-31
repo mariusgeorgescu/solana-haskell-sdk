@@ -591,9 +591,139 @@ getSupply = value <$> getSupply'
 
 ------------------------------------------------------------------------------------------------
 
-getTokenAccountBalance :: (JsonRpc m) => SolanaPublicKey -> m TokenAccountBalance
-getTokenAccountBalance = do
+-- | Returns the token balance of an SPL Token account.
+-- Returns @RpcResponse AmmountObject@ with value field set to @AmmountObject@.
+getTokenAccountBalance' :: (JsonRpc m) => SolanaPublicKey -> m (RPCResponse AmmountObject)
+getTokenAccountBalance' = do
   remote "getTokenAccountBalance"
+
+-- | Returns the token balance of an SPL Token account.
+getTokenAccountBalance :: (JsonRpc m) => SolanaPublicKey -> m AmmountObject
+getTokenAccountBalance = fmap value . getTokenAccountBalance'
+
+------------------------------------------------------------------------------------------------
+
+-- * getTokenAccountsByDelegate
+
+------------------------------------------------------------------------------------------------
+--
+--
+-- TODO
+--
+--
+
+------------------------------------------------------------------------------------------------
+
+-- * getTokenAccountsByOwner
+
+------------------------------------------------------------------------------------------------
+--
+--
+-- TODO
+--
+--
+
+------------------------------------------------------------------------------------------------
+
+-- * getTokenLargestAccounts
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns the token balance of an SPL Token account.
+-- Returns @RpcResponse TokenAccountBalance@ with value field set to @TokenAccountBalance@.
+getTokenLargestAccounts' :: (JsonRpc m) => SolanaPublicKey -> m (RPCResponse [TokenAccountBalanceWithAddr])
+getTokenLargestAccounts' = do
+  remote "getTokenLargestAccounts"
+
+-- | Returns the token balance of an SPL Token account.
+getTokenLargestAccounts :: (JsonRpc m) => SolanaPublicKey -> m [TokenAccountBalanceWithAddr]
+getTokenLargestAccounts = fmap value . getTokenLargestAccounts'
+
+------------------------------------------------------------------------------------------------
+
+-- * getStakeMinimgetSupplyumDelegation
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns the total supply of an SPL Token type.
+-- Returns @RpcResponse AmmountObject@ with value field set to @AmmountObject@.
+getTokenSupply' :: (JsonRpc m) => SolanaPublicKey -> m (RPCResponse AmmountObject)
+getTokenSupply' = do
+  remote "getTokenSupply"
+
+-- | Returns information about the current supply.
+getTokenSupply :: (JsonRpc m) => SolanaPublicKey -> m AmmountObject
+getTokenSupply = fmap value . getTokenSupply'
+
+------------------------------------------------------------------------------------------------
+
+-- * getTransaction
+
+------------------------------------------------------------------------------------------------
+--
+--
+-- TODO
+--
+--
+
+------------------------------------------------------------------------------------------------
+
+-- * getTransactionCount
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns the current Transaction count from the ledger
+getTransactionCount :: (JsonRpc m) => m Slot
+getTransactionCount = do
+  remote "getTransactionCount"
+
+------------------------------------------------------------------------------------------------
+
+-- * getVersion
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns the current Solana version running on the node.
+getVersion :: (JsonRpc m) => m SolanaVersion
+getVersion = do
+  remote "getVersion"
+
+------------------------------------------------------------------------------------------------
+
+-- * getVoteAccounts
+
+------------------------------------------------------------------------------------------------
+--
+--
+-- TODO
+--
+--
+
+------------------------------------------------------------------------------------------------
+
+-- * isBlockhashValid
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns whether a blockhash is still valid or not.
+isBlockhashValid' :: (JsonRpc m) => BlockHash -> m (RPCResponse Bool)
+isBlockhashValid' = do
+  remote "isBlockhashValid"
+
+-- | Returns whether a blockhash is still valid or not.
+isBlockhashValid :: (JsonRpc m) => BlockHash -> m Bool
+isBlockhashValid = fmap value . isBlockhashValid'
+
+------------------------------------------------------------------------------------------------
+
+-- * minimumLedgerSlot
+
+------------------------------------------------------------------------------------------------
+
+-- | Returns the lowest slot that the node has information about in its ledger.
+minimumLedgerSlot :: (JsonRpc m) => m Slot
+minimumLedgerSlot = do
+  remote "minimumLedgerSlot"
 
 ------------------------------------------------------------------------------------------------
 

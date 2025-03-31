@@ -435,8 +435,8 @@ data SolanaSupply = SolanaSupply
 
 ------------------------------------------------------------------------------------------------
 
--- | Contains information about the solana token supply.
-data TokenAccountBalance = TokenAccountBalance
+-- | Contains information about amount.
+data AmmountObject = AmmountObject
   { -- | The raw balance without decimals, a string representation of u64
     amount :: String,
     -- | Number of base 10 digits to the right of the decimal place.
@@ -448,3 +448,56 @@ data TokenAccountBalance = TokenAccountBalance
   }
   deriving (Generic, Show, Eq)
   deriving anyclass (FromJSON, ToJSON)
+
+------------------------------------------------------------------------------------------------
+
+-- *  TokenAccountBalance2
+
+------------------------------------------------------------------------------------------------
+
+-- | Contains information about the solana token supply.
+data TokenAccountBalanceWithAddr = TokenAccountBalanceWithAddr
+  { -- | The raw balance without decimals, a string representation of u64
+    address' :: SolanaPublicKey,
+    -- | The raw balance without decimals, a string representation of u64
+    amount' :: String,
+    -- | Number of base 10 digits to the right of the decimal place.
+    decimals' :: Word8,
+    -- | The balance, using mint-prescribed decimals DEPRECATED.
+    uiAmount' :: Maybe Double,
+    -- | The balance as a string, using mint-prescribed decimals.
+    uiAmountString' :: String
+  }
+  deriving (Generic, Show, Eq)
+
+instance FromJSON TokenAccountBalanceWithAddr where
+  parseJSON :: Value -> Parser TokenAccountBalanceWithAddr
+  parseJSON = withObject "TokenAccountBalanceWithAddr" $ \v ->
+    TokenAccountBalanceWithAddr
+      <$> v .: "address"
+      <*> v .: "amount"
+      <*> v .: "decimals"
+      <*> v .: "uiAmount"
+      <*> v .: "uiAmountString"
+
+------------------------------------------------------------------------------------------------
+
+-- *  SolanaVersion
+
+------------------------------------------------------------------------------------------------
+
+-- | Contains information about the current Solana version running on the node.
+data SolanaVersion = SolanaVersion
+  { -- | Software version of solana-core.
+    solana_core :: String,
+    -- | Unique identifier of the current software's feature set
+    feature_set :: Word32
+  }
+  deriving (Generic, Show, Eq)
+
+instance FromJSON SolanaVersion where
+  parseJSON :: Value -> Parser SolanaVersion
+  parseJSON = withObject "SolanaVersion" $ \v ->
+    SolanaVersion
+      <$> v .: "solana-core"
+      <*> v .: "feature-set"

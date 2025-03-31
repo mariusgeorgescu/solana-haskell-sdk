@@ -16,6 +16,7 @@ import Network.Web3.Provider
 import RPC.HTTP
 import RPC.Providers
 import RPC.Types (RPCResponse (..))
+import Data.Aeson (ToJSON(toJSON))
 
 testTx :: IO (Either Web3Error SolanaSignature)
 testTx = runWeb3' localHttpProvider $ do
@@ -81,7 +82,7 @@ main = do
   putStrLn $ "Private key :" <> show myPrivKey1
   putStrLn $ "Public key :" <> show myPubKey1
 
-  void $ runWeb3' devnetHttpProvider $ do
+  void $ runWeb3' localHttpProvider $ do
     -- liftIO $ putStrLn "Get Account Info"
     -- maybeAccountInfo <- getAccountInfo myPubKey1
     -- liftIO $ print maybeAccountInfo
@@ -233,8 +234,34 @@ main = do
     -- supply <- getSupply
     -- liftIO $ print supply
 
-    liftIO $ putStrLn "Get Token Account Balance"
-    tab <- getTokenAccountBalance (unsafeSolanaPublicKey "AQoKYV7tYpTrFZN6P5oUufbQKAUr9mNYGe1TTJC9wajM")
-    liftIO $ print tab
+    -- liftIO $ putStrLn "Get Token Account Balance"
+    -- tab <- getTokenAccountBalance (unsafeSolanaPublicKey "5QzKcuk1nJQfYM88wQtD5vpZS1onA8Zpp2GaZft6wZ5H")
+    -- liftIO $ print tab
+
+    -- liftIO $ putStrLn "Get Token Largest Accounts"
+    -- tlaccs <- getTokenLargestAccounts (unsafeSolanaPublicKey "CEk5uWHcwNxFGN9md54dpivZAzY3oYWtubCxJ3XJ518u")
+    -- liftIO $ print tlaccs
+
+    -- liftIO $ putStrLn "Get Token Supply"
+    -- tsupply <- getTokenSupply (unsafeSolanaPublicKey "CEk5uWHcwNxFGN9md54dpivZAzY3oYWtubCxJ3XJ518u")
+    -- liftIO $ print tsupply
+
+    -- liftIO $ putStrLn "Get Transaction Count"
+    -- txcount <- getTransactionCount
+    -- liftIO $ print txcount
+
+    -- liftIO $ putStrLn "Get Version"
+    -- v <- getVersion
+    -- liftIO $ print v
+
+    liftIO $ putStrLn "Check Blockhash"
+    bh <- getTheLatestBlockhash
+    liftIO $ print (toJSON bh)
+    ibhv <- isBlockhashValid bh
+    liftIO $ print ibhv
+
+    liftIO $ putStrLn "Minimum ledger slot"
+    mls <- minimumLedgerSlot
+    liftIO $ print mls
 
     return ()
