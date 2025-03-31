@@ -606,22 +606,34 @@ getTokenAccountBalance = fmap value . getTokenAccountBalance'
 -- * getTokenAccountsByDelegate
 
 ------------------------------------------------------------------------------------------------
---
---
--- TODO
---
---
+
+-- | Returns all SPL Token accounts by approved Delegate.
+getTokenAccountsByDelegate :: (JsonRpc m) => SolanaPublicKey -> SolanaPubKeyWithPurpose -> m [Account]
+getTokenAccountsByDelegate = do
+  remote "getTokenAccountsByDelegate"
+{-# INLINE getTokenAccountsByDelegate #-}
 
 ------------------------------------------------------------------------------------------------
 
 -- * getTokenAccountsByOwner
 
 ------------------------------------------------------------------------------------------------
---
---
--- TODO
---
---
+cfgJustEncodingBase64 :: ConfigurationObject
+cfgJustEncodingBase64 =
+  defaultConfigObject
+    { encoding = Just "base64"
+    }
+
+-- | Returns all SPL Token accounts by token owner.
+getTokenAccountsByOwner' :: (JsonRpc m) => SolanaPublicKey -> SolanaPubKeyWithPurpose -> ConfigurationObject -> m (RPCResponse [Account])
+getTokenAccountsByOwner' = do
+  remote "getTokenAccountsByOwner"
+{-# INLINE getTokenAccountsByOwner' #-}
+
+-- | Returns all SPL Token accounts by token owner.
+getTokenAccountsByOwner :: (JsonRpc m) => SolanaPublicKey -> SolanaPubKeyWithPurpose -> m [Account]
+getTokenAccountsByOwner pk pkwv = value <$> getTokenAccountsByOwner' pk pkwv cfgJustEncodingBase64
+{-# INLINE getTokenAccountsByOwner #-}
 
 ------------------------------------------------------------------------------------------------
 
@@ -630,13 +642,13 @@ getTokenAccountBalance = fmap value . getTokenAccountBalance'
 ------------------------------------------------------------------------------------------------
 
 -- | Returns the token balance of an SPL Token account.
--- Returns @RpcResponse TokenAccountBalance@ with value field set to @TokenAccountBalance@.
-getTokenLargestAccounts' :: (JsonRpc m) => SolanaPublicKey -> m (RPCResponse [TokenAccountBalanceWithAddr])
+-- Returns @RpcResponse AmmountObjectWithAddr@ with value field set to @AmmountObjectWithAddr@.
+getTokenLargestAccounts' :: (JsonRpc m) => SolanaPublicKey -> m (RPCResponse [AmmountObjectWithAddr])
 getTokenLargestAccounts' = do
   remote "getTokenLargestAccounts"
 
 -- | Returns the token balance of an SPL Token account.
-getTokenLargestAccounts :: (JsonRpc m) => SolanaPublicKey -> m [TokenAccountBalanceWithAddr]
+getTokenLargestAccounts :: (JsonRpc m) => SolanaPublicKey -> m [AmmountObjectWithAddr]
 getTokenLargestAccounts = fmap value . getTokenLargestAccounts'
 
 ------------------------------------------------------------------------------------------------
@@ -660,11 +672,11 @@ getTokenSupply = fmap value . getTokenSupply'
 -- * getTransaction
 
 ------------------------------------------------------------------------------------------------
---
---
--- TODO
---
---
+
+-- | Returns information about the current supply.
+getTransaction :: (JsonRpc m) => SolanaSignature -> m TransactionResult
+getTransaction = do
+  remote "getTransaction"
 
 ------------------------------------------------------------------------------------------------
 
@@ -731,7 +743,7 @@ minimumLedgerSlot = do
 
 ------------------------------------------------------------------------------------------------
 
-requestAirdrop :: (JsonRpc m) => SolanaPublicKey -> Lamport -> m String
+requestAirdrop :: (JsonRpc m) => SolanaPublicKey -> Lamport -> m SolanaSignature
 requestAirdrop = do
   remote "requestAirdrop"
 
@@ -741,29 +753,20 @@ requestAirdrop = do
 
 ------------------------------------------------------------------------------------------------
 
-data RpcSendTransactionConfig = RpcSendTransactionConfig
-  { encoding :: String,
-    skipPreflight :: Bool,
-    preflightCommitment :: String,
-    maxRetries :: Int,
-    minContextSlot :: Int
-  }
-  deriving (Eq, Show, Generic, ToJSON)
-
-defaultRpcSendTransactionConfig :: RpcSendTransactionConfig
+defaultRpcSendTransactionConfig :: ConfigurationObject
 defaultRpcSendTransactionConfig =
-  RpcSendTransactionConfig
-    { encoding = "base64",
-      skipPreflight = True,
-      preflightCommitment = "finalized",
-      maxRetries = 0,
-      minContextSlot = 0
+  defaultConfigObject
+    { encoding = Just "base64",
+      skipPreflight = Just True,
+      preflightCommitment = Just "finalized",
+      maxRetries = Just 0,
+      minContextSlot = Just 0
     }
 
 sendTransaction :: (JsonRpc m) => String -> m String
 sendTransaction tx = sendTransaction' tx defaultRpcSendTransactionConfig
 
-sendTransaction' :: (JsonRpc m) => String -> RpcSendTransactionConfig -> m String
+sendTransaction' :: (JsonRpc m) => String -> ConfigurationObject -> m String
 sendTransaction' = do
   remote "sendTransaction"
 

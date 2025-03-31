@@ -7,6 +7,7 @@ module RPC.Types where
 import Core.Account (Lamport)
 import Core.Block (BlockHash)
 import Core.Crypto
+import Core.Transaction (Transaction)
 import Data.Aeson.Types
 import Data.Int (Int64)
 import Data.Map
@@ -54,12 +55,18 @@ instance (FromJSON a) => FromJSON (RPCResponse a) where
 
 data BlockCommitment = BlockCommitment
   { -- | Array of 'Word64' logging the amount of cluster stake in lamports that has voted on the block at each depth from 0 to MAX_LOCKOUT_HISTORY
-    commitment :: Maybe [Word64],
+    commitmentList :: Maybe [Word64],
     -- | Total active stake, in lamports, of the current epoch.
     totalStake :: Integer
   }
   deriving (Generic, Eq, Show)
-  deriving anyclass (FromJSON)
+
+instance FromJSON BlockCommitment where
+  parseJSON :: Value -> Parser BlockCommitment
+  parseJSON = withObject "BlockCommitment" $ \v ->
+    BlockCommitment
+      <$> v .: "commitment"
+      <*> v .: "totalStake"
 
 type BlockHeight = Word64
 
@@ -456,7 +463,7 @@ data AmmountObject = AmmountObject
 ------------------------------------------------------------------------------------------------
 
 -- | Contains information about the solana token supply.
-data TokenAccountBalanceWithAddr = TokenAccountBalanceWithAddr
+data AmmountObjectWithAddr = AmmountObjectWithAddr
   { -- | The raw balance without decimals, a string representation of u64
     address' :: SolanaPublicKey,
     -- | The raw balance without decimals, a string representation of u64
@@ -470,10 +477,10 @@ data TokenAccountBalanceWithAddr = TokenAccountBalanceWithAddr
   }
   deriving (Generic, Show, Eq)
 
-instance FromJSON TokenAccountBalanceWithAddr where
-  parseJSON :: Value -> Parser TokenAccountBalanceWithAddr
-  parseJSON = withObject "TokenAccountBalanceWithAddr" $ \v ->
-    TokenAccountBalanceWithAddr
+instance FromJSON AmmountObjectWithAddr where
+  parseJSON :: Value -> Parser AmmountObjectWithAddr
+  parseJSON = withObject "AmmountObjectWithAddr" $ \v ->
+    AmmountObjectWithAddr
       <$> v .: "address"
       <*> v .: "amount"
       <*> v .: "decimals"
@@ -501,3 +508,74 @@ instance FromJSON SolanaVersion where
     SolanaVersion
       <$> v .: "solana-core"
       <*> v .: "feature-set"
+
+------------------------------------------------------------------------------------------------
+
+-- *  TransactionResult
+
+------------------------------------------------------------------------------------------------
+
+-- | Contains information about the current Solana version running on the node.
+data TransactionResult = TransactionResult
+  { -- | The slot this transaction was processed in.
+    slotTx :: Slot,
+    -- | Estimated production time, as Unix timestamp (seconds since the Unix epoch) of when the transaction was processed. 'Nothing' if not available.
+    blockTimeTx :: Maybe Int64,
+    -- | Transaction status metadata object or 'Nothing'.
+    meta :: Maybe Object,
+    -- | Transaction information.
+    transaction :: Transaction
+  }
+  deriving (Generic, Show, Eq)
+
+instance FromJSON TransactionResult where
+  parseJSON :: Value -> Parser TransactionResult
+  parseJSON = withObject "TransactionResult" $ \v ->
+    TransactionResult
+      <$> v .: "slot"
+      <*> v .: "blockTime"
+      <*> (v .: "meta")
+      <*> v .: "transaction"
+
+------------------------------------------------------------------------------------------------
+
+-- *  SolanaPubKeyPurpose
+
+------------------------------------------------------------------------------------------------
+
+data SolanaPubKeyWithPurpose = Mint SolanaPublicKey | Program SolanaPublicKey
+  deriving (Generic)
+
+instance ToJSON SolanaPubKeyWithPurpose where
+  toJSON :: SolanaPubKeyWithPurpose -> Value
+  toJSON (Mint key) = object ["mint" .= key]
+  toJSON (Program key) = object ["programId" .= key]
+
+------------------------------------------------------------------------------------------------
+
+-- *  ConfigurationObject
+
+------------------------------------------------------------------------------------------------
+
+data ConfigurationObject = ConfigurationObject
+  { commitment :: Maybe String,
+    encoding :: Maybe String,
+    dataSlice :: Maybe Object,
+    skipPreflight :: Maybe Bool,
+    preflightCommitment :: Maybe String,
+    maxRetries :: Maybe Int,
+    minContextSlot :: Maybe Int
+  }
+  deriving (Generic, Show, ToJSON)
+
+defaultConfigObject :: ConfigurationObject
+defaultConfigObject =
+  ConfigurationObject
+    { commitment = Nothing,
+      encoding = Nothing,
+      dataSlice = Nothing,
+      skipPreflight = Nothing,
+      preflightCommitment = Nothing,
+      maxRetries = Nothing,
+      minContextSlot = Nothing
+    }

@@ -1,3 +1,6 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
+
 module Core.Instruction
   ( Instruction,
     mkInstruction,
@@ -6,14 +9,24 @@ module Core.Instruction
     iData,
     AccountMeta (..),
     InstructionData (..),
+    compileInstruction,
+    CompiledInstruction,
+    CompileException,
   )
 where
 
-import Core.Crypto (SolanaPublicKey, toBase64String)
+import Control.Exception
+import Core.Compact
+import Core.Crypto (SolanaPublicKey, fromBase58String, toBase58String, toBase64String)
+import Data.Aeson (ToJSON)
+import Data.Aeson.Types
+import Data.Binary
 import Data.Binary qualified as Binary
 import Data.ByteString qualified as S
-import Data.ByteString.Base64 (encodeBase64')
+import Data.Either.Combinators
+import Data.List (elemIndex)
 import GHC.Generics (Generic)
+import Data.Maybe (fromJust)
 
 ------------------------------------------------------------------------------------------------
 
@@ -83,3 +96,75 @@ newtype InstructionData = InstructionData {instrData :: S.ByteString}
 instance Show InstructionData where
   show :: InstructionData -> String
   show (InstructionData bs) = toBase64String bs
+
+------------------------------------------------------------------------------------------------
+
+-- *** Compiled Instruction
+
+------------------------------------------------------------------------------------------------
+
+-- | The structure of a Compiled Instructuin.
+data CompiledInstruction = CompiledInstruction
+  { {-
+    Index that points to the program's address in the account addresses array.
+    This specifies the program that will process the instruction.
+    -}
+    ciProgramIdIndex :: Word8,
+    -- |  Compact array of indexes that point to the account addresses required for this instruction..
+    ciAccounts :: CompactArray Word8,
+    {-  Compact byte array specifying the instruction on the program to invoke
+        and any function arguments required by the instruction.
+    -}
+    ciData :: CompactArray Word8
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON CompiledInstruction where
+  toJSON :: CompiledInstruction -> Value
+  toJSON (CompiledInstruction programIdIndex accounts iData) =
+    object
+      [ "programIdIndex" .= programIdIndex,
+        "accounts" .= unCompact accounts,
+        "data" .= (toBase58String . S.pack . unCompact $ iData)
+      ]
+
+instance FromJSON CompiledInstruction where
+  parseJSON :: Value -> Parser CompiledInstruction
+  parseJSON = withObject "CompiledInstruction" $ \v ->
+    CompiledInstruction
+      <$> v .: "programIdIndex"
+      <*> (mkCompact <$> (v .: "accounts"))
+      <*> (mkCompact . S.unpack . fromJust . fromBase58String <$> (v .: "data"))
+
+instance Binary CompiledInstruction where
+  put :: CompiledInstruction -> Put
+  put CompiledInstruction {..} = do
+    put ciProgramIdIndex
+    put ciAccounts
+    put ciData
+  get :: Get CompiledInstruction
+  get = CompiledInstruction <$> get <*> get <*> get
+
+compileInstruction :: [SolanaPublicKey] -> Instruction -> Either CompileException CompiledInstruction
+compileInstruction keys instruction = do
+  programIdIndex <- keyToIndex (iProgramId instruction) keys
+  accIndices <- mapM ((`keyToIndex` keys) . accountPubKey) (iAccounts instruction)
+  return $
+    CompiledInstruction
+      { ciProgramIdIndex = fromIntegral programIdIndex,
+        ciAccounts = mkCompact (fromIntegral <$> accIndices),
+        ciData = mkCompact . S.unpack $ instrData (iData instruction)
+      }
+
+keyToIndex :: SolanaPublicKey -> [SolanaPublicKey] -> Either CompileException Int
+keyToIndex k keys = maybeToRight (MissingIndex $ show k) $ k `elemIndex` keys
+
+------------------------------------------------------------------------------------------------
+
+-- *** CompileException
+
+------------------------------------------------------------------------------------------------
+newtype CompileException = MissingIndex String
+  deriving (Show)
+
+instance Exception CompileException

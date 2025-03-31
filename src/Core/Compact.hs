@@ -18,11 +18,15 @@ module Core.Compact
     putCompactU16,
     encodeCompactU16,
     decodeCompactU16,
-    CompactArray,
+    CompactArray (),
     mkCompact,
+    unCompact,
+    getCompactArrayLength,
   )
 where
 
+import Data.Aeson
+import Data.Aeson.Types (Parser)
 import Data.Binary
 import Data.Binary.Get
 import Data.Binary.Put
@@ -36,15 +40,25 @@ import GHC.Generics
 
 ------------------------------------------------------------------------------------------------
 
-data CompactArray a = CompactArray Word16 [a]
+data CompactArray a = CompactArray
+  { getCompactArrayLength :: Word16,
+    unCompact :: [a]
+  }
   deriving (Eq, Ord, Show, Generic)
+
+-- instance (ToJSON a) => ToJSON (CompactArray a) where
+--   toJSON :: CompactArray a -> Value
+--   toJSON (CompactArray _ xs) = toJSON xs
+
+-- instance (FromJSON a) => FromJSON (CompactArray a) where
+--   parseJSON :: (FromJSON a) => Value -> Parser (CompactArray a)
+--   parseJSON v = mkCompact <$> parseJSON v
 
 instance (Binary a) => Binary (CompactArray a) where
   put :: (Binary a) => CompactArray a -> Put
   put (CompactArray i xs) = do
     putCompactU16 i
     mapM_ put xs -- not default putList
-
 
 mkCompact :: [a] -> CompactArray a
 mkCompact xs = CompactArray (fromIntegral $ length xs) xs
