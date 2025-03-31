@@ -49,7 +49,39 @@ instance (FromJSON a) => FromJSON (RPCResponse a) where
 
 ------------------------------------------------------------------------------------------------
 
--- * BlockInfo
+-- * VoteAccountsResult
+
+------------------------------------------------------------------------------------------------
+
+data VoteAccounts = VoteAccounts
+  { current :: [VoteAccountsResult],
+    delinquent :: [VoteAccountsResult]
+  }
+  deriving (Generic, Show, FromJSON)
+
+data VoteAccountsResult = VoteAccountsResult
+  { -- | Vote account address
+    votePubkey :: SolanaPublicKey,
+    -- | Validator identity
+    nodePubkey :: SolanaPublicKey,
+    -- | The stake, in lamports, delegated to this vote account and active in this epoch
+    activatedStake :: Word64,
+    -- | Whether the vote account is staked for this epoch
+    epochVoteAccount :: Bool,
+    -- | Percentage (0-100) of rewards payout owed to the vote account
+    commission :: Int,
+    -- | Most recent slot voted on by this vote account
+    lastVote :: Slot,
+    -- | Latest history of earned credits for up to five epochs, as an array of arrays containing: [epoch, credits, previousCredits]
+    epochCredits :: [[Word64]],
+    -- | Current root slot for this vote account
+    rootSlot :: Slot
+  }
+  deriving (Generic, Show, FromJSON)
+
+------------------------------------------------------------------------------------------------
+
+-- * TransactionWithMeta
 
 ------------------------------------------------------------------------------------------------
 
@@ -299,7 +331,7 @@ data InflationReward = InflationReward
     -- | Post balance of the account in lamports.
     postBalance :: Lamport,
     -- | Vote account commission when the reward was credited.
-    commission :: Maybe Word8
+    commissionIR :: Maybe Word8
   }
   deriving (Show, Generic)
 

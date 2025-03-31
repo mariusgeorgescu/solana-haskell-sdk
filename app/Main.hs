@@ -76,6 +76,8 @@ main = do
     currentSlot <- getSlot
     currentBlock <- getBlock currentSlot
     liftIO $ print currentBlock
+    vac <- getVoteAccounts
+    liftIO $ print vac
 
 -- balance1 <- getBalance myPubKey1
 -- balance2 <- getBalance myPubKey2

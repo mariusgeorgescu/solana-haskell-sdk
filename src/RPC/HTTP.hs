@@ -710,11 +710,11 @@ getVersion = do
 -- * getVoteAccounts
 
 ------------------------------------------------------------------------------------------------
---
---
--- TODO
---
---
+
+-- | Returns the account info and associated stake for all the voting accounts in the current bank.
+getVoteAccounts :: (JsonRpc m) => m VoteAccounts
+getVoteAccounts = do
+  remote "getVoteAccounts"
 
 ------------------------------------------------------------------------------------------------
 
