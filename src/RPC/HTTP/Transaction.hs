@@ -19,15 +19,15 @@ import RPC.HTTP.Types
 
 ------------------------------------------------------------------------------------------------
 
--- | Get the fee the network will charge for a particular Message.
--- Returns 'RpcResponse Lamport' with value field set  to the fee corresponding to the message at the specified blockhash
+-- | Returns the fee the network will charge for a particular message (base64-encoded).
+-- Returns 'RpcResponse (Maybe Int)' where the value is the fee in lamports, or 'Nothing' if the fee couldn't be calculated.
 getFeeForMessage' :: (JsonRpc m) => String -> m (RPCResponse (Maybe Int))
 getFeeForMessage' = do
   remote "getFeeForMessage"
 {-# INLINE getFeeForMessage' #-}
 
--- | Get the fee the network will charge for a particular Message.
--- Returns the fee corresponding to the message at the specified blockhash
+-- | Returns the fee the network will charge for a particular message (base64-encoded).
+-- Returns 'Maybe Int' fee in lamports.
 getFeeForMessage :: (JsonRpc m) => String -> m (Maybe Int)
 getFeeForMessage = fmap value . getFeeForMessage'
 {-# INLINE getFeeForMessage #-}
@@ -38,30 +38,31 @@ getFeeForMessage = fmap value . getFeeForMessage'
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns information about the current supply.
+-- | Returns metadata and content for a confirmed transaction identified by its signature.
 getTransaction :: (JsonRpc m) => SolanaSignature -> m TransactionResult
 getTransaction = do
   remote "getTransaction"
+{-# INLINE getTransaction #-}
 
+-- | Contains metadata and transaction information returned by 'getTransaction'.
 data TransactionResult = TransactionResult
   { -- | The slot this transaction was processed in.
     slotTx :: Slot,
-    -- | Estimated production time, as Unix timestamp (seconds since the Unix epoch) of when the transaction was processed. 'Nothing' if not available.
+    -- | Estimated production time, as Unix timestamp (seconds since the Unix epoch) when the transaction was processed.
     blockTimeTx :: Maybe Int64,
-    -- | Transaction status metadata object or 'Nothing'.
+    -- | Optional transaction metadata.
     metaTx :: Maybe Object,
-    -- | Transaction information.
+    -- | The transaction content.
     transactionTx :: Transaction
   }
   deriving (Generic, Show)
 
 instance FromJSON TransactionResult where
-  parseJSON :: Value -> Parser TransactionResult
   parseJSON = withObject "TransactionResult" $ \v ->
     TransactionResult
       <$> v .: "slot"
       <*> v .: "blockTime"
-      <*> (v .: "meta")
+      <*> v .: "meta"
       <*> v .: "transaction"
 
 ------------------------------------------------------------------------------------------------
@@ -70,9 +71,11 @@ instance FromJSON TransactionResult where
 
 ------------------------------------------------------------------------------------------------
 
+-- | Requests an airdrop of the specified number of lamports to the given address.
 requestAirdrop :: (JsonRpc m) => SolanaPublicKey -> Lamport -> m SolanaSignature
 requestAirdrop = do
   remote "requestAirdrop"
+{-# INLINE requestAirdrop #-}
 
 ------------------------------------------------------------------------------------------------
 
@@ -80,6 +83,7 @@ requestAirdrop = do
 
 ------------------------------------------------------------------------------------------------
 
+-- | Default configuration used for sending transactions.
 defaultRpcSendTransactionConfig :: ConfigurationObject
 defaultRpcSendTransactionConfig =
   defaultConfigObject
@@ -90,21 +94,30 @@ defaultRpcSendTransactionConfig =
       minContextSlot = Just 0
     }
 
+-- | Sends a base64-encoded transaction to the cluster using the default configuration.
 sendTransaction :: (JsonRpc m) => String -> m String
 sendTransaction tx = sendTransaction' tx defaultRpcSendTransactionConfig
+{-# INLINE sendTransaction #-}
 
+-- | Sends a base64-encoded transaction to the cluster with the specified configuration.
 sendTransaction' :: (JsonRpc m) => String -> ConfigurationObject -> m String
 sendTransaction' = do
   remote "sendTransaction"
+{-# INLINE sendTransaction' #-}
 
 ------------------------------------------------------------------------------------------------
 
 -- * simulateTransaction
 
 ------------------------------------------------------------------------------------------------
+
+-- | Simulates a base64-encoded transaction with the given configuration.
 simulateTransaction' :: (JsonRpc m) => String -> ConfigurationObject -> m Object
 simulateTransaction' = do
   remote "simulateTransaction"
+{-# INLINE simulateTransaction' #-}
 
+-- | Simulates a base64-encoded transaction using a basic configuration with base64 encoding.
 simulateTransaction :: (JsonRpc m) => String -> m Object
 simulateTransaction tx = simulateTransaction' tx cfgJustEncodingBase64
+{-# INLINE simulateTransaction #-}

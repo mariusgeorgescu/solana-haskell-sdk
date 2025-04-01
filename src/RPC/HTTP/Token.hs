@@ -20,7 +20,7 @@ import RPC.HTTP.Types
 ------------------------------------------------------------------------------------------------
 
 -- | Returns the token balance of an SPL Token account.
--- Returns @RpcResponse AmmountObject@ with value field set to @AmmountObject@.
+-- Returns 'RpcResponse AmmountObject' with detailed balance information.
 getTokenAccountBalance' :: (JsonRpc m) => SolanaPublicKey -> m (RPCResponse AmmountObject)
 getTokenAccountBalance' = do
   remote "getTokenAccountBalance"
@@ -29,13 +29,13 @@ getTokenAccountBalance' = do
 getTokenAccountBalance :: (JsonRpc m) => SolanaPublicKey -> m AmmountObject
 getTokenAccountBalance = fmap value . getTokenAccountBalance'
 
--- | Contains information about amount.
+-- | Contains SPL token balance details.
 data AmmountObject = AmmountObject
-  { -- | The raw balance without decimals, a string representation of u64
+  { -- | The raw balance without decimals, a string representation of .
     amount :: String,
     -- | Number of base 10 digits to the right of the decimal place.
     decimals :: Word8,
-    -- | The balance, using mint-prescribed decimals DEPRECATED.
+    -- | The balance using mint-prescribed decimals (deprecated).
     uiAmount :: Maybe Double,
     -- | The balance as a string, using mint-prescribed decimals.
     uiAmountString :: String
@@ -49,7 +49,7 @@ data AmmountObject = AmmountObject
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns all SPL Token accounts by approved Delegate.
+-- | Returns all SPL Token accounts delegated to the provided delegate address.
 getTokenAccountsByDelegate :: (JsonRpc m) => SolanaPublicKey -> SolanaPubKeyWithPurpose -> ConfigurationObject -> m (RPCResponse [Account])
 getTokenAccountsByDelegate = do
   remote "getTokenAccountsByDelegate"
@@ -61,31 +61,31 @@ getTokenAccountsByDelegate = do
 
 ------------------------------------------------------------------------------------------------
 
+-- | Specifies either a mint or a program to filter token accounts.
 data SolanaPubKeyWithPurpose = Mint SolanaPublicKey | Program SolanaPublicKey
   deriving (Generic)
 
 instance ToJSON SolanaPubKeyWithPurpose where
-  toJSON :: SolanaPubKeyWithPurpose -> Value
   toJSON (Mint key) = object ["mint" .= key]
   toJSON (Program key) = object ["programId" .= key]
 
--- | Returns all SPL Token accounts by token owner.
+-- | Returns all SPL Token accounts owned by the specified wallet.
 getTokenAccountsByOwner' :: (JsonRpc m) => SolanaPublicKey -> SolanaPubKeyWithPurpose -> ConfigurationObject -> m (RPCResponse [Account])
 getTokenAccountsByOwner' = do
   remote "getTokenAccountsByOwner"
 {-# INLINE getTokenAccountsByOwner' #-}
 
--- | Returns all SPL Token accounts by token owner.
+-- | Returns all SPL Token accounts owned by the specified wallet.
 getTokenAccountsByOwner :: (JsonRpc m) => SolanaPublicKey -> SolanaPubKeyWithPurpose -> m [Account]
 getTokenAccountsByOwner pk pkwv = value <$> getTokenAccountsByOwner' pk pkwv cfgJustEncodingBase64
 {-# INLINE getTokenAccountsByOwner #-}
 
--- | Returns all SPL Token accounts by token owner and mint.
+-- | Returns all SPL Token accounts for the specified owner and mint address.
 getTokenAccountsByOwnerAndMint :: (JsonRpc m) => SolanaPublicKey -> SolanaPublicKey -> m [Account]
 getTokenAccountsByOwnerAndMint pk pkwv = value <$> getTokenAccountsByOwner' pk (Mint pkwv) cfgJustEncodingBase64
 {-# INLINE getTokenAccountsByOwnerAndMint #-}
 
--- | Returns all SPL Token accounts by token owner and program.
+-- | Returns all SPL Token accounts for the specified owner and program ID.
 getTokenAccountsByOwnerAndProgram :: (JsonRpc m) => SolanaPublicKey -> SolanaPublicKey -> m [Account]
 getTokenAccountsByOwnerAndProgram pk pkwv = value <$> getTokenAccountsByOwner' pk (Program pkwv) cfgJustEncodingBase64
 {-# INLINE getTokenAccountsByOwnerAndProgram #-}
@@ -96,25 +96,25 @@ getTokenAccountsByOwnerAndProgram pk pkwv = value <$> getTokenAccountsByOwner' p
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns the token balance of an SPL Token account.
--- Returns @RpcResponse AmmountObjectWithAddr@ with value field set to @AmmountObjectWithAddr@.
+-- | Returns the largest accounts for a given SPL Token mint, sorted by balance.
+-- Returns 'RpcResponse [AmmountObjectWithAddr]'.
 getTokenLargestAccounts' :: (JsonRpc m) => SolanaPublicKey -> m (RPCResponse [AmmountObjectWithAddr])
 getTokenLargestAccounts' = do
   remote "getTokenLargestAccounts"
 
--- | Returns the token balance of an SPL Token account.
+-- | Returns the largest accounts for a given SPL Token mint, sorted by balance.
 getTokenLargestAccounts :: (JsonRpc m) => SolanaPublicKey -> m [AmmountObjectWithAddr]
 getTokenLargestAccounts = fmap value . getTokenLargestAccounts'
 
--- | Contains information about SPL Token account.
+-- | Contains address and balance information for an SPL Token account.
 data AmmountObjectWithAddr = AmmountObjectWithAddr
-  { -- | The raw balance without decimals, a string representation of u64
+  { -- | The account address.
     address' :: SolanaPublicKey,
-    -- | The raw balance without decimals, a string representation of u64
+    -- | The raw balance without decimals, a string representation of 'Word64'.
     amount' :: String,
     -- | Number of base 10 digits to the right of the decimal place.
     decimals' :: Word8,
-    -- | The balance, using mint-prescribed decimals DEPRECATED.
+    -- | The balance using mint-prescribed decimals (deprecated).
     uiAmount' :: Maybe Double,
     -- | The balance as a string, using mint-prescribed decimals.
     uiAmountString' :: String
@@ -122,7 +122,6 @@ data AmmountObjectWithAddr = AmmountObjectWithAddr
   deriving (Generic, Show)
 
 instance FromJSON AmmountObjectWithAddr where
-  parseJSON :: Value -> Parser AmmountObjectWithAddr
   parseJSON = withObject "AmmountObjectWithAddr" $ \v ->
     AmmountObjectWithAddr
       <$> v .: "address"
@@ -133,16 +132,16 @@ instance FromJSON AmmountObjectWithAddr where
 
 ------------------------------------------------------------------------------------------------
 
--- * getStakeMinimgetSupplyumDelegation
+-- * getTokenSupply
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns the total supply of an SPL Token type.
--- Returns @RpcResponse AmmountObject@ with value field set to @AmmountObject@.
+-- | Returns the total supply of an SPL Token.
+-- Returns 'RpcResponse AmmountObject' with the supply balance.
 getTokenSupply' :: (JsonRpc m) => SolanaPublicKey -> m (RPCResponse AmmountObject)
 getTokenSupply' = do
   remote "getTokenSupply"
 
--- | Returns information about the current supply.
+-- | Returns the total supply of an SPL Token.
 getTokenSupply :: (JsonRpc m) => SolanaPublicKey -> m AmmountObject
 getTokenSupply = fmap value . getTokenSupply'

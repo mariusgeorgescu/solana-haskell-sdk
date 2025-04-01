@@ -12,15 +12,9 @@ import Data.Aeson.Types
 import Data.Int
 import Data.Map
 import Data.Word (Word64)
-import GHC.Generics
+import GHC.Generics ( Generic )
 import Network.JsonRpc.TinyClient (JsonRpc (..))
-import RPC.HTTP.Types
-
-------------------------------------------------------------------------------------------------
-
--- * RPC Methods
-
-------------------------------------------------------------------------------------------------
+import RPC.HTTP.Types ( RPCResponse(value), Slot )
 
 ------------------------------------------------------------------------------------------------
 
@@ -34,15 +28,17 @@ getBlock = do
   remote "getBlock"
 {-# INLINE getBlock #-}
 
+-- | Contains identity and transaction information for a block.
 data BlockInfo = BlockInfo
-  { -- | The blockhash of this block,
+  { -- | The blockhash of this block.
     blockhashBI :: BlockHash,
-    -- | The blockhash of this block's parent, if the parent block is not available due to ledger cleanup, this field will return "11111111111111111111111111111111".
+    -- | The blockhash of this block's parent. If the parent is not available due to ledger cleanup, this will return "11111111111111111111111111111111".
     previousBlockhashBI :: BlockHash,
-    -- | The slot index of this block's parent
+    -- | The slot index of this block's parent.
     parentSlotBI :: Slot,
+    -- | List of transactions included in the block, each with optional metadata.
     transactionsBI :: [TransactionWithMeta],
-    -- | Estimated production time, as Unix timestamp (seconds since the Unix epoch). 'Nothing' if not available.
+    -- | Estimated production time, as a Unix timestamp (in seconds). 'Nothing' if not available.
     blockTimeBI :: Maybe Int64,
     -- | The number of blocks beneath this block.
     blockHeightBI :: Maybe BlockHeight
@@ -60,9 +56,11 @@ instance FromJSON BlockInfo where
       <*> v .: "blockTime"
       <*> v .: "blockHeight"
 
+-- | A transaction and its optional metadata as included in a block.
 data TransactionWithMeta = TransactionWithMeta
-  { meta :: Maybe Object,
-    -- | Transaction information.
+  { -- | Optional metadata for the transaction.
+    meta :: Maybe Object,
+    -- | The transaction details.
     transaction :: Transaction
   }
   deriving (Generic, Show, FromJSON)
@@ -73,23 +71,23 @@ data TransactionWithMeta = TransactionWithMeta
 
 ------------------------------------------------------------------------------------------------
 
--- | Get the block commitment based on the block number 'Solt'.
--- Returns 'BlockCommitment' for particular block
+-- | Get the block commitment based on the given block number 'Slot'.
+-- Returns a 'BlockCommitment' for the specified block.
 getBlockCommitment :: (JsonRpc m) => Slot -> m BlockCommitment
 getBlockCommitment = do
   remote "getBlockCommitment"
 {-# INLINE getBlockCommitment #-}
 
+-- | Commitment information for a block.
 data BlockCommitment = BlockCommitment
-  { -- | Array of 'Word64' logging the amount of cluster stake in lamports that has voted on the block at each depth from 0 to MAX_LOCKOUT_HISTORY
+  { -- | Array logging the amount of cluster stake in lamports that has voted on the block at each depth from 0 to MAX_LOCKOUT_HISTORY
     commitmentList :: Maybe [Word64],
-    -- | Total active stake, in lamports, of the current epoch.
+    -- | Total active stake, in lamports, for the current epoch.
     totalStake :: Integer
   }
   deriving (Show)
 
 instance FromJSON BlockCommitment where
-  parseJSON :: Value -> Parser BlockCommitment
   parseJSON = withObject "BlockCommitment" $ \v ->
     BlockCommitment
       <$> v .: "commitment"
@@ -101,7 +99,7 @@ instance FromJSON BlockCommitment where
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns the current block height of the node
+-- | Returns the current block height of the node.
 getBlockHeight :: (JsonRpc m) => m BlockHeight
 getBlockHeight = do
   remote "getBlockHeight"
@@ -114,7 +112,7 @@ getBlockHeight = do
 ------------------------------------------------------------------------------------------------
 
 -- | Returns recent block production information from the current or previous epoch.
--- Returns 'RpcResponse BlockProduction' with value field set to the 'BlockProduction'.
+-- Returns 'RpcResponse BlockProduction' with the production statistics.
 getBlockProduction' :: (JsonRpc m) => m (RPCResponse BlockProduction)
 getBlockProduction' = do
   remote "getBlockProduction"
@@ -125,17 +123,28 @@ getBlockProduction :: (JsonRpc m) => m BlockProduction
 getBlockProduction = value <$> getBlockProduction'
 {-# INLINE getBlockProduction #-}
 
+-- | Range of slots considered.
 type ValidatorData = [Word64]
 
+-- | Mapping from validator identity to number of blocks produced.
 type ByIdentity = Map SolanaPublicKey ValidatorData
 
+-- | Range of slots considered for block production.
 data BlockProductionRange = BlockProductionRange
-  { firstSlot :: Slot,
+  { -- | First slot in the range.
+    firstSlot :: Slot,
+    -- | Last slot in the range.
     lastSlot :: Slot
   }
   deriving (Show, Generic, FromJSON)
 
-data BlockProduction = BlockProduction ByIdentity BlockProductionRange
+-- | Block production statistics mapped by validator identity.
+data BlockProduction
+  = BlockProduction
+      -- | Mapping from validator identity to number of blocks produced.
+      ByIdentity
+      -- | Range of slots considered.
+      BlockProductionRange
   deriving (Generic, Show)
 
 instance FromJSON BlockProduction where
@@ -151,9 +160,8 @@ instance FromJSON BlockProduction where
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns a list of confirmed blocks between two slots
--- An array of integers listing confirmed blocks between start_slot and either end_slot
--- if provided, or latest confirmed slot, inclusive. Max range allowed is 500,000 slots.
+-- | Returns a list of confirmed blocks between two slots (inclusive).
+-- The maximum range allowed is 500,000 slots.
 getBlocks :: (JsonRpc m) => Slot -> Maybe Slot -> m [Int]
 getBlocks = do
   remote "getBlocks"
@@ -165,8 +173,7 @@ getBlocks = do
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns a list of confirmed blocks starting at the given slot.
--- An array of integers listing confirmed blocks starting at start_slot for up to limit blocks, inclusive.
+-- | Returns a list of confirmed blocks starting from the given slot, up to the specified limit.
 getBlocksWithLimit :: (JsonRpc m) => Slot -> Int -> m [Int]
 getBlocksWithLimit = do
   remote "getBlocksWithLimit"
@@ -178,9 +185,8 @@ getBlocksWithLimit = do
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns the estimated production time of a block (as Unix timestamp / seconds since the Unix epoch).
--- Each validator reports their UTC time to the ledger on a regular interval by intermittently adding a timestamp to a Vote for a particular block.
--- A requested block's time is calculated from the stake-weighted mean of the Vote timestamps in a set of recent blocks recorded on the ledger.
+-- | Returns the estimated production time of a block (as Unix timestamp).
+-- This is based on stake-weighted votes and validator-reported timestamps.
 getBlockTime :: (JsonRpc m) => Slot -> m Int
 getBlockTime = do
   remote "getBlockTime"
@@ -192,29 +198,28 @@ getBlockTime = do
 
 ------------------------------------------------------------------------------------------------
 
--- | Get the hash and the height of the latest block.
--- Returns 'RpcResponse LatestBlockHash' with value field set to a list of 'LatestBlockHash'.
+-- | Get the hash and height of the latest block.
+-- Returns 'RpcResponse LatestBlockHash' containing the block information.
 getLatestBlockhash' :: (JsonRpc m) => m (RPCResponse LatestBlockHash)
 getLatestBlockhash' = do
   remote "getLatestBlockhash"
 {-# INLINE getLatestBlockhash' #-}
 
--- | Get the hash and the height of the latest block as 'LatestBlockHash'.
+-- | Get the hash and height of the latest block.
 getLatestBlockhash :: (JsonRpc m) => m LatestBlockHash
 getLatestBlockhash = value <$> getLatestBlockhash'
 {-# INLINE getLatestBlockhash #-}
 
--- | Get the 'BlockHash' of the latest block.
+-- | Get only the blockhash of the latest block.
 getTheLatestBlockhash :: (JsonRpc m) => m BlockHash
 getTheLatestBlockhash = blockhash <$> getLatestBlockhash
 {-# INLINE getTheLatestBlockhash #-}
 
--- | Contains the  hash as base-58 encoded string and the height of the latest block.
-data LatestBlockHash
-  = LatestBlockHash
-  { -- | A Hash as base-58 encoded string
+-- | Contains the hash and the height of the latest block.
+data LatestBlockHash = LatestBlockHash
+  { -- | Block hash as a base-58 encoded string.
     blockhash :: BlockHash,
-    -- | Last block height at which the blockhash will be valid
+    -- | Last block height at which the blockhash is still considered valid.
     lastValidBlockHeight :: BlockHeight
   }
   deriving (Generic, Show, FromJSON)
@@ -225,13 +230,13 @@ data LatestBlockHash
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns whether a blockhash is still valid or not.
+-- | Returns whether a blockhash is still valid.
 isBlockhashValid' :: (JsonRpc m) => BlockHash -> m (RPCResponse Bool)
 isBlockhashValid' = do
   remote "isBlockhashValid"
 {-# INLINE isBlockhashValid' #-}
 
--- | Returns whether a blockhash is still valid or not.
+-- | Returns whether a blockhash is still valid.
 isBlockhashValid :: (JsonRpc m) => BlockHash -> m Bool
 isBlockhashValid = fmap value . isBlockhashValid'
 {-# INLINE isBlockhashValid #-}

@@ -19,15 +19,15 @@ import RPC.HTTP.Types
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns all information associated with the account of provided 'SolanaPubkey'
--- Returns 'RpcResponse (Maybe AccountInfo)' with value field set to the 'Nothing' if the requested account doesn't exist.
+-- | Fetches all available data for the given account address.
+-- Returns 'RpcResponse (Maybe AccountInfo)', where 'Nothing' indicates the account does not exist.
 getAccountInfo' :: (JsonRpc m) => SolanaPublicKey -> m (RPCResponse (Maybe AccountInfo))
 getAccountInfo' = do
   remote "getAccountInfo"
 {-# INLINE getAccountInfo' #-}
 
--- | Returns all information associated with the account of provided 'SolanaPubkey'
--- Returns '(Maybe AccountInfo)' with value field set to the 'Nothing' if the requested account doesn't exist.
+-- | Fetches all available data for the given account address.
+-- Returns 'Nothing' if the account does not exist.
 getAccountInfo :: (JsonRpc m) => SolanaPublicKey -> m (Maybe AccountInfo)
 getAccountInfo pubKey = value <$> getAccountInfo' pubKey
 {-# INLINE getAccountInfo #-}
@@ -38,15 +38,14 @@ getAccountInfo pubKey = value <$> getAccountInfo' pubKey
 
 ------------------------------------------------------------------------------------------------
 
--- | Get the lamport balance of the account of provided 'SolanaPubkey'.
--- Returns 'RpcResponse Lamport' with value field set to the 'Lamport' balance.
+-- | Returns the balance, in lamports, of the specified account.
+-- Returns 'RpcResponse Lamport'.
 getBalance' :: (JsonRpc m) => SolanaPublicKey -> m (RPCResponse Lamport)
 getBalance' = do
   remote "getBalance"
 {-# INLINE getBalance' #-}
 
--- | Get the lamport balance of the account of provided 'SolanaPubkey'.
--- Returns 'Lamport' the balance.
+-- | Returns the balance, in lamports, of the specified account.
 getBalance :: (JsonRpc m) => SolanaPublicKey -> m Lamport
 getBalance pubKey = value <$> getBalance' pubKey
 {-# INLINE getBalance #-}
@@ -57,18 +56,15 @@ getBalance pubKey = value <$> getBalance' pubKey
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns list of accounts based on their 'SolanaPubkey'
--- Returns @RpcResponse [(Maybe AccountInfo)]@ with value field set to @[(Maybe AccountInfo)]@
--- If the account of a given 'SolanaPubkey' doesn't exist, the coresponding element in the list is 'Nothing'.
+-- | Returns account information for a list of addresses.
+-- For any missing account, the result contains 'Nothing' in its place.
 getMultipleAccounts' :: (JsonRpc m) => [SolanaPublicKey] -> m (RPCResponse [Maybe AccountInfo])
 getMultipleAccounts' = do
   remote "getMultipleAccounts"
 {-# INLINE getMultipleAccounts' #-}
 
-------------------------------------------------------------------------------------------------
-
--- | Returns list of accounts based on their 'SolanaPubkey'
--- If the account of a given 'SolanaPubkey' doesn't exist, the coresponding element in the list is 'Nothing'.
+-- | Returns account information for a list of addresses.
+-- For any missing account, the result contains 'Nothing' in its place.
 getMultipleAccounts :: (JsonRpc m) => [SolanaPublicKey] -> m [Maybe AccountInfo]
 getMultipleAccounts = fmap value . getMultipleAccounts'
 {-# INLINE getMultipleAccounts #-}
@@ -79,9 +75,7 @@ getMultipleAccounts = fmap value . getMultipleAccounts'
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns list of accounts owned by the provided program 'SolanaPubkey'
--- Returns a list of 'Account.
--- If the account of a given 'SolanaPubkey' doesn't exist, the list is empty.
+-- | Returns all accounts owned by the specified program address.
 getProgramAccounts :: (JsonRpc m) => SolanaPublicKey -> m [Account]
 getProgramAccounts = do
   remote "getProgramAccounts"
@@ -103,15 +97,15 @@ data AddressAndLamports
   }
   deriving (Generic, Show, FromJSON)
 
--- | Returns the 20 largest accounts, by lamport balance (results may be cached up to two hours).
--- Returns 'RpcResponse [AddressAndLamports]' with value field set to a list of 'AddressAndLamports'.
+-- | Returns up to the 20 accounts with the highest balances in lamports.
+-- Results may be cached for up to two hours.
 getLargestAccounts' :: (JsonRpc m) => m (RPCResponse [AddressAndLamports])
 getLargestAccounts' = do
   remote "getLargestAccounts"
 {-# INLINE getLargestAccounts' #-}
 
--- | Returns the 20 largest accounts, by lamport balance (results may be cached up to two hours).
--- | Returns a list of pairs of address and balance.
+-- | Returns up to the 20 accounts with the highest balances in lamports.
+-- Results may be cached for up to two hours.
 getLargestAccounts :: (JsonRpc m) => m [(SolanaPublicKey, Lamport)]
 getLargestAccounts = fmap (liftA2 (,) address lamports) . value <$> getLargestAccounts'
 {-# INLINE getLargestAccounts #-}
@@ -122,13 +116,13 @@ getLargestAccounts = fmap (liftA2 (,) address lamports) . value <$> getLargestAc
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns signatures for confirmed transactions that include the given address in their 'accountKeys' list.
--- Returns signatures backwards in time from the provided signature or most recent confirmed block
+-- | Returns confirmed transaction signatures involving the given address, in reverse chronological order.
 getSignaturesForAddress :: (JsonRpc m) => SolanaPublicKey -> m [TransactionSignatureInformation]
 getSignaturesForAddress = do
   remote "getSignaturesForAddress"
 {-# INLINE getSignaturesForAddress #-}
 
+-- | Metadata for a confirmed transaction signature involving a given address.
 data TransactionSignatureInformation = TransactionSignatureInformation
   { -- | Transaction signature
     signature :: SolanaSignature,
@@ -162,21 +156,20 @@ instance FromJSON TransactionSignatureInformation where
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns the statuses of a list of @TransactionSignatureStatus@.
--- Each signature must be a TxId (the first signature in a transaction, which can be used to uniquely identify
--- the transaction across the complete ledger).
+-- | Returns the confirmation status and slot info for the specified transaction signatures.
+-- Each signature should be the transaction’s first signature (used as a unique identifier).
 getSignatureStatuses' :: (JsonRpc m) => [SolanaSignature] -> ConfigurationObject -> m (RPCResponse [Maybe TransactionSignatureStatus])
 getSignatureStatuses' = do
   remote "getSignatureStatuses"
 {-# INLINE getSignatureStatuses' #-}
 
--- | Returns the statuses of a list of @TransactionSignatureStatus@.
--- Each signature must be a TxId (the first signature in a transaction, which can be used to uniquely identify
--- the transaction across the complete ledger).
+-- | Returns the confirmation status and slot info for the specified transaction signatures.
+-- Each signature should be the transaction’s first signature (used as a unique identifier).
 getSignatureStatuses :: (JsonRpc m) => [SolanaSignature] -> m [Maybe TransactionSignatureStatus]
 getSignatureStatuses sigs = value <$> getSignatureStatuses' sigs (defaultConfigObject {searchTransactionHistory = Just True})
 {-# INLINE getSignatureStatuses #-}
 
+-- | Status metadata for a given transaction signature.
 data TransactionSignatureStatus = TransactionSignatureStatus
   { -- | The slot the transaction was processed
     slotTxStatus :: Slot,
