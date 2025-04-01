@@ -2,6 +2,16 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- |
+-- Module      : Network.Solana.RPC.HTTP.Token
+-- Description : Solana RPC methods for interacting with SPL Token accounts.
+--
+-- This module provides access to Solana JSON-RPC methods related to SPL Token accounts.
+-- It includes queries for fetching token balances, owned accounts, delegated accounts,
+-- largest token holders, and token supply information.
+--
+-- It is useful for building wallets, explorers, or token dashboards that interact
+-- with SPL-compliant tokens deployed on the Solana blockchain.
 module Network.Solana.RPC.HTTP.Token where
 
 import Data.Aeson

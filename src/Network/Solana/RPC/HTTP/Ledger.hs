@@ -2,6 +2,14 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- |
+-- Module      : Network.Solana.RPC.HTTP.Ledger
+-- Description : Ledger-level Solana RPC methods for querying epoch and slot data.
+--
+-- This module provides bindings to Solana JSON-RPC methods related to the ledger,
+-- including epoch and slot information, block leader schedules, genesis data,
+-- and transaction counts. It is useful for building explorers, monitoring tools,
+-- or protocols that depend on precise ledger state and validator schedule tracking.
 module Network.Solana.RPC.HTTP.Ledger where
 
 import Data.Aeson

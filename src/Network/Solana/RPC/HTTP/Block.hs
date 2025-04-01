@@ -2,6 +2,14 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- |
+-- Module      : Network.Solana.RPC.HTTP.Block
+-- Description : Solana RPC methods for accessing block-related information.
+--
+-- This module provides access to block-related JSON-RPC methods in the Solana network.
+-- These include fetching full block data, commitment levels, recent block production statistics,
+-- block ranges, timestamps, and validity of blockhashes. Useful for exploring historical blocks,
+-- validator performance, and transaction confirmation metadata.
 module Network.Solana.RPC.HTTP.Block where
 
 import Data.Aeson

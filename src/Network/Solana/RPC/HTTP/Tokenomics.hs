@@ -2,6 +2,15 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- |
+-- Module      : Network.Solana.RPC.HTTP.Tokenomics
+-- Description : Solana RPC methods for querying inflation, staking, supply, and vote account data.
+--
+-- This module exposes Solana JSON-RPC methods for interacting with protocol-level
+-- tokenomics: inflation schedules, rewards, token supply, staking parameters, and
+-- validator vote accounts.
+--
+-- Useful for dashboards, analytics tools, staking services, or indexers.
 module Network.Solana.RPC.HTTP.Tokenomics where
 
 import Data.Aeson

@@ -2,6 +2,15 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- |
+-- Module      : Network.Solana.RPC.HTTP.Chain
+-- Description : Cluster and node-level RPC methods for Solana.
+--
+-- This module provides access to Solana JSON-RPC endpoints related to cluster-wide
+-- and node-specific information.
+--
+-- These endpoints are especially useful for monitoring, diagnostics,
+-- and understanding the state of the cluster from a validator or RPC node's perspective.
 module Network.Solana.RPC.HTTP.Chain where
 
 import Data.Aeson

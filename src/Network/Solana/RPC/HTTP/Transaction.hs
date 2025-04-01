@@ -1,6 +1,15 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- |
+-- Module      : Network.Solana.RPC.HTTP.Transaction
+-- Description : Solana RPC methods for submitting, inspecting, and simulating transactions.
+--
+-- This module provides Solana JSON-RPC bindings related to transaction lifecycle operations:
+-- fee estimation, transaction broadcasting, simulation, airdrops (on devnet), and retrieving
+-- metadata for finalized transactions.
+--
+-- These endpoints are essential for any client application that signs and sends transactions.
 module Network.Solana.RPC.HTTP.Transaction where
 
 import Data.Aeson
