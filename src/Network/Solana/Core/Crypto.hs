@@ -23,6 +23,7 @@ module Network.Solana.Core.Crypto
     toBase64String,
     fromBase64String,
     fromBase58String,
+    readSigningKeyFromFile,
   )
 where
 
@@ -33,24 +34,26 @@ import Data.Bifunctor (Bifunctor (bimap))
 import Data.Binary
 import Data.Binary.Get (getByteString)
 import Data.Binary.Put (putByteString)
-import Data.ByteString qualified as S
+import Data.ByteString qualified as BS
 import Data.ByteString.Base58
 import Data.ByteString.Base64 (decodeBase64Lenient, encodeBase64')
+import Data.ByteString.Char8 qualified as BS8
+import Data.Either.Extra (maybeToEither)
 import Data.Maybe (fromJust)
 import Data.String (fromString)
 import Data.Text qualified as Text
 import GHC.Generics (Generic)
 
-toBase58String :: S.ByteString -> String
+toBase58String :: BS.ByteString -> String
 toBase58String = tail . init . show . encodeBase58 bitcoinAlphabet
 
-toBase64String :: S.ByteString -> String
+toBase64String :: BS.ByteString -> String
 toBase64String = tail . init . show . encodeBase64'
 
-fromBase58String :: String -> Maybe S.ByteString
+fromBase58String :: String -> Maybe BS.ByteString
 fromBase58String = decodeBase58 bitcoinAlphabet . fromString
 
-fromBase64String :: String -> S.ByteString
+fromBase64String :: String -> BS.ByteString
 fromBase64String = decodeBase64Lenient . fromString
 
 --- >>> fromBase64String $ toBase64String "Sun"
@@ -141,26 +144,34 @@ instance Show SolanaPrivateKey where
 
 ------------------------------------------------------------------------------------------------
 
+mkSigFromString :: String -> Either String SolanaSignature
+mkSigFromString str = do
+  bs <- maybeToEither "Not base58" $ fromBase58String str
+  if BS.length bs == 64
+    then Right $ (SolanaSignature . Ed25519.Signature) bs
+    else Left "Invalid string length for sig"
+
 unsafeSigFromString :: String -> SolanaSignature
-unsafeSigFromString str =
-  let bs = fromJust . fromBase58String $ str
-   in if S.length bs == 64
-        then
-          (SolanaSignature . Ed25519.Signature) bs
-        else
-          error "Invalid string length for sig"
+unsafeSigFromString = either error id . mkSigFromString
 
-unsafeKeyFromString :: forall f. (S.ByteString -> f) -> String -> f
-unsafeKeyFromString cstr str =
-  let bs = fromJust . fromBase58String $ str
-   in if S.length bs == 32
-        then
-          cstr bs
-        else
-          error "Invalid string length for key"
+mkKeyromString :: forall f. (BS.ByteString -> f) -> String -> Either String f
+mkKeyromString cstr str = do
+  bs <- maybeToEither "Not base58" $ fromBase58String str
+  if BS.length bs == 32
+    then Right $ cstr bs
+    else Left "Invalid string length for key"
 
-unsafeKeyFromWords :: forall f. (S.ByteString -> f) -> [Word8] -> f
-unsafeKeyFromWords cstr ws = cstr (S.pack ws)
+mkPublicKeyFromString :: String -> Either String SolanaPublicKey
+mkPublicKeyFromString = mkKeyromString (SolanaPublicKey . Ed25519.PublicKey)
+
+mkPrivateKeyFromString :: String -> Either String SolanaPrivateKey
+mkPrivateKeyFromString = mkKeyromString (SolanaPrivateKey . Ed25519.SecretKey)
+
+unsafeKeyFromString :: forall f. (BS.ByteString -> f) -> String -> f
+unsafeKeyFromString cstr str = either error id $ mkKeyromString cstr str
+
+unsafeKeyFromWords :: forall f. (BS.ByteString -> f) -> [Word8] -> f
+unsafeKeyFromWords cstr ws = cstr (BS.pack ws)
 
 unsafeSolanaPublicKey :: String -> SolanaPublicKey
 unsafeSolanaPublicKey = unsafeKeyFromString (SolanaPublicKey . Ed25519.PublicKey)
@@ -174,32 +185,53 @@ unsafeSolanaPrivateKey = unsafeKeyFromString (SolanaPrivateKey . Ed25519.SecretK
 unsafeSolanaPrivateKeyRaw :: [Word8] -> SolanaPrivateKey
 unsafeSolanaPrivateKeyRaw = unsafeKeyFromWords (SolanaPrivateKey . Ed25519.SecretKey)
 
-getSolanaPublicKeyRaw :: SolanaPublicKey -> S.ByteString
+getSolanaPublicKeyRaw :: SolanaPublicKey -> BS.ByteString
 getSolanaPublicKeyRaw (SolanaPublicKey (Ed25519.PublicKey bs)) = bs
 
-getSolanaPrivateKeyRaw :: SolanaPrivateKey -> S.ByteString
+getSolanaPrivateKeyRaw :: SolanaPrivateKey -> BS.ByteString
 getSolanaPrivateKeyRaw (SolanaPrivateKey (Ed25519.SecretKey bs)) = bs
 
-getSolanaSignatureRaw :: SolanaSignature -> S.ByteString
+getSolanaSignatureRaw :: SolanaSignature -> BS.ByteString
 getSolanaSignatureRaw (SolanaSignature (Ed25519.Signature bs)) = bs
 
 createSolanaKeyPair :: IO (SolanaPublicKey, SolanaPrivateKey)
 createSolanaKeyPair = bimap SolanaPublicKey SolanaPrivateKey <$> Ed25519.createKeypair
 
-createSolanaKeypairFromSeed :: S.ByteString -> Maybe (SolanaPublicKey, SolanaPrivateKey)
+createSolanaKeypairFromSeed :: BS.ByteString -> Maybe (SolanaPublicKey, SolanaPrivateKey)
 createSolanaKeypairFromSeed bs = bimap SolanaPublicKey SolanaPrivateKey <$> Ed25519.createKeypairFromSeed_ bs
 
 toSolanaPublicKey :: SolanaPrivateKey -> SolanaPublicKey
 toSolanaPublicKey (SolanaPrivateKey pv) = SolanaPublicKey $ Ed25519.toPublicKey pv
 
-sign :: SolanaPrivateKey -> S.ByteString -> S.ByteString
+sign :: SolanaPrivateKey -> BS.ByteString -> BS.ByteString
 sign (SolanaPrivateKey sk) = Ed25519.sign sk
 
-verify :: SolanaPublicKey -> S.ByteString -> Bool
+verify :: SolanaPublicKey -> BS.ByteString -> Bool
 verify (SolanaPublicKey pk) = Ed25519.verify pk
 
-dsign :: SolanaPrivateKey -> S.ByteString -> SolanaSignature
+dsign :: SolanaPrivateKey -> BS.ByteString -> SolanaSignature
 dsign (SolanaPrivateKey sk) bs = SolanaSignature $ Ed25519.dsign sk bs
 
-dverify :: SolanaPublicKey -> S.ByteString -> SolanaSignature -> Bool
+dverify :: SolanaPublicKey -> BS.ByteString -> SolanaSignature -> Bool
 dverify (SolanaPublicKey pk) bs (SolanaSignature sig) = Ed25519.dverify pk bs sig
+
+----
+----
+----
+----
+
+readSigningKeyFromFile :: FilePath -> IO SolanaPrivateKey
+readSigningKeyFromFile path = do
+  contents <- BS8.readFile path
+  let word8List = read (BS8.unpack contents) :: [Word8]
+  return $ unsafeSolanaPrivateKeyRaw word8List
+
+-- -- TODO
+
+-- getKeyPairFromFile
+-- writeKeys
+-- Write priv key to file
+-- writeKeyToFileBase68 privKey
+
+-- Write priv key to file
+-- writeKeyToFileRaw privKey

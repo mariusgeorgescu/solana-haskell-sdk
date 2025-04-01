@@ -53,7 +53,6 @@ library
     Network.Solana.RPC.HTTP.Tokenomics
     Network.Solana.RPC.HTTP.Transaction
     Network.Solana.RPC.HTTP.Types
-    Network.Solana.RPC.Providers
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -72,12 +71,10 @@ library
     , containers
     , ed25519
     , either
-    , hex-text
     , jsonrpc-tinyclient
-    , mtl
     , text
     , vector
-    , web3-provider
+    , extra
 
   -- Directories containing source files.
   hs-source-dirs:   src
@@ -93,7 +90,7 @@ executable solana-haskell-sdk
   main-is:          Main.hs
 
   -- Modules included in this executable, other than Main.
-  -- other-modules:
+  other-modules:    KeyManagement
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:

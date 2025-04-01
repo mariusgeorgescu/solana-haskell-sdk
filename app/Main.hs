@@ -19,8 +19,13 @@ import Network.Solana.RPC.HTTP.Ledger
 import Network.Solana.RPC.HTTP.Token
 import Network.Solana.RPC.HTTP.Tokenomics
 import Network.Solana.RPC.HTTP.Transaction
-import Network.Solana.RPC.Providers
 import Network.Web3.Provider
+
+devnetHttpProvider :: Provider
+devnetHttpProvider = HttpProvider "https://api.devnet.solana.com"
+
+localHttpProvider :: Provider
+localHttpProvider = HttpProvider "http://127.0.0.1:8899"
 
 testTx :: IO ()
 testTx = void $ runWeb3' localHttpProvider $ do
