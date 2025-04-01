@@ -1,0 +1,617 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.Solana.RPC.HTTP.Account</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson.Types</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Int</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Int64</span></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.JsonRpc.TinyClient</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">JsonRpc</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.Solana.Core.Account.html"><span class="hs-identifier">Network.Solana.Core.Account</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.Core.Account.html#Account"><span class="hs-identifier">Account</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Solana.Core.Account.html#AccountInfo"><span class="hs-identifier">AccountInfo</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Solana.Core.Account.html#Lamport"><span class="hs-identifier">Lamport</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html"><span class="hs-identifier">Network.Solana.Core.Crypto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier">SolanaPublicKey</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaSignature"><span class="hs-identifier">SolanaSignature</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html"><span class="hs-identifier">Network.Solana.RPC.HTTP.Types</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="annot"><span class="hs-comment">-- ** getAccountInfo</span></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- | Fetches all available data for the given account address.</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- Returns 'RpcResponse (Maybe AccountInfo)', where 'Nothing' indicates the account does not exist.</span><span>
+</span><span id="line-24"></span><span id="local-6989586621679153529"><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getAccountInfo%27"><span class="hs-identifier hs-type">getAccountInfo'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JsonRpc</span></span><span> </span><span class="annot"><a href="#local-6989586621679153529"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679153529"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#RPCResponse"><span class="hs-identifier hs-type">RPCResponse</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="Network.Solana.Core.Account.html#AccountInfo"><span class="hs-identifier hs-type">AccountInfo</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-25"></span><span id="getAccountInfo%27"><span class="annot"><span class="annottext">getAccountInfo' :: forall (m :: * -&gt; *).
+JsonRpc m =&gt;
+SolanaPublicKey -&gt; m (RPCResponse (Maybe AccountInfo))
+</span><a href="Network.Solana.RPC.HTTP.Account.html#getAccountInfo%27"><span class="hs-identifier hs-var hs-var">getAccountInfo'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><span class="annottext">MethodName
+-&gt; SolanaPublicKey -&gt; m (RPCResponse (Maybe AccountInfo))
+forall a. Remote m a =&gt; MethodName -&gt; a
+forall (m :: * -&gt; *) a. (JsonRpc m, Remote m a) =&gt; MethodName -&gt; a
+</span><span class="hs-identifier hs-var">remote</span></span><span> </span><span class="annot"><span class="annottext">MethodName
+</span><span class="hs-string">&quot;getAccountInfo&quot;</span></span><span>
+</span><span id="line-27"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getAccountInfo%27"><span class="hs-pragma hs-type">getAccountInfo'</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- | Fetches all available data for the given account address.</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- Returns 'Nothing' if the account does not exist.</span><span>
+</span><span id="line-31"></span><span id="local-6989586621679153549"><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getAccountInfo"><span class="hs-identifier hs-type">getAccountInfo</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JsonRpc</span></span><span> </span><span class="annot"><a href="#local-6989586621679153549"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679153549"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="Network.Solana.Core.Account.html#AccountInfo"><span class="hs-identifier hs-type">AccountInfo</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-32"></span><span id="getAccountInfo"><span class="annot"><span class="annottext">getAccountInfo :: forall (m :: * -&gt; *).
+JsonRpc m =&gt;
+SolanaPublicKey -&gt; m (Maybe AccountInfo)
+</span><a href="Network.Solana.RPC.HTTP.Account.html#getAccountInfo"><span class="hs-identifier hs-var hs-var">getAccountInfo</span></a></span></span><span> </span><span id="local-6989586621679153750"><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679153750"><span class="hs-identifier hs-var">pubKey</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RPCResponse (Maybe AccountInfo) -&gt; Maybe AccountInfo
+forall a. RPCResponse a -&gt; a
+</span><a href="Network.Solana.RPC.HTTP.Types.html#value"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="annot"><span class="annottext">(RPCResponse (Maybe AccountInfo) -&gt; Maybe AccountInfo)
+-&gt; m (RPCResponse (Maybe AccountInfo)) -&gt; m (Maybe AccountInfo)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">SolanaPublicKey -&gt; m (RPCResponse (Maybe AccountInfo))
+forall (m :: * -&gt; *).
+JsonRpc m =&gt;
+SolanaPublicKey -&gt; m (RPCResponse (Maybe AccountInfo))
+</span><a href="Network.Solana.RPC.HTTP.Account.html#getAccountInfo%27"><span class="hs-identifier hs-var">getAccountInfo'</span></a></span><span> </span><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679153750"><span class="hs-identifier hs-var">pubKey</span></a></span><span>
+</span><span id="line-33"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getAccountInfo"><span class="hs-pragma hs-type">getAccountInfo</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="annot"><span class="hs-comment">-- ** getBalance</span></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- | Returns the balance, in lamports, of the specified account.</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- Returns 'RpcResponse Lamport'.</span><span>
+</span><span id="line-43"></span><span id="local-6989586621679153562"><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getBalance%27"><span class="hs-identifier hs-type">getBalance'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JsonRpc</span></span><span> </span><span class="annot"><a href="#local-6989586621679153562"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679153562"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#RPCResponse"><span class="hs-identifier hs-type">RPCResponse</span></a></span><span> </span><span class="annot"><a href="Network.Solana.Core.Account.html#Lamport"><span class="hs-identifier hs-type">Lamport</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-44"></span><span id="getBalance%27"><span class="annot"><span class="annottext">getBalance' :: forall (m :: * -&gt; *).
+JsonRpc m =&gt;
+SolanaPublicKey -&gt; m (RPCResponse Lamport)
+</span><a href="Network.Solana.RPC.HTTP.Account.html#getBalance%27"><span class="hs-identifier hs-var hs-var">getBalance'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><span class="annottext">MethodName -&gt; SolanaPublicKey -&gt; m (RPCResponse Lamport)
+forall a. Remote m a =&gt; MethodName -&gt; a
+forall (m :: * -&gt; *) a. (JsonRpc m, Remote m a) =&gt; MethodName -&gt; a
+</span><span class="hs-identifier hs-var">remote</span></span><span> </span><span class="annot"><span class="annottext">MethodName
+</span><span class="hs-string">&quot;getBalance&quot;</span></span><span>
+</span><span id="line-46"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getBalance%27"><span class="hs-pragma hs-type">getBalance'</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="annot"><span class="hs-comment">-- | Returns the balance, in lamports, of the specified account.</span></span><span>
+</span><span id="line-49"></span><span id="local-6989586621679153565"><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getBalance"><span class="hs-identifier hs-type">getBalance</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JsonRpc</span></span><span> </span><span class="annot"><a href="#local-6989586621679153565"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679153565"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Network.Solana.Core.Account.html#Lamport"><span class="hs-identifier hs-type">Lamport</span></a></span></span><span>
+</span><span id="line-50"></span><span id="getBalance"><span class="annot"><span class="annottext">getBalance :: forall (m :: * -&gt; *). JsonRpc m =&gt; SolanaPublicKey -&gt; m Lamport
+</span><a href="Network.Solana.RPC.HTTP.Account.html#getBalance"><span class="hs-identifier hs-var hs-var">getBalance</span></a></span></span><span> </span><span id="local-6989586621679153773"><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679153773"><span class="hs-identifier hs-var">pubKey</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RPCResponse Lamport -&gt; Lamport
+forall a. RPCResponse a -&gt; a
+</span><a href="Network.Solana.RPC.HTTP.Types.html#value"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="annot"><span class="annottext">(RPCResponse Lamport -&gt; Lamport)
+-&gt; m (RPCResponse Lamport) -&gt; m Lamport
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">SolanaPublicKey -&gt; m (RPCResponse Lamport)
+forall (m :: * -&gt; *).
+JsonRpc m =&gt;
+SolanaPublicKey -&gt; m (RPCResponse Lamport)
+</span><a href="Network.Solana.RPC.HTTP.Account.html#getBalance%27"><span class="hs-identifier hs-var">getBalance'</span></a></span><span> </span><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679153773"><span class="hs-identifier hs-var">pubKey</span></a></span><span>
+</span><span id="line-51"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getBalance"><span class="hs-pragma hs-type">getBalance</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="annot"><span class="hs-comment">-- * getMultipleAccounts</span></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- | Returns account information for a list of addresses.</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- For any missing account, the result contains 'Nothing' in its place.</span><span>
+</span><span id="line-61"></span><span id="local-6989586621679153567"><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getMultipleAccounts%27"><span class="hs-identifier hs-type">getMultipleAccounts'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JsonRpc</span></span><span> </span><span class="annot"><a href="#local-6989586621679153567"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679153567"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#RPCResponse"><span class="hs-identifier hs-type">RPCResponse</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="Network.Solana.Core.Account.html#AccountInfo"><span class="hs-identifier hs-type">AccountInfo</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span></span><span>
+</span><span id="line-62"></span><span id="getMultipleAccounts%27"><span class="annot"><span class="annottext">getMultipleAccounts' :: forall (m :: * -&gt; *).
+JsonRpc m =&gt;
+[SolanaPublicKey] -&gt; m (RPCResponse [Maybe AccountInfo])
+</span><a href="Network.Solana.RPC.HTTP.Account.html#getMultipleAccounts%27"><span class="hs-identifier hs-var hs-var">getMultipleAccounts'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><span class="annottext">MethodName
+-&gt; [SolanaPublicKey] -&gt; m (RPCResponse [Maybe AccountInfo])
+forall a. Remote m a =&gt; MethodName -&gt; a
+forall (m :: * -&gt; *) a. (JsonRpc m, Remote m a) =&gt; MethodName -&gt; a
+</span><span class="hs-identifier hs-var">remote</span></span><span> </span><span class="annot"><span class="annottext">MethodName
+</span><span class="hs-string">&quot;getMultipleAccounts&quot;</span></span><span>
+</span><span id="line-64"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getMultipleAccounts%27"><span class="hs-pragma hs-type">getMultipleAccounts'</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- | Returns account information for a list of addresses.</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- For any missing account, the result contains 'Nothing' in its place.</span><span>
+</span><span id="line-68"></span><span id="local-6989586621679153571"><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getMultipleAccounts"><span class="hs-identifier hs-type">getMultipleAccounts</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JsonRpc</span></span><span> </span><span class="annot"><a href="#local-6989586621679153571"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679153571"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="Network.Solana.Core.Account.html#AccountInfo"><span class="hs-identifier hs-type">AccountInfo</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-69"></span><span id="getMultipleAccounts"><span class="annot"><span class="annottext">getMultipleAccounts :: forall (m :: * -&gt; *).
+JsonRpc m =&gt;
+[SolanaPublicKey] -&gt; m [Maybe AccountInfo]
+</span><a href="Network.Solana.RPC.HTTP.Account.html#getMultipleAccounts"><span class="hs-identifier hs-var hs-var">getMultipleAccounts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(RPCResponse [Maybe AccountInfo] -&gt; [Maybe AccountInfo])
+-&gt; m (RPCResponse [Maybe AccountInfo]) -&gt; m [Maybe AccountInfo]
+forall a b. (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="annot"><span class="annottext">RPCResponse [Maybe AccountInfo] -&gt; [Maybe AccountInfo]
+forall a. RPCResponse a -&gt; a
+</span><a href="Network.Solana.RPC.HTTP.Types.html#value"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="annot"><span class="annottext">(m (RPCResponse [Maybe AccountInfo]) -&gt; m [Maybe AccountInfo])
+-&gt; ([SolanaPublicKey] -&gt; m (RPCResponse [Maybe AccountInfo]))
+-&gt; [SolanaPublicKey]
+-&gt; m [Maybe AccountInfo]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey] -&gt; m (RPCResponse [Maybe AccountInfo])
+forall (m :: * -&gt; *).
+JsonRpc m =&gt;
+[SolanaPublicKey] -&gt; m (RPCResponse [Maybe AccountInfo])
+</span><a href="Network.Solana.RPC.HTTP.Account.html#getMultipleAccounts%27"><span class="hs-identifier hs-var">getMultipleAccounts'</span></a></span><span>
+</span><span id="line-70"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getMultipleAccounts"><span class="hs-pragma hs-type">getMultipleAccounts</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="annot"><span class="hs-comment">-- * getProgramAccounts</span></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="annot"><span class="hs-comment">-- | Returns all accounts owned by the specified program address.</span></span><span>
+</span><span id="line-79"></span><span id="local-6989586621679153579"><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getProgramAccounts"><span class="hs-identifier hs-type">getProgramAccounts</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JsonRpc</span></span><span> </span><span class="annot"><a href="#local-6989586621679153579"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679153579"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Account.html#Account"><span class="hs-identifier hs-type">Account</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-80"></span><span id="getProgramAccounts"><span class="annot"><span class="annottext">getProgramAccounts :: forall (m :: * -&gt; *). JsonRpc m =&gt; SolanaPublicKey -&gt; m [Account]
+</span><a href="Network.Solana.RPC.HTTP.Account.html#getProgramAccounts"><span class="hs-identifier hs-var hs-var">getProgramAccounts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><span class="annottext">MethodName -&gt; SolanaPublicKey -&gt; m [Account]
+forall a. Remote m a =&gt; MethodName -&gt; a
+forall (m :: * -&gt; *) a. (JsonRpc m, Remote m a) =&gt; MethodName -&gt; a
+</span><span class="hs-identifier hs-var">remote</span></span><span> </span><span class="annot"><span class="annottext">MethodName
+</span><span class="hs-string">&quot;getProgramAccounts&quot;</span></span><span>
+</span><span id="line-82"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getProgramAccounts"><span class="hs-pragma hs-type">getProgramAccounts</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="annot"><span class="hs-comment">-- * getLargestAccounts</span></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="annot"><span class="hs-comment">-- | Contains the address and value of an account.</span></span><span>
+</span><span id="line-91"></span><span class="hs-keyword">data</span><span> </span><span id="AddressAndLamports"><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#AddressAndLamports"><span class="hs-identifier hs-var">AddressAndLamports</span></a></span></span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="AddressAndLamports"><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#AddressAndLamports"><span class="hs-identifier hs-var">AddressAndLamports</span></a></span></span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="hs-comment">-- | Account address</span></span><span>
+</span><span id="line-94"></span><span>    </span><span id="address"><span class="annot"><span class="annottext">AddressAndLamports -&gt; SolanaPublicKey
+</span><a href="Network.Solana.RPC.HTTP.Account.html#address"><span class="hs-identifier hs-var hs-var">address</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-95"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Number of lamports in the account</span></span><span>
+</span><span id="line-96"></span><span>    </span><span id="lamports"><span class="annot"><span class="annottext">AddressAndLamports -&gt; Lamport
+</span><a href="Network.Solana.RPC.HTTP.Account.html#lamports"><span class="hs-identifier hs-var hs-var">lamports</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Account.html#Lamport"><span class="hs-identifier hs-type">Lamport</span></a></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679153814"><span id="local-6989586621679153816"><span class="annot"><span class="annottext">(forall x. AddressAndLamports -&gt; Rep AddressAndLamports x)
+-&gt; (forall x. Rep AddressAndLamports x -&gt; AddressAndLamports)
+-&gt; Generic AddressAndLamports
+forall x. Rep AddressAndLamports x -&gt; AddressAndLamports
+forall x. AddressAndLamports -&gt; Rep AddressAndLamports x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. AddressAndLamports -&gt; Rep AddressAndLamports x
+from :: forall x. AddressAndLamports -&gt; Rep AddressAndLamports x
+$cto :: forall x. Rep AddressAndLamports x -&gt; AddressAndLamports
+to :: forall x. Rep AddressAndLamports x -&gt; AddressAndLamports
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679153820"><span id="local-6989586621679153828"><span id="local-6989586621679153832"><span class="annot"><span class="annottext">Int -&gt; AddressAndLamports -&gt; ShowS
+[AddressAndLamports] -&gt; ShowS
+AddressAndLamports -&gt; String
+(Int -&gt; AddressAndLamports -&gt; ShowS)
+-&gt; (AddressAndLamports -&gt; String)
+-&gt; ([AddressAndLamports] -&gt; ShowS)
+-&gt; Show AddressAndLamports
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; AddressAndLamports -&gt; ShowS
+showsPrec :: Int -&gt; AddressAndLamports -&gt; ShowS
+$cshow :: AddressAndLamports -&gt; String
+show :: AddressAndLamports -&gt; String
+$cshowList :: [AddressAndLamports] -&gt; ShowS
+showList :: [AddressAndLamports] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679153836"><span id="local-6989586621679153843"><span class="annot"><span class="annottext">Value -&gt; Parser [AddressAndLamports]
+Value -&gt; Parser AddressAndLamports
+(Value -&gt; Parser AddressAndLamports)
+-&gt; (Value -&gt; Parser [AddressAndLamports])
+-&gt; FromJSON AddressAndLamports
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser AddressAndLamports
+parseJSON :: Value -&gt; Parser AddressAndLamports
+$cparseJSONList :: Value -&gt; Parser [AddressAndLamports]
+parseJSONList :: Value -&gt; Parser [AddressAndLamports]
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- | Returns up to the 20 accounts with the highest balances in lamports.</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- Results may be cached for up to two hours.</span><span>
+</span><span id="line-102"></span><span id="local-6989586621679153688"><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getLargestAccounts%27"><span class="hs-identifier hs-type">getLargestAccounts'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JsonRpc</span></span><span> </span><span class="annot"><a href="#local-6989586621679153688"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679153688"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#RPCResponse"><span class="hs-identifier hs-type">RPCResponse</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#AddressAndLamports"><span class="hs-identifier hs-type">AddressAndLamports</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span></span><span>
+</span><span id="line-103"></span><span id="getLargestAccounts%27"><span class="annot"><span class="annottext">getLargestAccounts' :: forall (m :: * -&gt; *).
+JsonRpc m =&gt;
+m (RPCResponse [AddressAndLamports])
+</span><a href="Network.Solana.RPC.HTTP.Account.html#getLargestAccounts%27"><span class="hs-identifier hs-var hs-var">getLargestAccounts'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-104"></span><span>  </span><span class="annot"><span class="annottext">MethodName -&gt; m (RPCResponse [AddressAndLamports])
+forall a. Remote m a =&gt; MethodName -&gt; a
+forall (m :: * -&gt; *) a. (JsonRpc m, Remote m a) =&gt; MethodName -&gt; a
+</span><span class="hs-identifier hs-var">remote</span></span><span> </span><span class="annot"><span class="annottext">MethodName
+</span><span class="hs-string">&quot;getLargestAccounts&quot;</span></span><span>
+</span><span id="line-105"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getLargestAccounts%27"><span class="hs-pragma hs-type">getLargestAccounts'</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- | Returns up to the 20 accounts with the highest balances in lamports.</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- Results may be cached for up to two hours.</span><span>
+</span><span id="line-109"></span><span id="local-6989586621679153690"><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getLargestAccounts"><span class="hs-identifier hs-type">getLargestAccounts</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JsonRpc</span></span><span> </span><span class="annot"><a href="#local-6989586621679153690"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679153690"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Solana.Core.Account.html#Lamport"><span class="hs-identifier hs-type">Lamport</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span></span><span>
+</span><span id="line-110"></span><span id="getLargestAccounts"><span class="annot"><span class="annottext">getLargestAccounts :: forall (m :: * -&gt; *). JsonRpc m =&gt; m [(SolanaPublicKey, Lamport)]
+</span><a href="Network.Solana.RPC.HTTP.Account.html#getLargestAccounts"><span class="hs-identifier hs-var hs-var">getLargestAccounts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(AddressAndLamports -&gt; (SolanaPublicKey, Lamport))
+-&gt; [AddressAndLamports] -&gt; [(SolanaPublicKey, Lamport)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(SolanaPublicKey -&gt; Lamport -&gt; (SolanaPublicKey, Lamport))
+-&gt; (AddressAndLamports -&gt; SolanaPublicKey)
+-&gt; (AddressAndLamports -&gt; Lamport)
+-&gt; AddressAndLamports
+-&gt; (SolanaPublicKey, Lamport)
+forall a b c.
+(a -&gt; b -&gt; c)
+-&gt; (AddressAndLamports -&gt; a)
+-&gt; (AddressAndLamports -&gt; b)
+-&gt; AddressAndLamports
+-&gt; c
+forall (f :: * -&gt; *) a b c.
+Applicative f =&gt;
+(a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c
+</span><span class="hs-identifier hs-var">liftA2</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">AddressAndLamports -&gt; SolanaPublicKey
+</span><a href="Network.Solana.RPC.HTTP.Account.html#address"><span class="hs-identifier hs-var">address</span></a></span><span> </span><span class="annot"><span class="annottext">AddressAndLamports -&gt; Lamport
+</span><a href="Network.Solana.RPC.HTTP.Account.html#lamports"><span class="hs-identifier hs-var">lamports</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([AddressAndLamports] -&gt; [(SolanaPublicKey, Lamport)])
+-&gt; (RPCResponse [AddressAndLamports] -&gt; [AddressAndLamports])
+-&gt; RPCResponse [AddressAndLamports]
+-&gt; [(SolanaPublicKey, Lamport)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">RPCResponse [AddressAndLamports] -&gt; [AddressAndLamports]
+forall a. RPCResponse a -&gt; a
+</span><a href="Network.Solana.RPC.HTTP.Types.html#value"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="annot"><span class="annottext">(RPCResponse [AddressAndLamports] -&gt; [(SolanaPublicKey, Lamport)])
+-&gt; m (RPCResponse [AddressAndLamports])
+-&gt; m [(SolanaPublicKey, Lamport)]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">m (RPCResponse [AddressAndLamports])
+forall (m :: * -&gt; *).
+JsonRpc m =&gt;
+m (RPCResponse [AddressAndLamports])
+</span><a href="Network.Solana.RPC.HTTP.Account.html#getLargestAccounts%27"><span class="hs-identifier hs-var">getLargestAccounts'</span></a></span><span>
+</span><span id="line-111"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getLargestAccounts"><span class="hs-pragma hs-type">getLargestAccounts</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="annot"><span class="hs-comment">-- * getSignaturesForAddress</span></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span class="annot"><span class="hs-comment">-- | Returns confirmed transaction signatures involving the given address, in reverse chronological order.</span></span><span>
+</span><span id="line-120"></span><span id="local-6989586621679153696"><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getSignaturesForAddress"><span class="hs-identifier hs-type">getSignaturesForAddress</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JsonRpc</span></span><span> </span><span class="annot"><a href="#local-6989586621679153696"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679153696"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#TransactionSignatureInformation"><span class="hs-identifier hs-type">TransactionSignatureInformation</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-121"></span><span id="getSignaturesForAddress"><span class="annot"><span class="annottext">getSignaturesForAddress :: forall (m :: * -&gt; *).
+JsonRpc m =&gt;
+SolanaPublicKey -&gt; m [TransactionSignatureInformation]
+</span><a href="Network.Solana.RPC.HTTP.Account.html#getSignaturesForAddress"><span class="hs-identifier hs-var hs-var">getSignaturesForAddress</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-122"></span><span>  </span><span class="annot"><span class="annottext">MethodName
+-&gt; SolanaPublicKey -&gt; m [TransactionSignatureInformation]
+forall a. Remote m a =&gt; MethodName -&gt; a
+forall (m :: * -&gt; *) a. (JsonRpc m, Remote m a) =&gt; MethodName -&gt; a
+</span><span class="hs-identifier hs-var">remote</span></span><span> </span><span class="annot"><span class="annottext">MethodName
+</span><span class="hs-string">&quot;getSignaturesForAddress&quot;</span></span><span>
+</span><span id="line-123"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getSignaturesForAddress"><span class="hs-pragma hs-type">getSignaturesForAddress</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span class="annot"><span class="hs-comment">-- | Metadata for a confirmed transaction signature involving a given address.</span></span><span>
+</span><span id="line-126"></span><span class="hs-keyword">data</span><span> </span><span id="TransactionSignatureInformation"><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#TransactionSignatureInformation"><span class="hs-identifier hs-var">TransactionSignatureInformation</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TransactionSignatureInformation"><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#TransactionSignatureInformation"><span class="hs-identifier hs-var">TransactionSignatureInformation</span></a></span></span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="hs-comment">-- | Transaction signature</span></span><span>
+</span><span id="line-128"></span><span>    </span><span id="signature"><span class="annot"><span class="annottext">TransactionSignatureInformation -&gt; SolanaSignature
+</span><a href="Network.Solana.RPC.HTTP.Account.html#signature"><span class="hs-keyword hs-var hs-var">signature</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaSignature"><span class="hs-identifier hs-type">SolanaSignature</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-129"></span><span>    </span><span class="annot"><span class="hs-comment">-- | The slot that contains the block with the transaction</span></span><span>
+</span><span id="line-130"></span><span>    </span><span id="slotTxSig"><span class="annot"><span class="annottext">TransactionSignatureInformation -&gt; Slot
+</span><a href="Network.Solana.RPC.HTTP.Account.html#slotTxSig"><span class="hs-identifier hs-var hs-var">slotTxSig</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#Slot"><span class="hs-identifier hs-type">Slot</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-131"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Error if transaction failed, 'Nothing' if transaction succeeded.</span></span><span>
+</span><span id="line-132"></span><span>    </span><span id="err"><span class="annot"><span class="annottext">TransactionSignatureInformation -&gt; Maybe String
+</span><a href="Network.Solana.RPC.HTTP.Account.html#err"><span class="hs-identifier hs-var hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">,</span><span>
+</span><span id="line-133"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Memo associated with the transaction, 'Nothing' if no memo is present</span></span><span>
+</span><span id="line-134"></span><span>    </span><span id="memo"><span class="annot"><span class="annottext">TransactionSignatureInformation -&gt; Maybe String
+</span><a href="Network.Solana.RPC.HTTP.Account.html#memo"><span class="hs-identifier hs-var hs-var">memo</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">,</span><span>
+</span><span id="line-135"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Estimated production time, as Unix timestamp (seconds since the Unix epoch) of when transaction was processed. 'Nothing' if not available.</span></span><span>
+</span><span id="line-136"></span><span>    </span><span id="blockTime"><span class="annot"><span class="annottext">TransactionSignatureInformation -&gt; Maybe Int64
+</span><a href="Network.Solana.RPC.HTTP.Account.html#blockTime"><span class="hs-identifier hs-var hs-var">blockTime</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int64</span></span><span class="hs-special">,</span><span>
+</span><span id="line-137"></span><span>    </span><span class="annot"><span class="hs-comment">-- | The transaction's cluster confirmation status;</span></span><span>
+</span><span id="line-138"></span><span>    </span><span id="confirmationStatus"><span class="annot"><span class="annottext">TransactionSignatureInformation -&gt; Maybe String
+</span><a href="Network.Solana.RPC.HTTP.Account.html#confirmationStatus"><span class="hs-identifier hs-var hs-var">confirmationStatus</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-139"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-140"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679153969"><span id="local-6989586621679153983"><span id="local-6989586621679153987"><span class="annot"><span class="annottext">Int -&gt; TransactionSignatureInformation -&gt; ShowS
+[TransactionSignatureInformation] -&gt; ShowS
+TransactionSignatureInformation -&gt; String
+(Int -&gt; TransactionSignatureInformation -&gt; ShowS)
+-&gt; (TransactionSignatureInformation -&gt; String)
+-&gt; ([TransactionSignatureInformation] -&gt; ShowS)
+-&gt; Show TransactionSignatureInformation
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TransactionSignatureInformation -&gt; ShowS
+showsPrec :: Int -&gt; TransactionSignatureInformation -&gt; ShowS
+$cshow :: TransactionSignatureInformation -&gt; String
+show :: TransactionSignatureInformation -&gt; String
+$cshowList :: [TransactionSignatureInformation] -&gt; ShowS
+showList :: [TransactionSignatureInformation] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679153995"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#TransactionSignatureInformation"><span class="hs-identifier hs-type">TransactionSignatureInformation</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-143"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">parseJSON</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#TransactionSignatureInformation"><span class="hs-identifier hs-type">TransactionSignatureInformation</span></a></span><span>
+</span><span id="line-144"></span><span>  </span><span id="local-6989586621679154026"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser TransactionSignatureInformation
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (Object -&gt; Parser TransactionSignatureInformation)
+-&gt; Value
+-&gt; Parser TransactionSignatureInformation
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;TransactionSignatureInformation&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser TransactionSignatureInformation)
+ -&gt; Value -&gt; Parser TransactionSignatureInformation)
+-&gt; (Object -&gt; Parser TransactionSignatureInformation)
+-&gt; Value
+-&gt; Parser TransactionSignatureInformation
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679154028"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679154028"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-145"></span><span>    </span><span class="annot"><span class="annottext">SolanaSignature
+-&gt; Slot
+-&gt; Maybe String
+-&gt; Maybe String
+-&gt; Maybe Int64
+-&gt; Maybe String
+-&gt; TransactionSignatureInformation
+</span><a href="Network.Solana.RPC.HTTP.Account.html#TransactionSignatureInformation"><span class="hs-identifier hs-var">TransactionSignatureInformation</span></a></span><span>
+</span><span id="line-146"></span><span>      </span><span class="annot"><span class="annottext">(SolanaSignature
+ -&gt; Slot
+ -&gt; Maybe String
+ -&gt; Maybe String
+ -&gt; Maybe Int64
+ -&gt; Maybe String
+ -&gt; TransactionSignatureInformation)
+-&gt; Parser SolanaSignature
+-&gt; Parser
+     (Slot
+      -&gt; Maybe String
+      -&gt; Maybe String
+      -&gt; Maybe Int64
+      -&gt; Maybe String
+      -&gt; TransactionSignatureInformation)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679154028"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser SolanaSignature
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;signature&quot;</span></span><span>
+</span><span id="line-147"></span><span>      </span><span class="annot"><span class="annottext">Parser
+  (Slot
+   -&gt; Maybe String
+   -&gt; Maybe String
+   -&gt; Maybe Int64
+   -&gt; Maybe String
+   -&gt; TransactionSignatureInformation)
+-&gt; Parser Slot
+-&gt; Parser
+     (Maybe String
+      -&gt; Maybe String
+      -&gt; Maybe Int64
+      -&gt; Maybe String
+      -&gt; TransactionSignatureInformation)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679154028"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Slot
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;slot&quot;</span></span><span>
+</span><span id="line-148"></span><span>      </span><span class="annot"><span class="annottext">Parser
+  (Maybe String
+   -&gt; Maybe String
+   -&gt; Maybe Int64
+   -&gt; Maybe String
+   -&gt; TransactionSignatureInformation)
+-&gt; Parser (Maybe String)
+-&gt; Parser
+     (Maybe String
+      -&gt; Maybe Int64 -&gt; Maybe String -&gt; TransactionSignatureInformation)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679154028"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe String)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;err&quot;</span></span><span>
+</span><span id="line-149"></span><span>      </span><span class="annot"><span class="annottext">Parser
+  (Maybe String
+   -&gt; Maybe Int64 -&gt; Maybe String -&gt; TransactionSignatureInformation)
+-&gt; Parser (Maybe String)
+-&gt; Parser
+     (Maybe Int64 -&gt; Maybe String -&gt; TransactionSignatureInformation)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679154028"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe String)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;memo&quot;</span></span><span>
+</span><span id="line-150"></span><span>      </span><span class="annot"><span class="annottext">Parser
+  (Maybe Int64 -&gt; Maybe String -&gt; TransactionSignatureInformation)
+-&gt; Parser (Maybe Int64)
+-&gt; Parser (Maybe String -&gt; TransactionSignatureInformation)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679154028"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe Int64)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;blockTime&quot;</span></span><span>
+</span><span id="line-151"></span><span>      </span><span class="annot"><span class="annottext">Parser (Maybe String -&gt; TransactionSignatureInformation)
+-&gt; Parser (Maybe String) -&gt; Parser TransactionSignatureInformation
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679154028"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe String)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;confirmationStatus&quot;</span></span><span>
+</span><span id="line-152"></span><span>
+</span><span id="line-153"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-154"></span><span>
+</span><span id="line-155"></span><span class="annot"><span class="hs-comment">-- * getSignatureStatuses</span></span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-158"></span><span>
+</span><span id="line-159"></span><span class="hs-comment">-- | Returns the confirmation status and slot info for the specified transaction signatures.</span><span>
+</span><span id="line-160"></span><span class="hs-comment">-- Each signature should be the transaction&#8217;s first signature (used as a unique identifier).</span><span>
+</span><span id="line-161"></span><span id="local-6989586621679153712"><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getSignatureStatuses%27"><span class="hs-identifier hs-type">getSignatureStatuses'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JsonRpc</span></span><span> </span><span class="annot"><a href="#local-6989586621679153712"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaSignature"><span class="hs-identifier hs-type">SolanaSignature</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#ConfigurationObject"><span class="hs-identifier hs-type">ConfigurationObject</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679153712"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#RPCResponse"><span class="hs-identifier hs-type">RPCResponse</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#TransactionSignatureStatus"><span class="hs-identifier hs-type">TransactionSignatureStatus</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span></span><span>
+</span><span id="line-162"></span><span id="getSignatureStatuses%27"><span class="annot"><span class="annottext">getSignatureStatuses' :: forall (m :: * -&gt; *).
+JsonRpc m =&gt;
+[SolanaSignature]
+-&gt; ConfigurationObject
+-&gt; m (RPCResponse [Maybe TransactionSignatureStatus])
+</span><a href="Network.Solana.RPC.HTTP.Account.html#getSignatureStatuses%27"><span class="hs-identifier hs-var hs-var">getSignatureStatuses'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-163"></span><span>  </span><span class="annot"><span class="annottext">MethodName
+-&gt; [SolanaSignature]
+-&gt; ConfigurationObject
+-&gt; m (RPCResponse [Maybe TransactionSignatureStatus])
+forall a. Remote m a =&gt; MethodName -&gt; a
+forall (m :: * -&gt; *) a. (JsonRpc m, Remote m a) =&gt; MethodName -&gt; a
+</span><span class="hs-identifier hs-var">remote</span></span><span> </span><span class="annot"><span class="annottext">MethodName
+</span><span class="hs-string">&quot;getSignatureStatuses&quot;</span></span><span>
+</span><span id="line-164"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getSignatureStatuses%27"><span class="hs-pragma hs-type">getSignatureStatuses'</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-165"></span><span>
+</span><span id="line-166"></span><span class="hs-comment">-- | Returns the confirmation status and slot info for the specified transaction signatures.</span><span>
+</span><span id="line-167"></span><span class="hs-comment">-- Each signature should be the transaction&#8217;s first signature (used as a unique identifier).</span><span>
+</span><span id="line-168"></span><span id="local-6989586621679153716"><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getSignatureStatuses"><span class="hs-identifier hs-type">getSignatureStatuses</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JsonRpc</span></span><span> </span><span class="annot"><a href="#local-6989586621679153716"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaSignature"><span class="hs-identifier hs-type">SolanaSignature</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679153716"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#TransactionSignatureStatus"><span class="hs-identifier hs-type">TransactionSignatureStatus</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-169"></span><span id="getSignatureStatuses"><span class="annot"><span class="annottext">getSignatureStatuses :: forall (m :: * -&gt; *).
+JsonRpc m =&gt;
+[SolanaSignature] -&gt; m [Maybe TransactionSignatureStatus]
+</span><a href="Network.Solana.RPC.HTTP.Account.html#getSignatureStatuses"><span class="hs-identifier hs-var hs-var">getSignatureStatuses</span></a></span></span><span> </span><span id="local-6989586621679154057"><span class="annot"><span class="annottext">[SolanaSignature]
+</span><a href="#local-6989586621679154057"><span class="hs-identifier hs-var">sigs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RPCResponse [Maybe TransactionSignatureStatus]
+-&gt; [Maybe TransactionSignatureStatus]
+forall a. RPCResponse a -&gt; a
+</span><a href="Network.Solana.RPC.HTTP.Types.html#value"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="annot"><span class="annottext">(RPCResponse [Maybe TransactionSignatureStatus]
+ -&gt; [Maybe TransactionSignatureStatus])
+-&gt; m (RPCResponse [Maybe TransactionSignatureStatus])
+-&gt; m [Maybe TransactionSignatureStatus]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">[SolanaSignature]
+-&gt; ConfigurationObject
+-&gt; m (RPCResponse [Maybe TransactionSignatureStatus])
+forall (m :: * -&gt; *).
+JsonRpc m =&gt;
+[SolanaSignature]
+-&gt; ConfigurationObject
+-&gt; m (RPCResponse [Maybe TransactionSignatureStatus])
+</span><a href="Network.Solana.RPC.HTTP.Account.html#getSignatureStatuses%27"><span class="hs-identifier hs-var">getSignatureStatuses'</span></a></span><span> </span><span class="annot"><span class="annottext">[SolanaSignature]
+</span><a href="#local-6989586621679154057"><span class="hs-identifier hs-var">sigs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConfigurationObject
+</span><a href="Network.Solana.RPC.HTTP.Types.html#defaultConfigObject"><span class="hs-identifier hs-var">defaultConfigObject</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#searchTransactionHistory"><span class="hs-identifier hs-var">searchTransactionHistory</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">True</span></span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-170"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#getSignatureStatuses"><span class="hs-pragma hs-type">getSignatureStatuses</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-171"></span><span>
+</span><span id="line-172"></span><span class="annot"><span class="hs-comment">-- | Status metadata for a given transaction signature.</span></span><span>
+</span><span id="line-173"></span><span class="hs-keyword">data</span><span> </span><span id="TransactionSignatureStatus"><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#TransactionSignatureStatus"><span class="hs-identifier hs-var">TransactionSignatureStatus</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TransactionSignatureStatus"><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#TransactionSignatureStatus"><span class="hs-identifier hs-var">TransactionSignatureStatus</span></a></span></span><span>
+</span><span id="line-174"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="hs-comment">-- | The slot the transaction was processed</span></span><span>
+</span><span id="line-175"></span><span>    </span><span id="slotTxStatus"><span class="annot"><span class="annottext">TransactionSignatureStatus -&gt; Slot
+</span><a href="Network.Solana.RPC.HTTP.Account.html#slotTxStatus"><span class="hs-identifier hs-var hs-var">slotTxStatus</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#Slot"><span class="hs-identifier hs-type">Slot</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-176"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Number of blocks since signature confirmation, 'Nothing' if rooted, as well as finalized by a supermajority of the cluster.</span></span><span>
+</span><span id="line-177"></span><span>    </span><span id="confirmationsTxStatus"><span class="annot"><span class="annottext">TransactionSignatureStatus -&gt; Maybe Int
+</span><a href="Network.Solana.RPC.HTTP.Account.html#confirmationsTxStatus"><span class="hs-identifier hs-var hs-var">confirmationsTxStatus</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span>
+</span><span id="line-178"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Error if transaction failed, 'Nothing' if transaction succeeded.</span></span><span>
+</span><span id="line-179"></span><span>    </span><span id="errTxStatus"><span class="annot"><span class="annottext">TransactionSignatureStatus -&gt; Maybe String
+</span><a href="Network.Solana.RPC.HTTP.Account.html#errTxStatus"><span class="hs-identifier hs-var hs-var">errTxStatus</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">,</span><span>
+</span><span id="line-180"></span><span>    </span><span class="annot"><span class="hs-comment">-- | The transaction's cluster confirmation status.</span></span><span>
+</span><span id="line-181"></span><span>    </span><span id="confirmationStatusTxStatus"><span class="annot"><span class="annottext">TransactionSignatureStatus -&gt; Maybe String
+</span><a href="Network.Solana.RPC.HTTP.Account.html#confirmationStatusTxStatus"><span class="hs-identifier hs-var hs-var">confirmationStatusTxStatus</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-182"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-183"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679154066"><span id="local-6989586621679154068"><span class="annot"><span class="annottext">(forall x.
+ TransactionSignatureStatus -&gt; Rep TransactionSignatureStatus x)
+-&gt; (forall x.
+    Rep TransactionSignatureStatus x -&gt; TransactionSignatureStatus)
+-&gt; Generic TransactionSignatureStatus
+forall x.
+Rep TransactionSignatureStatus x -&gt; TransactionSignatureStatus
+forall x.
+TransactionSignatureStatus -&gt; Rep TransactionSignatureStatus x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x.
+TransactionSignatureStatus -&gt; Rep TransactionSignatureStatus x
+from :: forall x.
+TransactionSignatureStatus -&gt; Rep TransactionSignatureStatus x
+$cto :: forall x.
+Rep TransactionSignatureStatus x -&gt; TransactionSignatureStatus
+to :: forall x.
+Rep TransactionSignatureStatus x -&gt; TransactionSignatureStatus
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679154071"><span id="local-6989586621679154080"><span id="local-6989586621679154084"><span class="annot"><span class="annottext">Int -&gt; TransactionSignatureStatus -&gt; ShowS
+[TransactionSignatureStatus] -&gt; ShowS
+TransactionSignatureStatus -&gt; String
+(Int -&gt; TransactionSignatureStatus -&gt; ShowS)
+-&gt; (TransactionSignatureStatus -&gt; String)
+-&gt; ([TransactionSignatureStatus] -&gt; ShowS)
+-&gt; Show TransactionSignatureStatus
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TransactionSignatureStatus -&gt; ShowS
+showsPrec :: Int -&gt; TransactionSignatureStatus -&gt; ShowS
+$cshow :: TransactionSignatureStatus -&gt; String
+show :: TransactionSignatureStatus -&gt; String
+$cshowList :: [TransactionSignatureStatus] -&gt; ShowS
+showList :: [TransactionSignatureStatus] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-184"></span><span>
+</span><span id="line-185"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679154090"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#TransactionSignatureStatus"><span class="hs-identifier hs-type">TransactionSignatureStatus</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-186"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">parseJSON</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Account.html#TransactionSignatureStatus"><span class="hs-identifier hs-type">TransactionSignatureStatus</span></a></span><span>
+</span><span id="line-187"></span><span>  </span><span id="local-6989586621679154108"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser TransactionSignatureStatus
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (Object -&gt; Parser TransactionSignatureStatus)
+-&gt; Value
+-&gt; Parser TransactionSignatureStatus
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;TransactionSignatureStatus&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser TransactionSignatureStatus)
+ -&gt; Value -&gt; Parser TransactionSignatureStatus)
+-&gt; (Object -&gt; Parser TransactionSignatureStatus)
+-&gt; Value
+-&gt; Parser TransactionSignatureStatus
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679154109"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679154109"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-188"></span><span>    </span><span class="annot"><span class="annottext">Slot
+-&gt; Maybe Int
+-&gt; Maybe String
+-&gt; Maybe String
+-&gt; TransactionSignatureStatus
+</span><a href="Network.Solana.RPC.HTTP.Account.html#TransactionSignatureStatus"><span class="hs-identifier hs-var">TransactionSignatureStatus</span></a></span><span>
+</span><span id="line-189"></span><span>      </span><span class="annot"><span class="annottext">(Slot
+ -&gt; Maybe Int
+ -&gt; Maybe String
+ -&gt; Maybe String
+ -&gt; TransactionSignatureStatus)
+-&gt; Parser Slot
+-&gt; Parser
+     (Maybe Int
+      -&gt; Maybe String -&gt; Maybe String -&gt; TransactionSignatureStatus)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679154109"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Slot
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;slot&quot;</span></span><span>
+</span><span id="line-190"></span><span>      </span><span class="annot"><span class="annottext">Parser
+  (Maybe Int
+   -&gt; Maybe String -&gt; Maybe String -&gt; TransactionSignatureStatus)
+-&gt; Parser (Maybe Int)
+-&gt; Parser
+     (Maybe String -&gt; Maybe String -&gt; TransactionSignatureStatus)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679154109"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe Int)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;confirmations&quot;</span></span><span>
+</span><span id="line-191"></span><span>      </span><span class="annot"><span class="annottext">Parser (Maybe String -&gt; Maybe String -&gt; TransactionSignatureStatus)
+-&gt; Parser (Maybe String)
+-&gt; Parser (Maybe String -&gt; TransactionSignatureStatus)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679154109"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe String)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;err&quot;</span></span><span>
+</span><span id="line-192"></span><span>      </span><span class="annot"><span class="annottext">Parser (Maybe String -&gt; TransactionSignatureStatus)
+-&gt; Parser (Maybe String) -&gt; Parser TransactionSignatureStatus
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679154109"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe String)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;confirmationStatus&quot;</span></span><span>
+</span><span id="line-193"></span></pre></body></html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.Solana.NativePrograms.SystemProgram</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Binary</span></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Binary.Put</span></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html"><span class="hs-identifier">Network.Solana.Core.Crypto</span></a></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.Solana.Core.Instruction.html"><span class="hs-identifier">Network.Solana.Core.Instruction</span></a></span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="annot"><a href="Network.Solana.NativePrograms.SystemProgram.html#systemProgramId"><span class="hs-identifier hs-type">systemProgramId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span>
+</span><span id="line-10"></span><span id="systemProgramId"><span class="annot"><span class="annottext">systemProgramId :: SolanaPublicKey
+</span><a href="Network.Solana.NativePrograms.SystemProgram.html#systemProgramId"><span class="hs-identifier hs-var hs-var">systemProgramId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; SolanaPublicKey
+</span><a href="Network.Solana.Core.Crypto.html#unsafeSolanaPublicKey"><span class="hs-identifier hs-var">unsafeSolanaPublicKey</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;11111111111111111111111111111111&quot;</span></span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">data</span><span> </span><span id="SystemInstruction"><span class="annot"><a href="Network.Solana.NativePrograms.SystemProgram.html#SystemInstruction"><span class="hs-identifier hs-var">SystemInstruction</span></a></span></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="CreateAccount"><span class="annot"><a href="Network.Solana.NativePrograms.SystemProgram.html#CreateAccount"><span class="hs-identifier hs-var">CreateAccount</span></a></span></span><span>
+</span><span id="line-14"></span><span>      </span><span class="hs-special">{</span><span> </span><span id="lamports"><span class="annot"><span class="annottext">SystemInstruction -&gt; Word64
+</span><a href="Network.Solana.NativePrograms.SystemProgram.html#lamports"><span class="hs-identifier hs-var hs-var">lamports</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>        </span><span id="space"><span class="annot"><span class="annottext">SystemInstruction -&gt; Word64
+</span><a href="Network.Solana.NativePrograms.SystemProgram.html#space"><span class="hs-identifier hs-var hs-var">space</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>        </span><span id="owner"><span class="annot"><span class="annottext">SystemInstruction -&gt; SolanaPublicKey
+</span><a href="Network.Solana.NativePrograms.SystemProgram.html#owner"><span class="hs-identifier hs-var hs-var">owner</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span>
+</span><span id="line-17"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Assign"><span class="annot"><a href="Network.Solana.NativePrograms.SystemProgram.html#Assign"><span class="hs-identifier hs-var">Assign</span></a></span></span><span> </span><span class="hs-special">{</span><span id="owner"><span class="annot"><a href="Network.Solana.NativePrograms.SystemProgram.html#owner"><span class="hs-identifier hs-var">owner</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Transfer"><span class="annot"><a href="Network.Solana.NativePrograms.SystemProgram.html#Transfer"><span class="hs-identifier hs-var">Transfer</span></a></span></span><span> </span><span class="hs-special">{</span><span id="lamports"><span class="annot"><a href="Network.Solana.NativePrograms.SystemProgram.html#lamports"><span class="hs-identifier hs-var">lamports</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span class="hs-special">}</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679149089"><span id="local-6989586621679149098"><span class="annot"><span class="annottext">SystemInstruction -&gt; SystemInstruction -&gt; Bool
+(SystemInstruction -&gt; SystemInstruction -&gt; Bool)
+-&gt; (SystemInstruction -&gt; SystemInstruction -&gt; Bool)
+-&gt; Eq SystemInstruction
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: SystemInstruction -&gt; SystemInstruction -&gt; Bool
+== :: SystemInstruction -&gt; SystemInstruction -&gt; Bool
+$c/= :: SystemInstruction -&gt; SystemInstruction -&gt; Bool
+/= :: SystemInstruction -&gt; SystemInstruction -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679149103"><span id="local-6989586621679149116"><span id="local-6989586621679149120"><span class="annot"><span class="annottext">Int -&gt; SystemInstruction -&gt; ShowS
+[SystemInstruction] -&gt; ShowS
+SystemInstruction -&gt; String
+(Int -&gt; SystemInstruction -&gt; ShowS)
+-&gt; (SystemInstruction -&gt; String)
+-&gt; ([SystemInstruction] -&gt; ShowS)
+-&gt; Show SystemInstruction
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; SystemInstruction -&gt; ShowS
+showsPrec :: Int -&gt; SystemInstruction -&gt; ShowS
+$cshow :: SystemInstruction -&gt; String
+show :: SystemInstruction -&gt; String
+$cshowList :: [SystemInstruction] -&gt; ShowS
+showList :: [SystemInstruction] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679149124"><span id="local-6989586621679149126"><span class="annot"><span class="annottext">(forall x. SystemInstruction -&gt; Rep SystemInstruction x)
+-&gt; (forall x. Rep SystemInstruction x -&gt; SystemInstruction)
+-&gt; Generic SystemInstruction
+forall x. Rep SystemInstruction x -&gt; SystemInstruction
+forall x. SystemInstruction -&gt; Rep SystemInstruction x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. SystemInstruction -&gt; Rep SystemInstruction x
+from :: forall x. SystemInstruction -&gt; Rep SystemInstruction x
+$cto :: forall x. Rep SystemInstruction x -&gt; SystemInstruction
+to :: forall x. Rep SystemInstruction x -&gt; SystemInstruction
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679149131"><span id="local-6989586621679149137"><span class="annot"><span class="hs-identifier hs-type">Binary</span></span><span> </span><span class="annot"><a href="Network.Solana.NativePrograms.SystemProgram.html#SystemInstruction"><span class="hs-identifier hs-type">SystemInstruction</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">put</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.NativePrograms.SystemProgram.html#SystemInstruction"><span class="hs-identifier hs-type">SystemInstruction</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Put</span></span><span>
+</span><span id="line-24"></span><span>  </span><span id="local-6989586621679149182"><span class="annot"><span class="annottext">put :: SystemInstruction -&gt; Put
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">put</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.NativePrograms.SystemProgram.html#CreateAccount"><span class="hs-identifier hs-type">CreateAccount</span></a></span><span> </span><span id="local-6989586621679149183"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679149183"><span class="hs-identifier hs-var">lamports</span></a></span></span><span> </span><span id="local-6989586621679149184"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679149184"><span class="hs-identifier hs-var">space</span></a></span></span><span> </span><span id="local-6989586621679149185"><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679149185"><span class="hs-identifier hs-var">owner</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><span class="annottext">Word32 -&gt; Put
+</span><span class="hs-identifier hs-var">putWord32le</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word32</span></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>    </span><span class="annot"><span class="annottext">Word64 -&gt; Put
+</span><span class="hs-identifier hs-var">putWord64le</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679149183"><span class="hs-identifier hs-var">lamports</span></a></span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><span class="annottext">Word64 -&gt; Put
+</span><span class="hs-identifier hs-var">putWord64le</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679149184"><span class="hs-identifier hs-var">space</span></a></span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><span class="annottext">ByteString -&gt; Put
+forall t. Binary t =&gt; t -&gt; Put
+</span><span class="hs-identifier hs-var">put</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SolanaPublicKey -&gt; ByteString
+</span><a href="Network.Solana.Core.Crypto.html#getSolanaPublicKeyRaw"><span class="hs-identifier hs-var">getSolanaPublicKeyRaw</span></a></span><span> </span><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679149185"><span class="hs-identifier hs-var">owner</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">put</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.NativePrograms.SystemProgram.html#Assign"><span class="hs-identifier hs-type">Assign</span></a></span><span> </span><span id="local-6989586621679149189"><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679149189"><span class="hs-identifier hs-var">owner</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-keyword">do</span><span>
+</span><span id="line-31"></span><span>      </span><span class="annot"><span class="annottext">Word32 -&gt; Put
+</span><span class="hs-identifier hs-var">putWord32le</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word32</span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>      </span><span class="annot"><span class="annottext">ByteString -&gt; Put
+forall t. Binary t =&gt; t -&gt; Put
+</span><span class="hs-identifier hs-var">put</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SolanaPublicKey -&gt; ByteString
+</span><a href="Network.Solana.Core.Crypto.html#getSolanaPublicKeyRaw"><span class="hs-identifier hs-var">getSolanaPublicKeyRaw</span></a></span><span> </span><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679149189"><span class="hs-identifier hs-var">owner</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">put</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.NativePrograms.SystemProgram.html#Transfer"><span class="hs-identifier hs-type">Transfer</span></a></span><span> </span><span id="local-6989586621679149190"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679149190"><span class="hs-identifier hs-var">lamports</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-keyword">do</span><span>
+</span><span id="line-35"></span><span>      </span><span class="annot"><span class="annottext">Word32 -&gt; Put
+</span><span class="hs-identifier hs-var">putWord32le</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">2</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word32</span></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>      </span><span class="annot"><span class="annottext">Word64 -&gt; Put
+</span><span class="hs-identifier hs-var">putWord64le</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679149190"><span class="hs-identifier hs-var">lamports</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="annot"><a href="Network.Solana.NativePrograms.SystemProgram.html#transfer"><span class="hs-identifier hs-type">transfer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Solana.Core.Instruction.html#Instruction"><span class="hs-identifier hs-type">Instruction</span></a></span><span>
+</span><span id="line-39"></span><span id="transfer"><span class="annot"><span class="annottext">transfer :: SolanaPublicKey -&gt; SolanaPublicKey -&gt; Int -&gt; Instruction
+</span><a href="Network.Solana.NativePrograms.SystemProgram.html#transfer"><span class="hs-identifier hs-var hs-var">transfer</span></a></span></span><span> </span><span id="local-6989586621679149192"><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679149192"><span class="hs-identifier hs-var">fundingAccount</span></a></span></span><span> </span><span id="local-6989586621679149193"><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679149193"><span class="hs-identifier hs-var">recipientAccount</span></a></span></span><span> </span><span id="local-6989586621679149194"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679149194"><span class="hs-identifier hs-var">amount</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><span class="annottext">SolanaPublicKey
+-&gt; [AccountMeta] -&gt; SystemInstruction -&gt; Instruction
+forall a.
+Binary a =&gt;
+SolanaPublicKey -&gt; [AccountMeta] -&gt; a -&gt; Instruction
+</span><a href="Network.Solana.Core.Instruction.html#mkInstruction"><span class="hs-identifier hs-var">mkInstruction</span></a></span><span>
+</span><span id="line-41"></span><span>    </span><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="Network.Solana.NativePrograms.SystemProgram.html#systemProgramId"><span class="hs-identifier hs-var">systemProgramId</span></a></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><a href="Network.Solana.Core.Instruction.html#AccountMeta"><span class="hs-identifier hs-type">AccountMeta</span></a></span><span>
+</span><span id="line-43"></span><span>        </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">accountPubKey :: SolanaPublicKey
+</span><a href="Network.Solana.Core.Instruction.html#accountPubKey"><span class="hs-identifier hs-var">accountPubKey</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679149192"><span class="hs-identifier hs-var">fundingAccount</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>          </span><span class="annot"><span class="annottext">isSigner :: Bool
+</span><a href="Network.Solana.Core.Instruction.html#isSigner"><span class="hs-identifier hs-var">isSigner</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span>          </span><span class="annot"><span class="annottext">isWritable :: Bool
+</span><a href="Network.Solana.Core.Instruction.html#isWritable"><span class="hs-identifier hs-var">isWritable</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-46"></span><span>        </span><span class="hs-special">}</span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span>      </span><span class="annot"><a href="Network.Solana.Core.Instruction.html#AccountMeta"><span class="hs-identifier hs-type">AccountMeta</span></a></span><span>
+</span><span id="line-48"></span><span>        </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">accountPubKey :: SolanaPublicKey
+</span><a href="Network.Solana.Core.Instruction.html#accountPubKey"><span class="hs-identifier hs-var">accountPubKey</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679149193"><span class="hs-identifier hs-var">recipientAccount</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-49"></span><span>          </span><span class="annot"><span class="annottext">isSigner :: Bool
+</span><a href="Network.Solana.Core.Instruction.html#isSigner"><span class="hs-identifier hs-var">isSigner</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">,</span><span>
+</span><span id="line-50"></span><span>          </span><span class="annot"><span class="annottext">isWritable :: Bool
+</span><a href="Network.Solana.Core.Instruction.html#isWritable"><span class="hs-identifier hs-var">isWritable</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-51"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; SystemInstruction
+</span><a href="Network.Solana.NativePrograms.SystemProgram.html#Transfer"><span class="hs-identifier hs-var">Transfer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679149194"><span class="hs-identifier hs-var">amount</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span></pre></body></html>

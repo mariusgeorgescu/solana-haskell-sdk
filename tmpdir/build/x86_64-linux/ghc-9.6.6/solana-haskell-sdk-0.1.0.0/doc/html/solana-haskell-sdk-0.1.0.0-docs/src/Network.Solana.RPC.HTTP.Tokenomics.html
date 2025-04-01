@@ -1,0 +1,607 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.Solana.RPC.HTTP.Tokenomics</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson.Types</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Int</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Int64</span></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.JsonRpc.TinyClient</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">JsonRpc</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.Solana.Core.Account.html"><span class="hs-identifier">Network.Solana.Core.Account</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.Core.Account.html#Lamport"><span class="hs-identifier">Lamport</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html"><span class="hs-identifier">Network.Solana.Core.Crypto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier">SolanaPublicKey</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html"><span class="hs-identifier">Network.Solana.RPC.HTTP.Types</span></a></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="annot"><span class="hs-comment">-- * getInflationGovernor</span></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- | Returns the current inflation governor parameters.</span><span>
+</span><span id="line-24"></span><span class="hs-comment">--</span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- These parameters define how inflation is distributed and how it changes over time.</span><span>
+</span><span id="line-26"></span><span id="local-6989586621679149978"><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getInflationGovernor"><span class="hs-identifier hs-type">getInflationGovernor</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JsonRpc</span></span><span> </span><span class="annot"><a href="#local-6989586621679149978"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679149978"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#InflationGovernor"><span class="hs-identifier hs-type">InflationGovernor</span></a></span></span><span>
+</span><span id="line-27"></span><span id="getInflationGovernor"><span class="annot"><span class="annottext">getInflationGovernor :: forall (m :: * -&gt; *). JsonRpc m =&gt; m InflationGovernor
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getInflationGovernor"><span class="hs-identifier hs-var hs-var">getInflationGovernor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><span class="annottext">MethodName -&gt; m InflationGovernor
+forall a. Remote m a =&gt; MethodName -&gt; a
+forall (m :: * -&gt; *) a. (JsonRpc m, Remote m a) =&gt; MethodName -&gt; a
+</span><span class="hs-identifier hs-var">remote</span></span><span> </span><span class="annot"><span class="annottext">MethodName
+</span><span class="hs-string">&quot;getInflationGovernor&quot;</span></span><span>
+</span><span id="line-29"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getInflationGovernor"><span class="hs-pragma hs-type">getInflationGovernor</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="annot"><span class="hs-comment">-- | Parameters defining the inflation configuration.</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">data</span><span> </span><span id="InflationGovernor"><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#InflationGovernor"><span class="hs-identifier hs-var">InflationGovernor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="InflationGovernor"><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#InflationGovernor"><span class="hs-identifier hs-var">InflationGovernor</span></a></span></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="hs-comment">-- | Percentage of inflation allocated to the foundation.</span></span><span>
+</span><span id="line-34"></span><span>    </span><span id="foundation"><span class="annot"><span class="annottext">InflationGovernor -&gt; Double
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#foundation"><span class="hs-identifier hs-var hs-var">foundation</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Double</span></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Duration of the foundation pool inflation (in years).</span></span><span>
+</span><span id="line-36"></span><span>    </span><span id="foundationTerm"><span class="annot"><span class="annottext">InflationGovernor -&gt; Double
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#foundationTerm"><span class="hs-identifier hs-var hs-var">foundationTerm</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Double</span></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Initial inflation rate at genesis (percentage).</span></span><span>
+</span><span id="line-38"></span><span>    </span><span id="initial"><span class="annot"><span class="annottext">InflationGovernor -&gt; Double
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#initial"><span class="hs-identifier hs-var hs-var">initial</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Double</span></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Rate per year at which inflation is lowered. (Rate reduction is derived using the target slot time in genesis config)</span></span><span>
+</span><span id="line-40"></span><span>    </span><span id="taper"><span class="annot"><span class="annottext">InflationGovernor -&gt; Double
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#taper"><span class="hs-identifier hs-var hs-var">taper</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Double</span></span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Terminal inflation rate (percentage).</span></span><span>
+</span><span id="line-42"></span><span>    </span><span id="terminal"><span class="annot"><span class="annottext">InflationGovernor -&gt; Double
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#terminal"><span class="hs-identifier hs-var hs-var">terminal</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Double</span></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679150170"><span id="local-6989586621679150180"><span id="local-6989586621679150184"><span class="annot"><span class="annottext">Int -&gt; InflationGovernor -&gt; ShowS
+[InflationGovernor] -&gt; ShowS
+InflationGovernor -&gt; String
+(Int -&gt; InflationGovernor -&gt; ShowS)
+-&gt; (InflationGovernor -&gt; String)
+-&gt; ([InflationGovernor] -&gt; ShowS)
+-&gt; Show InflationGovernor
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; InflationGovernor -&gt; ShowS
+showsPrec :: Int -&gt; InflationGovernor -&gt; ShowS
+$cshow :: InflationGovernor -&gt; String
+show :: InflationGovernor -&gt; String
+$cshowList :: [InflationGovernor] -&gt; ShowS
+showList :: [InflationGovernor] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679150188"><span id="local-6989586621679150190"><span class="annot"><span class="annottext">(forall x. InflationGovernor -&gt; Rep InflationGovernor x)
+-&gt; (forall x. Rep InflationGovernor x -&gt; InflationGovernor)
+-&gt; Generic InflationGovernor
+forall x. Rep InflationGovernor x -&gt; InflationGovernor
+forall x. InflationGovernor -&gt; Rep InflationGovernor x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. InflationGovernor -&gt; Rep InflationGovernor x
+from :: forall x. InflationGovernor -&gt; Rep InflationGovernor x
+$cto :: forall x. Rep InflationGovernor x -&gt; InflationGovernor
+to :: forall x. Rep InflationGovernor x -&gt; InflationGovernor
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679150194"><span id="local-6989586621679150200"><span class="annot"><span class="annottext">Value -&gt; Parser [InflationGovernor]
+Value -&gt; Parser InflationGovernor
+(Value -&gt; Parser InflationGovernor)
+-&gt; (Value -&gt; Parser [InflationGovernor])
+-&gt; FromJSON InflationGovernor
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser InflationGovernor
+parseJSON :: Value -&gt; Parser InflationGovernor
+$cparseJSONList :: Value -&gt; Parser [InflationGovernor]
+parseJSONList :: Value -&gt; Parser [InflationGovernor]
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="annot"><span class="hs-comment">-- * getInflationRate</span></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="annot"><span class="hs-comment">-- | Returns the inflation rate values for the current epoch.</span></span><span>
+</span><span id="line-53"></span><span id="local-6989586621679150095"><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getInflationRate"><span class="hs-identifier hs-type">getInflationRate</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JsonRpc</span></span><span> </span><span class="annot"><a href="#local-6989586621679150095"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679150095"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#InflationRate"><span class="hs-identifier hs-type">InflationRate</span></a></span></span><span>
+</span><span id="line-54"></span><span id="getInflationRate"><span class="annot"><span class="annottext">getInflationRate :: forall (m :: * -&gt; *). JsonRpc m =&gt; m InflationRate
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getInflationRate"><span class="hs-identifier hs-var hs-var">getInflationRate</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><span class="annottext">MethodName -&gt; m InflationRate
+forall a. Remote m a =&gt; MethodName -&gt; a
+forall (m :: * -&gt; *) a. (JsonRpc m, Remote m a) =&gt; MethodName -&gt; a
+</span><span class="hs-identifier hs-var">remote</span></span><span> </span><span class="annot"><span class="annottext">MethodName
+</span><span class="hs-string">&quot;getInflationRate&quot;</span></span><span>
+</span><span id="line-56"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getInflationRate"><span class="hs-pragma hs-type">getInflationRate</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="annot"><span class="hs-comment">-- | Inflation breakdown for the current epoch.</span></span><span>
+</span><span id="line-59"></span><span class="hs-keyword">data</span><span> </span><span id="InflationRate"><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#InflationRate"><span class="hs-identifier hs-var">InflationRate</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="InflationRate"><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#InflationRate"><span class="hs-identifier hs-var">InflationRate</span></a></span></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="hs-comment">-- | Total inflation rate (percentage).</span></span><span>
+</span><span id="line-61"></span><span>    </span><span id="totalInflation"><span class="annot"><span class="annottext">InflationRate -&gt; Double
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#totalInflation"><span class="hs-identifier hs-var hs-var">totalInflation</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Double</span></span><span class="hs-special">,</span><span>
+</span><span id="line-62"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Portion allocated to validators.</span></span><span>
+</span><span id="line-63"></span><span>    </span><span id="validatorInflation"><span class="annot"><span class="annottext">InflationRate -&gt; Double
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#validatorInflation"><span class="hs-identifier hs-var hs-var">validatorInflation</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Double</span></span><span class="hs-special">,</span><span>
+</span><span id="line-64"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Portion allocated to the foundation.</span></span><span>
+</span><span id="line-65"></span><span>    </span><span id="foundationInflation"><span class="annot"><span class="annottext">InflationRate -&gt; Double
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#foundationInflation"><span class="hs-identifier hs-var hs-var">foundationInflation</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Double</span></span><span class="hs-special">,</span><span>
+</span><span id="line-66"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Epoch index for which these values apply.</span></span><span>
+</span><span id="line-67"></span><span>    </span><span id="epochInflation"><span class="annot"><span class="annottext">InflationRate -&gt; Int64
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#epochInflation"><span class="hs-identifier hs-var hs-var">epochInflation</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int64</span></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679150322"><span id="local-6989586621679150330"><span id="local-6989586621679150334"><span class="annot"><span class="annottext">Int -&gt; InflationRate -&gt; ShowS
+[InflationRate] -&gt; ShowS
+InflationRate -&gt; String
+(Int -&gt; InflationRate -&gt; ShowS)
+-&gt; (InflationRate -&gt; String)
+-&gt; ([InflationRate] -&gt; ShowS)
+-&gt; Show InflationRate
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; InflationRate -&gt; ShowS
+showsPrec :: Int -&gt; InflationRate -&gt; ShowS
+$cshow :: InflationRate -&gt; String
+show :: InflationRate -&gt; String
+$cshowList :: [InflationRate] -&gt; ShowS
+showList :: [InflationRate] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679150338"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#InflationRate"><span class="hs-identifier hs-type">InflationRate</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">parseJSON</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#InflationRate"><span class="hs-identifier hs-type">InflationRate</span></a></span><span>
+</span><span id="line-73"></span><span>  </span><span id="local-6989586621679150357"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser InflationRate
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (Object -&gt; Parser InflationRate)
+-&gt; Value
+-&gt; Parser InflationRate
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;InflationRate&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser InflationRate) -&gt; Value -&gt; Parser InflationRate)
+-&gt; (Object -&gt; Parser InflationRate)
+-&gt; Value
+-&gt; Parser InflationRate
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679150359"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679150359"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-74"></span><span>    </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double -&gt; Int64 -&gt; InflationRate
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#InflationRate"><span class="hs-identifier hs-var">InflationRate</span></a></span><span>
+</span><span id="line-75"></span><span>      </span><span class="annot"><span class="annottext">(Double -&gt; Double -&gt; Double -&gt; Int64 -&gt; InflationRate)
+-&gt; Parser Double
+-&gt; Parser (Double -&gt; Double -&gt; Int64 -&gt; InflationRate)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679150359"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Double
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;total&quot;</span></span><span>
+</span><span id="line-76"></span><span>      </span><span class="annot"><span class="annottext">Parser (Double -&gt; Double -&gt; Int64 -&gt; InflationRate)
+-&gt; Parser Double -&gt; Parser (Double -&gt; Int64 -&gt; InflationRate)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679150359"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Double
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;validator&quot;</span></span><span>
+</span><span id="line-77"></span><span>      </span><span class="annot"><span class="annottext">Parser (Double -&gt; Int64 -&gt; InflationRate)
+-&gt; Parser Double -&gt; Parser (Int64 -&gt; InflationRate)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679150359"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Double
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;foundation&quot;</span></span><span>
+</span><span id="line-78"></span><span>      </span><span class="annot"><span class="annottext">Parser (Int64 -&gt; InflationRate)
+-&gt; Parser Int64 -&gt; Parser InflationRate
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679150359"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Int64
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;epoch&quot;</span></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="annot"><span class="hs-comment">-- * getInflationReward</span></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- | Returns the inflation reward for the specified accounts during an epoch.</span><span>
+</span><span id="line-87"></span><span class="hs-comment">--</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- Takes a list of public keys and returns a list of optional rewards.</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- Entries may be 'Nothing' if the reward could not be determined for the given account.</span><span>
+</span><span id="line-90"></span><span id="local-6989586621679150111"><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getInflationReward"><span class="hs-identifier hs-type">getInflationReward</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JsonRpc</span></span><span> </span><span class="annot"><a href="#local-6989586621679150111"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679150111"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#InflationReward"><span class="hs-identifier hs-type">InflationReward</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-91"></span><span id="getInflationReward"><span class="annot"><span class="annottext">getInflationReward :: forall (m :: * -&gt; *).
+JsonRpc m =&gt;
+[SolanaPublicKey] -&gt; m [Maybe InflationReward]
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getInflationReward"><span class="hs-identifier hs-var hs-var">getInflationReward</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-92"></span><span>  </span><span class="annot"><span class="annottext">MethodName -&gt; [SolanaPublicKey] -&gt; m [Maybe InflationReward]
+forall a. Remote m a =&gt; MethodName -&gt; a
+forall (m :: * -&gt; *) a. (JsonRpc m, Remote m a) =&gt; MethodName -&gt; a
+</span><span class="hs-identifier hs-var">remote</span></span><span> </span><span class="annot"><span class="annottext">MethodName
+</span><span class="hs-string">&quot;getInflationReward&quot;</span></span><span>
+</span><span id="line-93"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getInflationReward"><span class="hs-pragma hs-type">getInflationReward</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="annot"><span class="hs-comment">-- | Contains the inflation reward information for a given account.</span></span><span>
+</span><span id="line-96"></span><span class="hs-keyword">data</span><span> </span><span id="InflationReward"><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#InflationReward"><span class="hs-identifier hs-var">InflationReward</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="InflationReward"><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#InflationReward"><span class="hs-identifier hs-var">InflationReward</span></a></span></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="hs-comment">-- | Epoch in which the reward was issued.</span></span><span>
+</span><span id="line-98"></span><span>    </span><span id="epochReward"><span class="annot"><span class="annottext">InflationReward -&gt; Word64
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#epochReward"><span class="hs-identifier hs-var hs-var">epochReward</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span class="hs-special">,</span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Slot in which the reward became effective.</span></span><span>
+</span><span id="line-100"></span><span>    </span><span id="effectiveSlot"><span class="annot"><span class="annottext">InflationReward -&gt; Word64
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#effectiveSlot"><span class="hs-identifier hs-var hs-var">effectiveSlot</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#Slot"><span class="hs-identifier hs-type">Slot</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-101"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Amount of reward, in lamports.</span></span><span>
+</span><span id="line-102"></span><span>    </span><span id="amountReward"><span class="annot"><span class="annottext">InflationReward -&gt; Lamport
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#amountReward"><span class="hs-identifier hs-var hs-var">amountReward</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Account.html#Lamport"><span class="hs-identifier hs-type">Lamport</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-103"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Account balance after the reward was applied.</span></span><span>
+</span><span id="line-104"></span><span>    </span><span id="postBalance"><span class="annot"><span class="annottext">InflationReward -&gt; Lamport
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#postBalance"><span class="hs-identifier hs-var hs-var">postBalance</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Account.html#Lamport"><span class="hs-identifier hs-type">Lamport</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-105"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Vote account commission when the reward was credited.</span></span><span>
+</span><span id="line-106"></span><span>    </span><span id="commissionIR"><span class="annot"><span class="annottext">InflationReward -&gt; Maybe Word8
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#commissionIR"><span class="hs-identifier hs-var hs-var">commissionIR</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-108"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679150388"><span id="local-6989586621679150400"><span id="local-6989586621679150404"><span class="annot"><span class="annottext">Int -&gt; InflationReward -&gt; ShowS
+[InflationReward] -&gt; ShowS
+InflationReward -&gt; String
+(Int -&gt; InflationReward -&gt; ShowS)
+-&gt; (InflationReward -&gt; String)
+-&gt; ([InflationReward] -&gt; ShowS)
+-&gt; Show InflationReward
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; InflationReward -&gt; ShowS
+showsPrec :: Int -&gt; InflationReward -&gt; ShowS
+$cshow :: InflationReward -&gt; String
+show :: InflationReward -&gt; String
+$cshowList :: [InflationReward] -&gt; ShowS
+showList :: [InflationReward] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679150408"><span id="local-6989586621679150410"><span class="annot"><span class="annottext">(forall x. InflationReward -&gt; Rep InflationReward x)
+-&gt; (forall x. Rep InflationReward x -&gt; InflationReward)
+-&gt; Generic InflationReward
+forall x. Rep InflationReward x -&gt; InflationReward
+forall x. InflationReward -&gt; Rep InflationReward x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. InflationReward -&gt; Rep InflationReward x
+from :: forall x. InflationReward -&gt; Rep InflationReward x
+$cto :: forall x. Rep InflationReward x -&gt; InflationReward
+to :: forall x. Rep InflationReward x -&gt; InflationReward
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679150414"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#InflationReward"><span class="hs-identifier hs-type">InflationReward</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-111"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">parseJSON</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#InflationReward"><span class="hs-identifier hs-type">InflationReward</span></a></span><span>
+</span><span id="line-112"></span><span>  </span><span id="local-6989586621679150435"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser InflationReward
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (Object -&gt; Parser InflationReward)
+-&gt; Value
+-&gt; Parser InflationReward
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;InflationReward&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser InflationReward)
+ -&gt; Value -&gt; Parser InflationReward)
+-&gt; (Object -&gt; Parser InflationReward)
+-&gt; Value
+-&gt; Parser InflationReward
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679150436"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679150436"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-113"></span><span>    </span><span class="annot"><span class="annottext">Word64
+-&gt; Word64 -&gt; Lamport -&gt; Lamport -&gt; Maybe Word8 -&gt; InflationReward
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#InflationReward"><span class="hs-identifier hs-var">InflationReward</span></a></span><span>
+</span><span id="line-114"></span><span>      </span><span class="annot"><span class="annottext">(Word64
+ -&gt; Word64 -&gt; Lamport -&gt; Lamport -&gt; Maybe Word8 -&gt; InflationReward)
+-&gt; Parser Word64
+-&gt; Parser
+     (Word64 -&gt; Lamport -&gt; Lamport -&gt; Maybe Word8 -&gt; InflationReward)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679150436"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Word64
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;epoch&quot;</span></span><span>
+</span><span id="line-115"></span><span>      </span><span class="annot"><span class="annottext">Parser
+  (Word64 -&gt; Lamport -&gt; Lamport -&gt; Maybe Word8 -&gt; InflationReward)
+-&gt; Parser Word64
+-&gt; Parser (Lamport -&gt; Lamport -&gt; Maybe Word8 -&gt; InflationReward)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679150436"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Word64
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;effectiveSlot&quot;</span></span><span>
+</span><span id="line-116"></span><span>      </span><span class="annot"><span class="annottext">Parser (Lamport -&gt; Lamport -&gt; Maybe Word8 -&gt; InflationReward)
+-&gt; Parser Lamport
+-&gt; Parser (Lamport -&gt; Maybe Word8 -&gt; InflationReward)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679150436"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Lamport
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;amount&quot;</span></span><span>
+</span><span id="line-117"></span><span>      </span><span class="annot"><span class="annottext">Parser (Lamport -&gt; Maybe Word8 -&gt; InflationReward)
+-&gt; Parser Lamport -&gt; Parser (Maybe Word8 -&gt; InflationReward)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679150436"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Lamport
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;postBalance&quot;</span></span><span>
+</span><span id="line-118"></span><span>      </span><span class="annot"><span class="annottext">Parser (Maybe Word8 -&gt; InflationReward)
+-&gt; Parser (Maybe Word8) -&gt; Parser InflationReward
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679150436"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe Word8)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;commission&quot;</span></span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="annot"><span class="hs-comment">-- * getMinimumBalanceForRentExemption</span></span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="hs-comment">-- | Returns the minimum lamport balance required for a rent-exempt account.</span><span>
+</span><span id="line-127"></span><span class="hs-comment">--</span><span>
+</span><span id="line-128"></span><span class="hs-comment">-- Takes the account's data size in bytes and returns the required balance.</span><span>
+</span><span id="line-129"></span><span id="local-6989586621679150124"><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getMinimumBalanceForRentExemption"><span class="hs-identifier hs-type">getMinimumBalanceForRentExemption</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JsonRpc</span></span><span> </span><span class="annot"><a href="#local-6989586621679150124"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679150124"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Network.Solana.Core.Account.html#Lamport"><span class="hs-identifier hs-type">Lamport</span></a></span></span><span>
+</span><span id="line-130"></span><span id="getMinimumBalanceForRentExemption"><span class="annot"><span class="annottext">getMinimumBalanceForRentExemption :: forall (m :: * -&gt; *). JsonRpc m =&gt; Int -&gt; m Lamport
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getMinimumBalanceForRentExemption"><span class="hs-identifier hs-var hs-var">getMinimumBalanceForRentExemption</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-131"></span><span>  </span><span class="annot"><span class="annottext">MethodName -&gt; Int -&gt; m Lamport
+forall a. Remote m a =&gt; MethodName -&gt; a
+forall (m :: * -&gt; *) a. (JsonRpc m, Remote m a) =&gt; MethodName -&gt; a
+</span><span class="hs-identifier hs-var">remote</span></span><span> </span><span class="annot"><span class="annottext">MethodName
+</span><span class="hs-string">&quot;getMinimumBalanceForRentExemption&quot;</span></span><span>
+</span><span id="line-132"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getMinimumBalanceForRentExemption"><span class="hs-pragma hs-type">getMinimumBalanceForRentExemption</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span class="annot"><span class="hs-comment">-- * getStakeMinimumDelegation</span></span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-139"></span><span>
+</span><span id="line-140"></span><span class="hs-comment">-- | Returns the minimum delegation amount required to stake.</span><span>
+</span><span id="line-141"></span><span class="hs-comment">-- Returns @RpcResponse Lamport@ with value field set to @Lamport@.</span><span>
+</span><span id="line-142"></span><span id="local-6989586621679150126"><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getStakeMinimumDelegation%27"><span class="hs-identifier hs-type">getStakeMinimumDelegation'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JsonRpc</span></span><span> </span><span class="annot"><a href="#local-6989586621679150126"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679150126"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#RPCResponse"><span class="hs-identifier hs-type">RPCResponse</span></a></span><span> </span><span class="annot"><a href="Network.Solana.Core.Account.html#Lamport"><span class="hs-identifier hs-type">Lamport</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-143"></span><span id="getStakeMinimumDelegation%27"><span class="annot"><span class="annottext">getStakeMinimumDelegation' :: forall (m :: * -&gt; *). JsonRpc m =&gt; m (RPCResponse Lamport)
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getStakeMinimumDelegation%27"><span class="hs-identifier hs-var hs-var">getStakeMinimumDelegation'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-144"></span><span>  </span><span class="annot"><span class="annottext">MethodName -&gt; m (RPCResponse Lamport)
+forall a. Remote m a =&gt; MethodName -&gt; a
+forall (m :: * -&gt; *) a. (JsonRpc m, Remote m a) =&gt; MethodName -&gt; a
+</span><span class="hs-identifier hs-var">remote</span></span><span> </span><span class="annot"><span class="annottext">MethodName
+</span><span class="hs-string">&quot;getStakeMinimumDelegation&quot;</span></span><span>
+</span><span id="line-145"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getStakeMinimumDelegation%27"><span class="hs-pragma hs-type">getStakeMinimumDelegation'</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-146"></span><span>
+</span><span id="line-147"></span><span class="annot"><span class="hs-comment">-- | Returns the minimum amount (in lamports) required for stake delegation.</span></span><span>
+</span><span id="line-148"></span><span id="local-6989586621679150130"><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getStakeMinimumDelegation"><span class="hs-identifier hs-type">getStakeMinimumDelegation</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JsonRpc</span></span><span> </span><span class="annot"><a href="#local-6989586621679150130"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679150130"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Network.Solana.Core.Account.html#Lamport"><span class="hs-identifier hs-type">Lamport</span></a></span></span><span>
+</span><span id="line-149"></span><span id="getStakeMinimumDelegation"><span class="annot"><span class="annottext">getStakeMinimumDelegation :: forall (m :: * -&gt; *). JsonRpc m =&gt; m Lamport
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getStakeMinimumDelegation"><span class="hs-identifier hs-var hs-var">getStakeMinimumDelegation</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RPCResponse Lamport -&gt; Lamport
+forall a. RPCResponse a -&gt; a
+</span><a href="Network.Solana.RPC.HTTP.Types.html#value"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="annot"><span class="annottext">(RPCResponse Lamport -&gt; Lamport)
+-&gt; m (RPCResponse Lamport) -&gt; m Lamport
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">m (RPCResponse Lamport)
+forall (m :: * -&gt; *). JsonRpc m =&gt; m (RPCResponse Lamport)
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getStakeMinimumDelegation%27"><span class="hs-identifier hs-var">getStakeMinimumDelegation'</span></a></span><span>
+</span><span id="line-150"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getStakeMinimumDelegation"><span class="hs-pragma hs-type">getStakeMinimumDelegation</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-151"></span><span>
+</span><span id="line-152"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-153"></span><span>
+</span><span id="line-154"></span><span class="annot"><span class="hs-comment">-- * getSupply</span></span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span class="hs-comment">-- | Returns the current token supply information.</span><span>
+</span><span id="line-159"></span><span class="hs-comment">-- Returns @RpcResponse SolanaSupply@ with value field set to @SolanaSupply@.</span><span>
+</span><span id="line-160"></span><span id="local-6989586621679150139"><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getSupply%27"><span class="hs-identifier hs-type">getSupply'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JsonRpc</span></span><span> </span><span class="annot"><a href="#local-6989586621679150139"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679150139"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#RPCResponse"><span class="hs-identifier hs-type">RPCResponse</span></a></span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#SolanaSupply"><span class="hs-identifier hs-type">SolanaSupply</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-161"></span><span id="getSupply%27"><span class="annot"><span class="annottext">getSupply' :: forall (m :: * -&gt; *). JsonRpc m =&gt; m (RPCResponse SolanaSupply)
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getSupply%27"><span class="hs-identifier hs-var hs-var">getSupply'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-162"></span><span>  </span><span class="annot"><span class="annottext">MethodName -&gt; m (RPCResponse SolanaSupply)
+forall a. Remote m a =&gt; MethodName -&gt; a
+forall (m :: * -&gt; *) a. (JsonRpc m, Remote m a) =&gt; MethodName -&gt; a
+</span><span class="hs-identifier hs-var">remote</span></span><span> </span><span class="annot"><span class="annottext">MethodName
+</span><span class="hs-string">&quot;getSupply&quot;</span></span><span>
+</span><span id="line-163"></span><span>
+</span><span id="line-164"></span><span class="annot"><span class="hs-comment">-- | Returns the current token supply information.</span></span><span>
+</span><span id="line-165"></span><span id="local-6989586621679150142"><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getSupply"><span class="hs-identifier hs-type">getSupply</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JsonRpc</span></span><span> </span><span class="annot"><a href="#local-6989586621679150142"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679150142"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#SolanaSupply"><span class="hs-identifier hs-type">SolanaSupply</span></a></span></span><span>
+</span><span id="line-166"></span><span id="getSupply"><span class="annot"><span class="annottext">getSupply :: forall (m :: * -&gt; *). JsonRpc m =&gt; m SolanaSupply
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getSupply"><span class="hs-identifier hs-var hs-var">getSupply</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RPCResponse SolanaSupply -&gt; SolanaSupply
+forall a. RPCResponse a -&gt; a
+</span><a href="Network.Solana.RPC.HTTP.Types.html#value"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="annot"><span class="annottext">(RPCResponse SolanaSupply -&gt; SolanaSupply)
+-&gt; m (RPCResponse SolanaSupply) -&gt; m SolanaSupply
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">m (RPCResponse SolanaSupply)
+forall (m :: * -&gt; *). JsonRpc m =&gt; m (RPCResponse SolanaSupply)
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getSupply%27"><span class="hs-identifier hs-var">getSupply'</span></a></span><span>
+</span><span id="line-167"></span><span>
+</span><span id="line-168"></span><span class="annot"><span class="hs-comment">-- | Contains information about the total, circulating, and non-circulating token supply.</span></span><span>
+</span><span id="line-169"></span><span class="hs-keyword">data</span><span> </span><span id="SolanaSupply"><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#SolanaSupply"><span class="hs-identifier hs-var">SolanaSupply</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="SolanaSupply"><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#SolanaSupply"><span class="hs-identifier hs-var">SolanaSupply</span></a></span></span><span>
+</span><span id="line-170"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="hs-comment">-- | Total supply in lamports.</span></span><span>
+</span><span id="line-171"></span><span>    </span><span id="total"><span class="annot"><span class="annottext">SolanaSupply -&gt; Lamport
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#total"><span class="hs-identifier hs-var hs-var">total</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Account.html#Lamport"><span class="hs-identifier hs-type">Lamport</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-172"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Circulating supply in lamports.</span></span><span>
+</span><span id="line-173"></span><span>    </span><span id="circulating"><span class="annot"><span class="annottext">SolanaSupply -&gt; Lamport
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#circulating"><span class="hs-identifier hs-var hs-var">circulating</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Account.html#Lamport"><span class="hs-identifier hs-type">Lamport</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-174"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Non-circulating supply in lamports.</span></span><span>
+</span><span id="line-175"></span><span>    </span><span id="nonCirculating"><span class="annot"><span class="annottext">SolanaSupply -&gt; Lamport
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#nonCirculating"><span class="hs-identifier hs-var hs-var">nonCirculating</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Account.html#Lamport"><span class="hs-identifier hs-type">Lamport</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-176"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Accounts holding non-circulating tokens.</span></span><span>
+</span><span id="line-177"></span><span>    </span><span id="nonCirculatingAccounts"><span class="annot"><span class="annottext">SolanaSupply -&gt; [SolanaPublicKey]
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#nonCirculatingAccounts"><span class="hs-identifier hs-var hs-var">nonCirculatingAccounts</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-178"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-179"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679150493"><span id="local-6989586621679150495"><span class="annot"><span class="annottext">(forall x. SolanaSupply -&gt; Rep SolanaSupply x)
+-&gt; (forall x. Rep SolanaSupply x -&gt; SolanaSupply)
+-&gt; Generic SolanaSupply
+forall x. Rep SolanaSupply x -&gt; SolanaSupply
+forall x. SolanaSupply -&gt; Rep SolanaSupply x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. SolanaSupply -&gt; Rep SolanaSupply x
+from :: forall x. SolanaSupply -&gt; Rep SolanaSupply x
+$cto :: forall x. Rep SolanaSupply x -&gt; SolanaSupply
+to :: forall x. Rep SolanaSupply x -&gt; SolanaSupply
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679150498"><span id="local-6989586621679150507"><span id="local-6989586621679150511"><span class="annot"><span class="annottext">Int -&gt; SolanaSupply -&gt; ShowS
+[SolanaSupply] -&gt; ShowS
+SolanaSupply -&gt; String
+(Int -&gt; SolanaSupply -&gt; ShowS)
+-&gt; (SolanaSupply -&gt; String)
+-&gt; ([SolanaSupply] -&gt; ShowS)
+-&gt; Show SolanaSupply
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; SolanaSupply -&gt; ShowS
+showsPrec :: Int -&gt; SolanaSupply -&gt; ShowS
+$cshow :: SolanaSupply -&gt; String
+show :: SolanaSupply -&gt; String
+$cshowList :: [SolanaSupply] -&gt; ShowS
+showList :: [SolanaSupply] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679150515"><span id="local-6989586621679150524"><span class="annot"><span class="annottext">SolanaSupply -&gt; SolanaSupply -&gt; Bool
+(SolanaSupply -&gt; SolanaSupply -&gt; Bool)
+-&gt; (SolanaSupply -&gt; SolanaSupply -&gt; Bool) -&gt; Eq SolanaSupply
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: SolanaSupply -&gt; SolanaSupply -&gt; Bool
+== :: SolanaSupply -&gt; SolanaSupply -&gt; Bool
+$c/= :: SolanaSupply -&gt; SolanaSupply -&gt; Bool
+/= :: SolanaSupply -&gt; SolanaSupply -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-180"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679150530"><span id="local-6989586621679150536"><span class="annot"><span class="annottext">Value -&gt; Parser [SolanaSupply]
+Value -&gt; Parser SolanaSupply
+(Value -&gt; Parser SolanaSupply)
+-&gt; (Value -&gt; Parser [SolanaSupply]) -&gt; FromJSON SolanaSupply
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser SolanaSupply
+parseJSON :: Value -&gt; Parser SolanaSupply
+$cparseJSONList :: Value -&gt; Parser [SolanaSupply]
+parseJSONList :: Value -&gt; Parser [SolanaSupply]
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-181"></span><span>
+</span><span id="line-182"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-183"></span><span>
+</span><span id="line-184"></span><span class="annot"><span class="hs-comment">-- * getVoteAccounts</span></span><span>
+</span><span id="line-185"></span><span>
+</span><span id="line-186"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-187"></span><span>
+</span><span id="line-188"></span><span class="hs-comment">-- | Returns vote account information for all validators in the current bank.</span><span>
+</span><span id="line-189"></span><span class="hs-comment">--</span><span>
+</span><span id="line-190"></span><span class="hs-comment">-- Includes both current and delinquent vote accounts.</span><span>
+</span><span id="line-191"></span><span id="local-6989586621679150147"><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getVoteAccounts"><span class="hs-identifier hs-type">getVoteAccounts</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">JsonRpc</span></span><span> </span><span class="annot"><a href="#local-6989586621679150147"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679150147"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#VoteAccounts"><span class="hs-identifier hs-type">VoteAccounts</span></a></span></span><span>
+</span><span id="line-192"></span><span id="getVoteAccounts"><span class="annot"><span class="annottext">getVoteAccounts :: forall (m :: * -&gt; *). JsonRpc m =&gt; m VoteAccounts
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#getVoteAccounts"><span class="hs-identifier hs-var hs-var">getVoteAccounts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-193"></span><span>  </span><span class="annot"><span class="annottext">MethodName -&gt; m VoteAccounts
+forall a. Remote m a =&gt; MethodName -&gt; a
+forall (m :: * -&gt; *) a. (JsonRpc m, Remote m a) =&gt; MethodName -&gt; a
+</span><span class="hs-identifier hs-var">remote</span></span><span> </span><span class="annot"><span class="annottext">MethodName
+</span><span class="hs-string">&quot;getVoteAccounts&quot;</span></span><span>
+</span><span id="line-194"></span><span>
+</span><span id="line-195"></span><span class="annot"><span class="hs-comment">-- | Lists current and delinquent vote accounts.</span></span><span>
+</span><span id="line-196"></span><span class="hs-keyword">data</span><span> </span><span id="VoteAccounts"><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#VoteAccounts"><span class="hs-identifier hs-var">VoteAccounts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="VoteAccounts"><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#VoteAccounts"><span class="hs-identifier hs-var">VoteAccounts</span></a></span></span><span>
+</span><span id="line-197"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="hs-comment">-- | Currently active vote accounts.</span></span><span>
+</span><span id="line-198"></span><span>    </span><span id="current"><span class="annot"><span class="annottext">VoteAccounts -&gt; [VoteAccountsResult]
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#current"><span class="hs-identifier hs-var hs-var">current</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#VoteAccountsResult"><span class="hs-identifier hs-type">VoteAccountsResult</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-199"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Delinquent vote accounts.</span></span><span>
+</span><span id="line-200"></span><span>    </span><span id="delinquent"><span class="annot"><span class="annottext">VoteAccounts -&gt; [VoteAccountsResult]
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#delinquent"><span class="hs-identifier hs-var hs-var">delinquent</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#VoteAccountsResult"><span class="hs-identifier hs-type">VoteAccountsResult</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-201"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-202"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679150618"><span id="local-6989586621679150620"><span class="annot"><span class="annottext">(forall x. VoteAccounts -&gt; Rep VoteAccounts x)
+-&gt; (forall x. Rep VoteAccounts x -&gt; VoteAccounts)
+-&gt; Generic VoteAccounts
+forall x. Rep VoteAccounts x -&gt; VoteAccounts
+forall x. VoteAccounts -&gt; Rep VoteAccounts x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. VoteAccounts -&gt; Rep VoteAccounts x
+from :: forall x. VoteAccounts -&gt; Rep VoteAccounts x
+$cto :: forall x. Rep VoteAccounts x -&gt; VoteAccounts
+to :: forall x. Rep VoteAccounts x -&gt; VoteAccounts
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679150623"><span id="local-6989586621679150629"><span id="local-6989586621679150633"><span class="annot"><span class="annottext">Int -&gt; VoteAccounts -&gt; ShowS
+[VoteAccounts] -&gt; ShowS
+VoteAccounts -&gt; String
+(Int -&gt; VoteAccounts -&gt; ShowS)
+-&gt; (VoteAccounts -&gt; String)
+-&gt; ([VoteAccounts] -&gt; ShowS)
+-&gt; Show VoteAccounts
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; VoteAccounts -&gt; ShowS
+showsPrec :: Int -&gt; VoteAccounts -&gt; ShowS
+$cshow :: VoteAccounts -&gt; String
+show :: VoteAccounts -&gt; String
+$cshowList :: [VoteAccounts] -&gt; ShowS
+showList :: [VoteAccounts] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679150637"><span id="local-6989586621679150643"><span class="annot"><span class="annottext">Value -&gt; Parser [VoteAccounts]
+Value -&gt; Parser VoteAccounts
+(Value -&gt; Parser VoteAccounts)
+-&gt; (Value -&gt; Parser [VoteAccounts]) -&gt; FromJSON VoteAccounts
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser VoteAccounts
+parseJSON :: Value -&gt; Parser VoteAccounts
+$cparseJSONList :: Value -&gt; Parser [VoteAccounts]
+parseJSONList :: Value -&gt; Parser [VoteAccounts]
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-203"></span><span>
+</span><span id="line-204"></span><span class="annot"><span class="hs-comment">-- | Information about a vote account.</span></span><span>
+</span><span id="line-205"></span><span class="hs-keyword">data</span><span> </span><span id="VoteAccountsResult"><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#VoteAccountsResult"><span class="hs-identifier hs-var">VoteAccountsResult</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="VoteAccountsResult"><span class="annot"><a href="Network.Solana.RPC.HTTP.Tokenomics.html#VoteAccountsResult"><span class="hs-identifier hs-var">VoteAccountsResult</span></a></span></span><span>
+</span><span id="line-206"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="hs-comment">-- | Address of the vote account.</span></span><span>
+</span><span id="line-207"></span><span>    </span><span id="votePubkey"><span class="annot"><span class="annottext">VoteAccountsResult -&gt; SolanaPublicKey
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#votePubkey"><span class="hs-identifier hs-var hs-var">votePubkey</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-208"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Identity of the validator node.</span></span><span>
+</span><span id="line-209"></span><span>    </span><span id="nodePubkey"><span class="annot"><span class="annottext">VoteAccountsResult -&gt; SolanaPublicKey
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#nodePubkey"><span class="hs-identifier hs-var hs-var">nodePubkey</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-210"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Stake delegated to this vote account (active in this epoch).</span></span><span>
+</span><span id="line-211"></span><span>    </span><span id="activatedStake"><span class="annot"><span class="annottext">VoteAccountsResult -&gt; Word64
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#activatedStake"><span class="hs-identifier hs-var hs-var">activatedStake</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span class="hs-special">,</span><span>
+</span><span id="line-212"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Whether the vote account is active this epoch.</span></span><span>
+</span><span id="line-213"></span><span>    </span><span id="epochVoteAccount"><span class="annot"><span class="annottext">VoteAccountsResult -&gt; Bool
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#epochVoteAccount"><span class="hs-identifier hs-var hs-var">epochVoteAccount</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span class="hs-special">,</span><span>
+</span><span id="line-214"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Commission percentage charged by the validator (0&#8211;100).</span></span><span>
+</span><span id="line-215"></span><span>    </span><span id="commission"><span class="annot"><span class="annottext">VoteAccountsResult -&gt; Int
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#commission"><span class="hs-identifier hs-var hs-var">commission</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span>
+</span><span id="line-216"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Most recent slot voted on.</span></span><span>
+</span><span id="line-217"></span><span>    </span><span id="lastVote"><span class="annot"><span class="annottext">VoteAccountsResult -&gt; Word64
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#lastVote"><span class="hs-identifier hs-var hs-var">lastVote</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#Slot"><span class="hs-identifier hs-type">Slot</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-218"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Historical epoch credits: [epoch, credits, previousCredits].</span></span><span>
+</span><span id="line-219"></span><span>    </span><span id="epochCredits"><span class="annot"><span class="annottext">VoteAccountsResult -&gt; [[Word64]]
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#epochCredits"><span class="hs-identifier hs-var hs-var">epochCredits</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span class="hs-special">]</span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-220"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Current root slot for this vote account.</span></span><span>
+</span><span id="line-221"></span><span>    </span><span id="rootSlot"><span class="annot"><span class="annottext">VoteAccountsResult -&gt; Word64
+</span><a href="Network.Solana.RPC.HTTP.Tokenomics.html#rootSlot"><span class="hs-identifier hs-var hs-var">rootSlot</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#Slot"><span class="hs-identifier hs-type">Slot</span></a></span><span>
+</span><span id="line-222"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-223"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679150703"><span id="local-6989586621679150705"><span class="annot"><span class="annottext">(forall x. VoteAccountsResult -&gt; Rep VoteAccountsResult x)
+-&gt; (forall x. Rep VoteAccountsResult x -&gt; VoteAccountsResult)
+-&gt; Generic VoteAccountsResult
+forall x. Rep VoteAccountsResult x -&gt; VoteAccountsResult
+forall x. VoteAccountsResult -&gt; Rep VoteAccountsResult x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. VoteAccountsResult -&gt; Rep VoteAccountsResult x
+from :: forall x. VoteAccountsResult -&gt; Rep VoteAccountsResult x
+$cto :: forall x. Rep VoteAccountsResult x -&gt; VoteAccountsResult
+to :: forall x. Rep VoteAccountsResult x -&gt; VoteAccountsResult
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679150708"><span id="local-6989586621679150722"><span id="local-6989586621679150725"><span class="annot"><span class="annottext">Int -&gt; VoteAccountsResult -&gt; ShowS
+[VoteAccountsResult] -&gt; ShowS
+VoteAccountsResult -&gt; String
+(Int -&gt; VoteAccountsResult -&gt; ShowS)
+-&gt; (VoteAccountsResult -&gt; String)
+-&gt; ([VoteAccountsResult] -&gt; ShowS)
+-&gt; Show VoteAccountsResult
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; VoteAccountsResult -&gt; ShowS
+showsPrec :: Int -&gt; VoteAccountsResult -&gt; ShowS
+$cshow :: VoteAccountsResult -&gt; String
+show :: VoteAccountsResult -&gt; String
+$cshowList :: [VoteAccountsResult] -&gt; ShowS
+showList :: [VoteAccountsResult] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679150728"><span id="local-6989586621679150734"><span class="annot"><span class="annottext">Value -&gt; Parser [VoteAccountsResult]
+Value -&gt; Parser VoteAccountsResult
+(Value -&gt; Parser VoteAccountsResult)
+-&gt; (Value -&gt; Parser [VoteAccountsResult])
+-&gt; FromJSON VoteAccountsResult
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser VoteAccountsResult
+parseJSON :: Value -&gt; Parser VoteAccountsResult
+$cparseJSONList :: Value -&gt; Parser [VoteAccountsResult]
+parseJSONList :: Value -&gt; Parser [VoteAccountsResult]
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-224"></span></pre></body></html>

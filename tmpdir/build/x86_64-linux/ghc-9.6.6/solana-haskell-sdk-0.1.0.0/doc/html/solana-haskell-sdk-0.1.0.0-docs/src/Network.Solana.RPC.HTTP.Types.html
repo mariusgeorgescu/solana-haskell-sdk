@@ -1,0 +1,264 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.Solana.RPC.HTTP.Types</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson.Types</span></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="annot"><span class="hs-comment">-- * RPCResponse</span></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">type</span><span> </span><span id="Slot"><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#Slot"><span class="hs-identifier hs-var">Slot</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">data</span><span> </span><span id="Context"><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#Context"><span class="hs-identifier hs-var">Context</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Context"><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#Context"><span class="hs-identifier hs-var">Context</span></a></span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="apiVersion"><span class="annot"><span class="annottext">Context -&gt; Text
+</span><a href="Network.Solana.RPC.HTTP.Types.html#apiVersion"><span class="hs-identifier hs-var hs-var">apiVersion</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>    </span><span id="contextSlot"><span class="annot"><span class="annottext">Context -&gt; Slot
+</span><a href="Network.Solana.RPC.HTTP.Types.html#contextSlot"><span class="hs-identifier hs-var hs-var">contextSlot</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#Slot"><span class="hs-identifier hs-type">Slot</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679149380"><span id="local-6989586621679149388"><span id="local-6989586621679149392"><span class="annot"><span class="annottext">Int -&gt; Context -&gt; ShowS
+[Context] -&gt; ShowS
+Context -&gt; String
+(Int -&gt; Context -&gt; ShowS)
+-&gt; (Context -&gt; String) -&gt; ([Context] -&gt; ShowS) -&gt; Show Context
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Context -&gt; ShowS
+showsPrec :: Int -&gt; Context -&gt; ShowS
+$cshow :: Context -&gt; String
+show :: Context -&gt; String
+$cshowList :: [Context] -&gt; ShowS
+showList :: [Context] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679149396"><span id="local-6989586621679149398"><span class="annot"><span class="annottext">(forall x. Context -&gt; Rep Context x)
+-&gt; (forall x. Rep Context x -&gt; Context) -&gt; Generic Context
+forall x. Rep Context x -&gt; Context
+forall x. Context -&gt; Rep Context x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Context -&gt; Rep Context x
+from :: forall x. Context -&gt; Rep Context x
+$cto :: forall x. Rep Context x -&gt; Context
+to :: forall x. Rep Context x -&gt; Context
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679149403"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#Context"><span class="hs-identifier hs-type">Context</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">parseJSON</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#Context"><span class="hs-identifier hs-type">Context</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span id="local-6989586621679149419"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser Context
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; (Object -&gt; Parser Context) -&gt; Value -&gt; Parser Context
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Context&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser Context) -&gt; Value -&gt; Parser Context)
+-&gt; (Object -&gt; Parser Context) -&gt; Value -&gt; Parser Context
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679149421"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679149421"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Slot -&gt; Context
+</span><a href="Network.Solana.RPC.HTTP.Types.html#Context"><span class="hs-identifier hs-var">Context</span></a></span><span>
+</span><span id="line-30"></span><span>      </span><span class="annot"><span class="annottext">(Text -&gt; Slot -&gt; Context)
+-&gt; Parser Text -&gt; Parser (Slot -&gt; Context)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679149421"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Text
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;apiVersion&quot;</span></span><span>
+</span><span id="line-31"></span><span>      </span><span class="annot"><span class="annottext">Parser (Slot -&gt; Context) -&gt; Parser Slot -&gt; Parser Context
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679149421"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Slot
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;slot&quot;</span></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">data</span><span> </span><span id="RPCResponse"><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#RPCResponse"><span class="hs-identifier hs-var">RPCResponse</span></a></span></span><span> </span><span id="local-6989586621679149229"><span class="annot"><a href="#local-6989586621679149229"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="RPCResponse"><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#RPCResponse"><span class="hs-identifier hs-var">RPCResponse</span></a></span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="context"><span class="annot"><span class="annottext">forall a. RPCResponse a -&gt; Context
+</span><a href="Network.Solana.RPC.HTTP.Types.html#context"><span class="hs-identifier hs-var hs-var">context</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#Context"><span class="hs-identifier hs-type">Context</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>    </span><span id="value"><span class="annot"><span class="annottext">forall a. RPCResponse a -&gt; a
+</span><a href="Network.Solana.RPC.HTTP.Types.html#value"><span class="hs-identifier hs-var hs-var">value</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679149229"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679149429"><span id="local-6989586621679149434"><span id="local-6989586621679149438"><span class="annot"><span class="annottext">Int -&gt; RPCResponse a -&gt; ShowS
+[RPCResponse a] -&gt; ShowS
+RPCResponse a -&gt; String
+(Int -&gt; RPCResponse a -&gt; ShowS)
+-&gt; (RPCResponse a -&gt; String)
+-&gt; ([RPCResponse a] -&gt; ShowS)
+-&gt; Show (RPCResponse a)
+forall a. Show a =&gt; Int -&gt; RPCResponse a -&gt; ShowS
+forall a. Show a =&gt; [RPCResponse a] -&gt; ShowS
+forall a. Show a =&gt; RPCResponse a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; RPCResponse a -&gt; ShowS
+showsPrec :: Int -&gt; RPCResponse a -&gt; ShowS
+$cshow :: forall a. Show a =&gt; RPCResponse a -&gt; String
+show :: RPCResponse a -&gt; String
+$cshowList :: forall a. Show a =&gt; [RPCResponse a] -&gt; ShowS
+showList :: [RPCResponse a] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679149236"><span id="local-6989586621679149443"><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679149236"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#RPCResponse"><span class="hs-identifier hs-type">RPCResponse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679149236"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">parseJSON</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679149236"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#RPCResponse"><span class="hs-identifier hs-type">RPCResponse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679149236"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621679149454"><span class="annot"><span class="annottext">parseJSON :: FromJSON a =&gt; Value -&gt; Parser (RPCResponse a)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (Object -&gt; Parser (RPCResponse a))
+-&gt; Value
+-&gt; Parser (RPCResponse a)
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Person&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser (RPCResponse a))
+ -&gt; Value -&gt; Parser (RPCResponse a))
+-&gt; (Object -&gt; Parser (RPCResponse a))
+-&gt; Value
+-&gt; Parser (RPCResponse a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679149455"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679149455"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-42"></span><span>    </span><span class="annot"><span class="annottext">Context -&gt; a -&gt; RPCResponse a
+forall a. Context -&gt; a -&gt; RPCResponse a
+</span><a href="Network.Solana.RPC.HTTP.Types.html#RPCResponse"><span class="hs-identifier hs-var">RPCResponse</span></a></span><span>
+</span><span id="line-43"></span><span>      </span><span class="annot"><span class="annottext">(Context -&gt; a -&gt; RPCResponse a)
+-&gt; Parser Context -&gt; Parser (a -&gt; RPCResponse a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679149455"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Context
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;context&quot;</span></span><span>
+</span><span id="line-44"></span><span>      </span><span class="annot"><span class="annottext">Parser (a -&gt; RPCResponse a) -&gt; Parser a -&gt; Parser (RPCResponse a)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679149455"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser a
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;value&quot;</span></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="annot"><span class="hs-comment">-- *  ConfigurationObject</span></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">data</span><span> </span><span id="ConfigurationObject"><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#ConfigurationObject"><span class="hs-identifier hs-var">ConfigurationObject</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ConfigurationObject"><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#ConfigurationObject"><span class="hs-identifier hs-var">ConfigurationObject</span></a></span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="commitment"><span class="annot"><span class="annottext">ConfigurationObject -&gt; Maybe String
+</span><a href="Network.Solana.RPC.HTTP.Types.html#commitment"><span class="hs-identifier hs-var hs-var">commitment</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">,</span><span>
+</span><span id="line-54"></span><span>    </span><span id="encoding"><span class="annot"><span class="annottext">ConfigurationObject -&gt; Maybe String
+</span><a href="Network.Solana.RPC.HTTP.Types.html#encoding"><span class="hs-identifier hs-var hs-var">encoding</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">,</span><span>
+</span><span id="line-55"></span><span>    </span><span id="dataSlice"><span class="annot"><span class="annottext">ConfigurationObject -&gt; Maybe Object
+</span><a href="Network.Solana.RPC.HTTP.Types.html#dataSlice"><span class="hs-identifier hs-var hs-var">dataSlice</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Object</span></span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>    </span><span id="skipPreflight"><span class="annot"><span class="annottext">ConfigurationObject -&gt; Maybe Bool
+</span><a href="Network.Solana.RPC.HTTP.Types.html#skipPreflight"><span class="hs-identifier hs-var hs-var">skipPreflight</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span class="hs-special">,</span><span>
+</span><span id="line-57"></span><span>    </span><span id="preflightCommitment"><span class="annot"><span class="annottext">ConfigurationObject -&gt; Maybe String
+</span><a href="Network.Solana.RPC.HTTP.Types.html#preflightCommitment"><span class="hs-identifier hs-var hs-var">preflightCommitment</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">,</span><span>
+</span><span id="line-58"></span><span>    </span><span id="maxRetries"><span class="annot"><span class="annottext">ConfigurationObject -&gt; Maybe Int
+</span><a href="Network.Solana.RPC.HTTP.Types.html#maxRetries"><span class="hs-identifier hs-var hs-var">maxRetries</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span>
+</span><span id="line-59"></span><span>    </span><span id="minContextSlot"><span class="annot"><span class="annottext">ConfigurationObject -&gt; Maybe Int
+</span><a href="Network.Solana.RPC.HTTP.Types.html#minContextSlot"><span class="hs-identifier hs-var hs-var">minContextSlot</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span>
+</span><span id="line-60"></span><span>    </span><span id="searchTransactionHistory"><span class="annot"><span class="annottext">ConfigurationObject -&gt; Maybe Bool
+</span><a href="Network.Solana.RPC.HTTP.Types.html#searchTransactionHistory"><span class="hs-identifier hs-var hs-var">searchTransactionHistory</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679149466"><span id="local-6989586621679149468"><span class="annot"><span class="annottext">(forall x. ConfigurationObject -&gt; Rep ConfigurationObject x)
+-&gt; (forall x. Rep ConfigurationObject x -&gt; ConfigurationObject)
+-&gt; Generic ConfigurationObject
+forall x. Rep ConfigurationObject x -&gt; ConfigurationObject
+forall x. ConfigurationObject -&gt; Rep ConfigurationObject x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. ConfigurationObject -&gt; Rep ConfigurationObject x
+from :: forall x. ConfigurationObject -&gt; Rep ConfigurationObject x
+$cto :: forall x. Rep ConfigurationObject x -&gt; ConfigurationObject
+to :: forall x. Rep ConfigurationObject x -&gt; ConfigurationObject
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679149471"><span id="local-6989586621679149487"><span id="local-6989586621679149491"><span class="annot"><span class="annottext">Int -&gt; ConfigurationObject -&gt; ShowS
+[ConfigurationObject] -&gt; ShowS
+ConfigurationObject -&gt; String
+(Int -&gt; ConfigurationObject -&gt; ShowS)
+-&gt; (ConfigurationObject -&gt; String)
+-&gt; ([ConfigurationObject] -&gt; ShowS)
+-&gt; Show ConfigurationObject
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ConfigurationObject -&gt; ShowS
+showsPrec :: Int -&gt; ConfigurationObject -&gt; ShowS
+$cshow :: ConfigurationObject -&gt; String
+show :: ConfigurationObject -&gt; String
+$cshowList :: [ConfigurationObject] -&gt; ShowS
+showList :: [ConfigurationObject] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679149502"><span id="local-6989586621679149509"><span id="local-6989586621679149512"><span id="local-6989586621679149515"><span class="annot"><span class="annottext">[ConfigurationObject] -&gt; Value
+[ConfigurationObject] -&gt; Encoding
+ConfigurationObject -&gt; Value
+ConfigurationObject -&gt; Encoding
+(ConfigurationObject -&gt; Value)
+-&gt; (ConfigurationObject -&gt; Encoding)
+-&gt; ([ConfigurationObject] -&gt; Value)
+-&gt; ([ConfigurationObject] -&gt; Encoding)
+-&gt; ToJSON ConfigurationObject
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+$ctoJSON :: ConfigurationObject -&gt; Value
+toJSON :: ConfigurationObject -&gt; Value
+$ctoEncoding :: ConfigurationObject -&gt; Encoding
+toEncoding :: ConfigurationObject -&gt; Encoding
+$ctoJSONList :: [ConfigurationObject] -&gt; Value
+toJSONList :: [ConfigurationObject] -&gt; Value
+$ctoEncodingList :: [ConfigurationObject] -&gt; Encoding
+toEncodingList :: [ConfigurationObject] -&gt; Encoding
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#defaultConfigObject"><span class="hs-identifier hs-type">defaultConfigObject</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#ConfigurationObject"><span class="hs-identifier hs-type">ConfigurationObject</span></a></span><span>
+</span><span id="line-65"></span><span id="defaultConfigObject"><span class="annot"><span class="annottext">defaultConfigObject :: ConfigurationObject
+</span><a href="Network.Solana.RPC.HTTP.Types.html#defaultConfigObject"><span class="hs-identifier hs-var hs-var">defaultConfigObject</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-66"></span><span>  </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#ConfigurationObject"><span class="hs-identifier hs-type">ConfigurationObject</span></a></span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">commitment :: Maybe String
+</span><a href="Network.Solana.RPC.HTTP.Types.html#commitment"><span class="hs-identifier hs-var">commitment</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe String
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span class="hs-special">,</span><span>
+</span><span id="line-68"></span><span>      </span><span class="annot"><span class="annottext">encoding :: Maybe String
+</span><a href="Network.Solana.RPC.HTTP.Types.html#encoding"><span class="hs-identifier hs-var">encoding</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe String
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span class="hs-special">,</span><span>
+</span><span id="line-69"></span><span>      </span><span class="annot"><span class="annottext">dataSlice :: Maybe Object
+</span><a href="Network.Solana.RPC.HTTP.Types.html#dataSlice"><span class="hs-identifier hs-var">dataSlice</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Object
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span class="hs-special">,</span><span>
+</span><span id="line-70"></span><span>      </span><span class="annot"><span class="annottext">skipPreflight :: Maybe Bool
+</span><a href="Network.Solana.RPC.HTTP.Types.html#skipPreflight"><span class="hs-identifier hs-var">skipPreflight</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Bool
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span class="hs-special">,</span><span>
+</span><span id="line-71"></span><span>      </span><span class="annot"><span class="annottext">preflightCommitment :: Maybe String
+</span><a href="Network.Solana.RPC.HTTP.Types.html#preflightCommitment"><span class="hs-identifier hs-var">preflightCommitment</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe String
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span class="hs-special">,</span><span>
+</span><span id="line-72"></span><span>      </span><span class="annot"><span class="annottext">maxRetries :: Maybe Int
+</span><a href="Network.Solana.RPC.HTTP.Types.html#maxRetries"><span class="hs-identifier hs-var">maxRetries</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Int
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span class="hs-special">,</span><span>
+</span><span id="line-73"></span><span>      </span><span class="annot"><span class="annottext">minContextSlot :: Maybe Int
+</span><a href="Network.Solana.RPC.HTTP.Types.html#minContextSlot"><span class="hs-identifier hs-var">minContextSlot</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Int
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span class="hs-special">,</span><span>
+</span><span id="line-74"></span><span>      </span><span class="annot"><span class="annottext">searchTransactionHistory :: Maybe Bool
+</span><a href="Network.Solana.RPC.HTTP.Types.html#searchTransactionHistory"><span class="hs-identifier hs-var">searchTransactionHistory</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Bool
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#cfgJustEncodingBase64"><span class="hs-identifier hs-type">cfgJustEncodingBase64</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#ConfigurationObject"><span class="hs-identifier hs-type">ConfigurationObject</span></a></span><span>
+</span><span id="line-78"></span><span id="cfgJustEncodingBase64"><span class="annot"><span class="annottext">cfgJustEncodingBase64 :: ConfigurationObject
+</span><a href="Network.Solana.RPC.HTTP.Types.html#cfgJustEncodingBase64"><span class="hs-identifier hs-var hs-var">cfgJustEncodingBase64</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><span class="annottext">ConfigurationObject
+</span><a href="Network.Solana.RPC.HTTP.Types.html#defaultConfigObject"><span class="hs-identifier hs-var">defaultConfigObject</span></a></span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Network.Solana.RPC.HTTP.Types.html#encoding"><span class="hs-identifier hs-var">encoding</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="annot"><span class="hs-string">&quot;base64&quot;</span></span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-82"></span></pre></body></html>

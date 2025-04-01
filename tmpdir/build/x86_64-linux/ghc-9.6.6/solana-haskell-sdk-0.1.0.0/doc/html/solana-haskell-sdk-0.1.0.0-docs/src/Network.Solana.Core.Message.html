@@ -1,0 +1,1029 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.Solana.Core.Message</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#newTransactionIntent"><span class="hs-identifier">newTransactionIntent</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Network.Solana.Core.Message.html#Message"><span class="hs-identifier">Message</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Network.Solana.Core.Message.html#CompiledMessage"><span class="hs-identifier">CompiledMessage</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><a href="Network.Solana.Core.Message.html#newMessage"><span class="hs-identifier">newMessage</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Network.Solana.Core.Message.html#newMessageToBase64String"><span class="hs-identifier">newMessageToBase64String</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson.Types</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Parser</span></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Binary</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">S</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Foldable</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.Solana.Core.Block.html"><span class="hs-identifier">Network.Solana.Core.Block</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.Core.Block.html#BlockHash"><span class="hs-identifier">BlockHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.Solana.Core.Compact.html"><span class="hs-identifier">Network.Solana.Core.Compact</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html"><span class="hs-identifier">Network.Solana.Core.Crypto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPrivateKey"><span class="hs-identifier">SolanaPrivateKey</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier">SolanaPublicKey</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html#dsign"><span class="hs-identifier">dsign</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html#toBase64String"><span class="hs-identifier">toBase64String</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.Solana.Core.Instruction.html"><span class="hs-identifier">Network.Solana.Core.Instruction</span></a></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="annot"><span class="hs-comment">-- * SignedTransactionIntent</span></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">type</span><span> </span><span id="SignedTransactionIntent"><span class="annot"><a href="Network.Solana.Core.Message.html#SignedTransactionIntent"><span class="hs-identifier hs-var">SignedTransactionIntent</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.Core.Block.html#BlockHash"><span class="hs-identifier hs-type">BlockHash</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="Network.Solana.Core.Instruction.html#CompileException"><span class="hs-identifier hs-type">CompileException</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="annot"><a href="Network.Solana.Core.Message.html#newTransactionIntent"><span class="hs-identifier hs-type">newTransactionIntent</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPrivateKey"><span class="hs-identifier hs-type">SolanaPrivateKey</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Instruction.html#Instruction"><span class="hs-identifier hs-type">Instruction</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#SignedTransactionIntent"><span class="hs-identifier hs-type">SignedTransactionIntent</span></a></span><span>
+</span><span id="line-35"></span><span id="newTransactionIntent"><span class="annot"><span class="annottext">newTransactionIntent :: [SolanaPrivateKey] -&gt; [Instruction] -&gt; SignedTransactionIntent
+</span><a href="Network.Solana.Core.Message.html#newTransactionIntent"><span class="hs-identifier hs-var hs-var">newTransactionIntent</span></a></span></span><span> </span><span id="local-6989586621679147929"><span class="annot"><span class="annottext">[SolanaPrivateKey]
+</span><a href="#local-6989586621679147929"><span class="hs-identifier hs-var">signers</span></a></span></span><span> </span><span id="local-6989586621679147930"><span class="annot"><span class="annottext">[Instruction]
+</span><a href="#local-6989586621679147930"><span class="hs-identifier hs-var">instructions</span></a></span></span><span> </span><span id="local-6989586621679147931"><span class="annot"><span class="annottext">BlockHash
+</span><a href="#local-6989586621679147931"><span class="hs-identifier hs-var">blockhash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-36"></span><span>  </span><span id="local-6989586621679147932"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679147932"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">BlockHash -&gt; [Instruction] -&gt; Either CompileException ByteString
+</span><a href="Network.Solana.Core.Message.html#newMessage"><span class="hs-identifier hs-var">newMessage</span></a></span><span> </span><span class="annot"><span class="annottext">BlockHash
+</span><a href="#local-6989586621679147931"><span class="hs-identifier hs-var">blockhash</span></a></span><span> </span><span class="annot"><span class="annottext">[Instruction]
+</span><a href="#local-6989586621679147930"><span class="hs-identifier hs-var">instructions</span></a></span><span> </span><span class="hs-comment">-- make the binary message</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679147939"><span class="annot"><span class="annottext">signatures :: ByteString
+</span><a href="#local-6989586621679147939"><span class="hs-identifier hs-var hs-var">signatures</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><span class="hs-identifier hs-var">S.toStrict</span></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString)
+-&gt; (CompactArray SolanaSignature -&gt; ByteString)
+-&gt; CompactArray SolanaSignature
+-&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">CompactArray SolanaSignature -&gt; ByteString
+forall a. Binary a =&gt; a -&gt; ByteString
+</span><span class="hs-identifier hs-var">Data.Binary.encode</span></span><span> </span><span class="annot"><span class="annottext">(CompactArray SolanaSignature -&gt; ByteString)
+-&gt; CompactArray SolanaSignature -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[SolanaSignature] -&gt; CompactArray SolanaSignature
+forall a. [a] -&gt; CompactArray a
+</span><a href="Network.Solana.Core.Compact.html#mkCompact"><span class="hs-identifier hs-var">mkCompact</span></a></span><span> </span><span class="annot"><span class="annottext">([SolanaSignature] -&gt; CompactArray SolanaSignature)
+-&gt; [SolanaSignature] -&gt; CompactArray SolanaSignature
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(SolanaPrivateKey -&gt; ByteString -&gt; SolanaSignature)
+-&gt; ByteString -&gt; SolanaPrivateKey -&gt; SolanaSignature
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><span class="hs-identifier hs-var">flip</span></span><span> </span><span class="annot"><span class="annottext">SolanaPrivateKey -&gt; ByteString -&gt; SolanaSignature
+</span><a href="Network.Solana.Core.Crypto.html#dsign"><span class="hs-identifier hs-var">dsign</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679147932"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="annot"><span class="annottext">(SolanaPrivateKey -&gt; SolanaSignature)
+-&gt; [SolanaPrivateKey] -&gt; [SolanaSignature]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">[SolanaPrivateKey]
+</span><a href="#local-6989586621679147929"><span class="hs-identifier hs-var">signers</span></a></span><span> </span><span class="hs-comment">-- sign the binary message</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Either CompileException String
+forall a. a -&gt; Either CompileException a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Either CompileException String)
+-&gt; String -&gt; Either CompileException String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; String
+</span><a href="Network.Solana.Core.Crypto.html#toBase64String"><span class="hs-identifier hs-var">toBase64String</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; String) -&gt; ByteString -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+</span><span class="hs-identifier hs-var">S.append</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679147939"><span class="hs-identifier hs-var">signatures</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679147932"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="hs-comment">-- return signed transaction</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="annot"><span class="hs-comment">-- ** Message</span></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="annot"><span class="hs-comment">-- | The structure of a transaction message.</span></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">data</span><span> </span><span id="Message"><span class="annot"><a href="Network.Solana.Core.Message.html#Message"><span class="hs-identifier hs-var">Message</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Message"><span class="annot"><a href="Network.Solana.Core.Message.html#Message"><span class="hs-identifier hs-var">Message</span></a></span></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="hs-comment">-- | Specifies the number of signer and read-only account.</span></span><span>
+</span><span id="line-49"></span><span>    </span><span id="mHeader"><span class="annot"><span class="annottext">Message -&gt; MessageHeader
+</span><a href="Network.Solana.Core.Message.html#mHeader"><span class="hs-identifier hs-var hs-var">mHeader</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-type">MessageHeader</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-50"></span><span>    </span><span class="annot"><span class="hs-comment">-- |  All the account keys used by this transaction (used by all the instructions on the transaction).</span></span><span>
+</span><span id="line-51"></span><span>    </span><span id="mAccountKeys"><span class="annot"><span class="annottext">Message -&gt; [SolanaPublicKey]
+</span><a href="Network.Solana.Core.Message.html#mAccountKeys"><span class="hs-identifier hs-var hs-var">mAccountKeys</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span>
+</span><span id="line-52"></span><span>    </span><span class="annot"><span class="hs-comment">-- | The id of a recent ledger entry. Acts as a timestamp for the transaction.</span></span><span>
+</span><span id="line-53"></span><span>    </span><span id="mRecentBlockhash"><span class="annot"><span class="annottext">Message -&gt; BlockHash
+</span><a href="Network.Solana.Core.Message.html#mRecentBlockhash"><span class="hs-identifier hs-var hs-var">mRecentBlockhash</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Block.html#BlockHash"><span class="hs-identifier hs-type">BlockHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-comment">{-  An array of instructions to be executed.
+        Programs that will be executed in sequence and committed in one atomic transaction if all succeed.
+    -}</span><span>
+</span><span id="line-57"></span><span>    </span><span id="mInstructions"><span class="annot"><span class="annottext">Message -&gt; [Instruction]
+</span><a href="Network.Solana.Core.Message.html#mInstructions"><span class="hs-identifier hs-var hs-var">mInstructions</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Instruction.html#Instruction"><span class="hs-identifier hs-type">Instruction</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147953"><span id="local-6989586621679147966"><span id="local-6989586621679147970"><span class="annot"><span class="annottext">Int -&gt; Message -&gt; ShowS
+[Message] -&gt; ShowS
+Message -&gt; String
+(Int -&gt; Message -&gt; ShowS)
+-&gt; (Message -&gt; String) -&gt; ([Message] -&gt; ShowS) -&gt; Show Message
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Message -&gt; ShowS
+showsPrec :: Int -&gt; Message -&gt; ShowS
+$cshow :: Message -&gt; String
+show :: Message -&gt; String
+$cshowList :: [Message] -&gt; ShowS
+showList :: [Message] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147976"><span id="local-6989586621679147987"><span class="annot"><span class="annottext">Message -&gt; Message -&gt; Bool
+(Message -&gt; Message -&gt; Bool)
+-&gt; (Message -&gt; Message -&gt; Bool) -&gt; Eq Message
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Message -&gt; Message -&gt; Bool
+== :: Message -&gt; Message -&gt; Bool
+$c/= :: Message -&gt; Message -&gt; Bool
+/= :: Message -&gt; Message -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147994"><span id="local-6989586621679147996"><span class="annot"><span class="annottext">(forall x. Message -&gt; Rep Message x)
+-&gt; (forall x. Rep Message x -&gt; Message) -&gt; Generic Message
+forall x. Rep Message x -&gt; Message
+forall x. Message -&gt; Rep Message x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Message -&gt; Rep Message x
+from :: forall x. Message -&gt; Rep Message x
+$cto :: forall x. Rep Message x -&gt; Message
+to :: forall x. Rep Message x -&gt; Message
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="annot"><a href="Network.Solana.Core.Message.html#newMessage"><span class="hs-identifier hs-type">newMessage</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Block.html#BlockHash"><span class="hs-identifier hs-type">BlockHash</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Instruction.html#Instruction"><span class="hs-identifier hs-type">Instruction</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="Network.Solana.Core.Instruction.html#CompileException"><span class="hs-identifier hs-type">CompileException</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">S.ByteString</span></span><span>
+</span><span id="line-62"></span><span id="newMessage"><span class="annot"><span class="annottext">newMessage :: BlockHash -&gt; [Instruction] -&gt; Either CompileException ByteString
+</span><a href="Network.Solana.Core.Message.html#newMessage"><span class="hs-identifier hs-var hs-var">newMessage</span></a></span></span><span> </span><span id="local-6989586621679147999"><span class="annot"><span class="annottext">BlockHash
+</span><a href="#local-6989586621679147999"><span class="hs-identifier hs-var">bh</span></a></span></span><span> </span><span id="local-6989586621679148000"><span class="annot"><span class="annottext">[Instruction]
+</span><a href="#local-6989586621679148000"><span class="hs-identifier hs-var">is</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Message -&gt; Either CompileException ByteString
+</span><a href="Network.Solana.Core.Message.html#compileMessageToBinary"><span class="hs-identifier hs-var">compileMessageToBinary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BlockHash -&gt; [Instruction] -&gt; Message
+</span><a href="Network.Solana.Core.Message.html#mkNewMessage"><span class="hs-identifier hs-var">mkNewMessage</span></a></span><span> </span><span class="annot"><span class="annottext">BlockHash
+</span><a href="#local-6989586621679147999"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">[Instruction]
+</span><a href="#local-6989586621679148000"><span class="hs-identifier hs-var">is</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="annot"><a href="Network.Solana.Core.Message.html#newMessageToBase64String"><span class="hs-identifier hs-type">newMessageToBase64String</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Block.html#BlockHash"><span class="hs-identifier hs-type">BlockHash</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Instruction.html#Instruction"><span class="hs-identifier hs-type">Instruction</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="Network.Solana.Core.Instruction.html#CompileException"><span class="hs-identifier hs-type">CompileException</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-65"></span><span id="newMessageToBase64String"><span class="annot"><span class="annottext">newMessageToBase64String :: BlockHash -&gt; [Instruction] -&gt; Either CompileException String
+</span><a href="Network.Solana.Core.Message.html#newMessageToBase64String"><span class="hs-identifier hs-var hs-var">newMessageToBase64String</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Either CompileException ByteString
+ -&gt; Either CompileException String)
+-&gt; ([Instruction] -&gt; Either CompileException ByteString)
+-&gt; [Instruction]
+-&gt; Either CompileException String
+forall a b. (a -&gt; b) -&gt; ([Instruction] -&gt; a) -&gt; [Instruction] -&gt; b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ByteString -&gt; String)
+-&gt; Either CompileException ByteString
+-&gt; Either CompileException String
+forall a b.
+(a -&gt; b) -&gt; Either CompileException a -&gt; Either CompileException b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; String
+</span><a href="Network.Solana.Core.Crypto.html#toBase64String"><span class="hs-identifier hs-var">toBase64String</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(([Instruction] -&gt; Either CompileException ByteString)
+ -&gt; [Instruction] -&gt; Either CompileException String)
+-&gt; (BlockHash
+    -&gt; [Instruction] -&gt; Either CompileException ByteString)
+-&gt; BlockHash
+-&gt; [Instruction]
+-&gt; Either CompileException String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">BlockHash -&gt; [Instruction] -&gt; Either CompileException ByteString
+</span><a href="Network.Solana.Core.Message.html#newMessage"><span class="hs-identifier hs-var">newMessage</span></a></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="annot"><a href="Network.Solana.Core.Message.html#compileMessageToBinary"><span class="hs-identifier hs-type">compileMessageToBinary</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#Message"><span class="hs-identifier hs-type">Message</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="Network.Solana.Core.Instruction.html#CompileException"><span class="hs-identifier hs-type">CompileException</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">S.ByteString</span></span><span>
+</span><span id="line-68"></span><span id="compileMessageToBinary"><span class="annot"><span class="annottext">compileMessageToBinary :: Message -&gt; Either CompileException ByteString
+</span><a href="Network.Solana.Core.Message.html#compileMessageToBinary"><span class="hs-identifier hs-var hs-var">compileMessageToBinary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CompiledMessage -&gt; ByteString)
+-&gt; Either CompileException CompiledMessage
+-&gt; Either CompileException ByteString
+forall a b.
+(a -&gt; b) -&gt; Either CompileException a -&gt; Either CompileException b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><span class="hs-identifier hs-var">S.toStrict</span></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString)
+-&gt; (CompiledMessage -&gt; ByteString) -&gt; CompiledMessage -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">CompiledMessage -&gt; ByteString
+forall a. Binary a =&gt; a -&gt; ByteString
+</span><span class="hs-identifier hs-var">Data.Binary.encode</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Either CompileException CompiledMessage
+ -&gt; Either CompileException ByteString)
+-&gt; (Message -&gt; Either CompileException CompiledMessage)
+-&gt; Message
+-&gt; Either CompileException ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Message -&gt; Either CompileException CompiledMessage
+</span><a href="Network.Solana.Core.Message.html#compileMessage"><span class="hs-identifier hs-var">compileMessage</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="annot"><a href="Network.Solana.Core.Message.html#mkNewMessage"><span class="hs-identifier hs-type">mkNewMessage</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Block.html#BlockHash"><span class="hs-identifier hs-type">BlockHash</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Instruction.html#Instruction"><span class="hs-identifier hs-type">Instruction</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#Message"><span class="hs-identifier hs-type">Message</span></a></span><span>
+</span><span id="line-71"></span><span id="mkNewMessage"><span class="annot"><span class="annottext">mkNewMessage :: BlockHash -&gt; [Instruction] -&gt; Message
+</span><a href="Network.Solana.Core.Message.html#mkNewMessage"><span class="hs-identifier hs-var hs-var">mkNewMessage</span></a></span></span><span> </span><span id="local-6989586621679148004"><span class="annot"><span class="annottext">BlockHash
+</span><a href="#local-6989586621679148004"><span class="hs-identifier hs-var">bh</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Message -&gt; [Instruction] -&gt; Message
+</span><a href="Network.Solana.Core.Message.html#updateMessageWithInstructions"><span class="hs-identifier hs-var">updateMessageWithInstructions</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MessageHeader
+-&gt; [SolanaPublicKey] -&gt; BlockHash -&gt; [Instruction] -&gt; Message
+</span><a href="Network.Solana.Core.Message.html#Message"><span class="hs-identifier hs-var">Message</span></a></span><span> </span><span class="annot"><span class="annottext">MessageHeader
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span> </span><span class="annot"><span class="annottext">BlockHash
+</span><a href="#local-6989586621679148004"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">[Instruction]
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="annot"><a href="Network.Solana.Core.Message.html#updateMessageWithInstructions"><span class="hs-identifier hs-type">updateMessageWithInstructions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#Message"><span class="hs-identifier hs-type">Message</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Instruction.html#Instruction"><span class="hs-identifier hs-type">Instruction</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#Message"><span class="hs-identifier hs-type">Message</span></a></span><span>
+</span><span id="line-74"></span><span id="updateMessageWithInstructions"><span class="annot"><span class="annottext">updateMessageWithInstructions :: Message -&gt; [Instruction] -&gt; Message
+</span><a href="Network.Solana.Core.Message.html#updateMessageWithInstructions"><span class="hs-identifier hs-var hs-var">updateMessageWithInstructions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Message -&gt; Instruction -&gt; Message)
+-&gt; Message -&gt; [Instruction] -&gt; Message
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">foldl'</span></span><span> </span><span class="annot"><span class="annottext">Message -&gt; Instruction -&gt; Message
+</span><a href="Network.Solana.Core.Message.html#updateMessageWithInstruction"><span class="hs-identifier hs-var">updateMessageWithInstruction</span></a></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="annot"><a href="Network.Solana.Core.Message.html#updateMessageWithInstruction"><span class="hs-identifier hs-type">updateMessageWithInstruction</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#Message"><span class="hs-identifier hs-type">Message</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Solana.Core.Instruction.html#Instruction"><span class="hs-identifier hs-type">Instruction</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#Message"><span class="hs-identifier hs-type">Message</span></a></span><span>
+</span><span id="line-77"></span><span id="updateMessageWithInstruction"><span class="annot"><span class="annottext">updateMessageWithInstruction :: Message -&gt; Instruction -&gt; Message
+</span><a href="Network.Solana.Core.Message.html#updateMessageWithInstruction"><span class="hs-identifier hs-var hs-var">updateMessageWithInstruction</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.Core.Message.html#Message"><span class="hs-identifier hs-type">Message</span></a></span><span> </span><span id="local-6989586621679148008"><span class="annot"><span class="annottext">MessageHeader
+</span><a href="#local-6989586621679148008"><span class="hs-identifier hs-var">header</span></a></span></span><span> </span><span id="local-6989586621679148009"><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148009"><span class="hs-identifier hs-var">accountKeys</span></a></span></span><span> </span><span id="local-6989586621679148010"><span class="annot"><span class="annottext">BlockHash
+</span><a href="#local-6989586621679148010"><span class="hs-identifier hs-var">bh</span></a></span></span><span> </span><span id="local-6989586621679148011"><span class="annot"><span class="annottext">[Instruction]
+</span><a href="#local-6989586621679148011"><span class="hs-identifier hs-var">instrs</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679148012"><span class="annot"><span class="annottext">Instruction
+</span><a href="#local-6989586621679148012"><span class="hs-identifier hs-var">newInstr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679148014"><span class="annot"><span class="annottext">MessageHeader
+</span><a href="#local-6989586621679148014"><span class="hs-identifier hs-var">newHeader</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148015"><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148015"><span class="hs-identifier hs-var">newAccountKeys</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-79"></span><span>        </span><span class="annot"><span class="annottext">((MessageHeader, [SolanaPublicKey])
+ -&gt; AccountMeta -&gt; (MessageHeader, [SolanaPublicKey]))
+-&gt; (MessageHeader, [SolanaPublicKey])
+-&gt; [AccountMeta]
+-&gt; (MessageHeader, [SolanaPublicKey])
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">foldl'</span></span><span> </span><span class="annot"><span class="annottext">(MessageHeader, [SolanaPublicKey])
+-&gt; AccountMeta -&gt; (MessageHeader, [SolanaPublicKey])
+</span><a href="Network.Solana.Core.Message.html#updateHeaderAndKeys"><span class="hs-identifier hs-var">updateHeaderAndKeys</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MessageHeader
+</span><a href="#local-6989586621679148008"><span class="hs-identifier hs-var">header</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148009"><span class="hs-identifier hs-var">accountKeys</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Instruction -&gt; [AccountMeta]
+</span><a href="Network.Solana.Core.Instruction.html#iAccounts"><span class="hs-identifier hs-var">iAccounts</span></a></span><span> </span><span class="annot"><span class="annottext">Instruction
+</span><a href="#local-6989586621679148012"><span class="hs-identifier hs-var">newInstr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>      </span><span id="local-6989586621679148020"><span class="annot"><span class="annottext">newInstrucionsList :: [Instruction]
+</span><a href="#local-6989586621679148020"><span class="hs-identifier hs-var hs-var">newInstrucionsList</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Instruction]
+</span><a href="#local-6989586621679148011"><span class="hs-identifier hs-var">instrs</span></a></span><span> </span><span class="annot"><span class="annottext">[Instruction] -&gt; [Instruction] -&gt; [Instruction]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Instruction
+</span><a href="#local-6989586621679148012"><span class="hs-identifier hs-var">newInstr</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-81"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">MessageHeader
+-&gt; [SolanaPublicKey] -&gt; BlockHash -&gt; [Instruction] -&gt; Message
+</span><a href="Network.Solana.Core.Message.html#Message"><span class="hs-identifier hs-var">Message</span></a></span><span> </span><span class="annot"><span class="annottext">MessageHeader
+</span><a href="#local-6989586621679148014"><span class="hs-identifier hs-var">newHeader</span></a></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148015"><span class="hs-identifier hs-var">newAccountKeys</span></a></span><span> </span><span class="annot"><span class="annottext">BlockHash
+</span><a href="#local-6989586621679148010"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">[Instruction]
+</span><a href="#local-6989586621679148020"><span class="hs-identifier hs-var">newInstrucionsList</span></a></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="annot"><a href="Network.Solana.Core.Message.html#updateHeaderAndKeys"><span class="hs-identifier hs-type">updateHeaderAndKeys</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-type">MessageHeader</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Solana.Core.Instruction.html#AccountMeta"><span class="hs-identifier hs-type">AccountMeta</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-type">MessageHeader</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span id="updateHeaderAndKeys"><span class="annot"><span class="annottext">updateHeaderAndKeys :: (MessageHeader, [SolanaPublicKey])
+-&gt; AccountMeta -&gt; (MessageHeader, [SolanaPublicKey])
+</span><a href="Network.Solana.Core.Message.html#updateHeaderAndKeys"><span class="hs-identifier hs-var hs-var">updateHeaderAndKeys</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679148021"><span class="annot"><span class="annottext">MessageHeader
+</span><a href="#local-6989586621679148021"><span class="hs-identifier hs-var">currentHeader</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148022"><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148022"><span class="hs-identifier hs-var">currentKeys</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.Core.Instruction.html#AccountMeta"><span class="hs-identifier hs-type">AccountMeta</span></a></span><span> </span><span id="local-6989586621679148024"><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679148024"><span class="hs-identifier hs-var">newKey</span></a></span></span><span> </span><span id="local-6989586621679148025"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679148025"><span class="hs-identifier hs-var">isSigner</span></a></span></span><span> </span><span id="local-6989586621679148026"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679148026"><span class="hs-identifier hs-var">isWritable</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679148027"><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148027"><span class="hs-identifier hs-var">rws</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148028"><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148028"><span class="hs-identifier hs-var">ros</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148029"><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148029"><span class="hs-identifier hs-var">rwus</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148030"><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148030"><span class="hs-identifier hs-var">rous</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MessageHeader
+-&gt; [SolanaPublicKey]
+-&gt; ([SolanaPublicKey], [SolanaPublicKey], [SolanaPublicKey],
+    [SolanaPublicKey])
+</span><a href="Network.Solana.Core.Message.html#splitAccountsByPurpose"><span class="hs-identifier hs-var">splitAccountsByPurpose</span></a></span><span> </span><span class="annot"><span class="annottext">MessageHeader
+</span><a href="#local-6989586621679148021"><span class="hs-identifier hs-var">currentHeader</span></a></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148022"><span class="hs-identifier hs-var">currentKeys</span></a></span><span>
+</span><span id="line-86"></span><span>      </span><span id="local-6989586621679148035"><span class="annot"><span class="annottext">alreadySignable :: Bool
+</span><a href="#local-6989586621679148035"><span class="hs-identifier hs-var hs-var">alreadySignable</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679148024"><span class="hs-identifier hs-var">newKey</span></a></span><span> </span><span class="annot"><span class="annottext">SolanaPublicKey -&gt; [SolanaPublicKey] -&gt; Bool
+forall a. Eq a =&gt; a -&gt; [a] -&gt; Bool
+forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
+</span><span class="hs-operator hs-var">`elem`</span></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148027"><span class="hs-identifier hs-var">rws</span></a></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey] -&gt; [SolanaPublicKey] -&gt; [SolanaPublicKey]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148028"><span class="hs-identifier hs-var">ros</span></a></span><span>
+</span><span id="line-87"></span><span>      </span><span id="local-6989586621679148040"><span class="annot"><span class="annottext">alreadyWritable :: Bool
+</span><a href="#local-6989586621679148040"><span class="hs-identifier hs-var hs-var">alreadyWritable</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679148024"><span class="hs-identifier hs-var">newKey</span></a></span><span> </span><span class="annot"><span class="annottext">SolanaPublicKey -&gt; [SolanaPublicKey] -&gt; Bool
+forall a. Eq a =&gt; a -&gt; [a] -&gt; Bool
+forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
+</span><span class="hs-operator hs-var">`elem`</span></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148029"><span class="hs-identifier hs-var">rwus</span></a></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey] -&gt; [SolanaPublicKey] -&gt; [SolanaPublicKey]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148030"><span class="hs-identifier hs-var">rous</span></a></span><span>
+</span><span id="line-88"></span><span>      </span><span class="hs-special">(</span><span id="local-6989586621679148050"><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148050"><span class="hs-identifier hs-var">rws'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148051"><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148051"><span class="hs-identifier hs-var">ros'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148052"><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148052"><span class="hs-identifier hs-var">rwus'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148053"><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148053"><span class="hs-identifier hs-var">rous'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-89"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679148025"><span class="hs-identifier hs-var">isSigner</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679148035"><span class="hs-identifier hs-var">alreadySignable</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679148026"><span class="hs-identifier hs-var">isWritable</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679148040"><span class="hs-identifier hs-var">alreadyWritable</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-90"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-91"></span><span>            </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">SolanaPublicKey -&gt; [SolanaPublicKey] -&gt; [SolanaPublicKey]
+forall a. Eq a =&gt; a -&gt; [a] -&gt; [a]
+</span><a href="#local-6989586621679148055"><span class="hs-identifier hs-var">addIfNotExists</span></a></span><span> </span><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679148024"><span class="hs-identifier hs-var">newKey</span></a></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148027"><span class="hs-identifier hs-var">rws</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-92"></span><span>              </span><span class="annot"><span class="annottext">SolanaPublicKey -&gt; [SolanaPublicKey] -&gt; [SolanaPublicKey]
+forall a. Eq a =&gt; a -&gt; [a] -&gt; [a]
+</span><a href="#local-6989586621679148056"><span class="hs-identifier hs-var">removeAll</span></a></span><span> </span><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679148024"><span class="hs-identifier hs-var">newKey</span></a></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148028"><span class="hs-identifier hs-var">ros</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-93"></span><span>              </span><span class="annot"><span class="annottext">SolanaPublicKey -&gt; [SolanaPublicKey] -&gt; [SolanaPublicKey]
+forall a. Eq a =&gt; a -&gt; [a] -&gt; [a]
+</span><a href="#local-6989586621679148056"><span class="hs-identifier hs-var">removeAll</span></a></span><span> </span><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679148024"><span class="hs-identifier hs-var">newKey</span></a></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148029"><span class="hs-identifier hs-var">rwus</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-94"></span><span>              </span><span class="annot"><span class="annottext">SolanaPublicKey -&gt; [SolanaPublicKey] -&gt; [SolanaPublicKey]
+forall a. Eq a =&gt; a -&gt; [a] -&gt; [a]
+</span><a href="#local-6989586621679148056"><span class="hs-identifier hs-var">removeAll</span></a></span><span> </span><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679148024"><span class="hs-identifier hs-var">newKey</span></a></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148030"><span class="hs-identifier hs-var">rous</span></a></span><span>
+</span><span id="line-95"></span><span>            </span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-97"></span><span>            </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148027"><span class="hs-identifier hs-var">rws</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-98"></span><span>              </span><span class="annot"><span class="annottext">SolanaPublicKey -&gt; [SolanaPublicKey] -&gt; [SolanaPublicKey]
+forall a. Eq a =&gt; a -&gt; [a] -&gt; [a]
+</span><a href="#local-6989586621679148055"><span class="hs-identifier hs-var">addIfNotExists</span></a></span><span> </span><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679148024"><span class="hs-identifier hs-var">newKey</span></a></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148028"><span class="hs-identifier hs-var">ros</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-99"></span><span>              </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148029"><span class="hs-identifier hs-var">rwus</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-100"></span><span>              </span><span class="annot"><span class="annottext">SolanaPublicKey -&gt; [SolanaPublicKey] -&gt; [SolanaPublicKey]
+forall a. Eq a =&gt; a -&gt; [a] -&gt; [a]
+</span><a href="#local-6989586621679148056"><span class="hs-identifier hs-var">removeAll</span></a></span><span> </span><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679148024"><span class="hs-identifier hs-var">newKey</span></a></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148030"><span class="hs-identifier hs-var">rous</span></a></span><span>
+</span><span id="line-101"></span><span>            </span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-103"></span><span>            </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148027"><span class="hs-identifier hs-var">rws</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-104"></span><span>              </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148028"><span class="hs-identifier hs-var">ros</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-105"></span><span>              </span><span class="annot"><span class="annottext">SolanaPublicKey -&gt; [SolanaPublicKey] -&gt; [SolanaPublicKey]
+forall a. Eq a =&gt; a -&gt; [a] -&gt; [a]
+</span><a href="#local-6989586621679148055"><span class="hs-identifier hs-var">addIfNotExists</span></a></span><span> </span><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679148024"><span class="hs-identifier hs-var">newKey</span></a></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148029"><span class="hs-identifier hs-var">rwus</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-106"></span><span>              </span><span class="annot"><span class="annottext">SolanaPublicKey -&gt; [SolanaPublicKey] -&gt; [SolanaPublicKey]
+forall a. Eq a =&gt; a -&gt; [a] -&gt; [a]
+</span><a href="#local-6989586621679148056"><span class="hs-identifier hs-var">removeAll</span></a></span><span> </span><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679148024"><span class="hs-identifier hs-var">newKey</span></a></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148030"><span class="hs-identifier hs-var">rous</span></a></span><span>
+</span><span id="line-107"></span><span>            </span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-109"></span><span>            </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148027"><span class="hs-identifier hs-var">rws</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-110"></span><span>              </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148028"><span class="hs-identifier hs-var">ros</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-111"></span><span>              </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148029"><span class="hs-identifier hs-var">rwus</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-112"></span><span>              </span><span class="annot"><span class="annottext">SolanaPublicKey -&gt; [SolanaPublicKey] -&gt; [SolanaPublicKey]
+forall a. Eq a =&gt; a -&gt; [a] -&gt; [a]
+</span><a href="#local-6989586621679148055"><span class="hs-identifier hs-var">addIfNotExists</span></a></span><span> </span><span class="annot"><span class="annottext">SolanaPublicKey
+</span><a href="#local-6989586621679148024"><span class="hs-identifier hs-var">newKey</span></a></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148030"><span class="hs-identifier hs-var">rous</span></a></span><span>
+</span><span id="line-113"></span><span>            </span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>      </span><span id="local-6989586621679148057"><span class="annot"><span class="annottext">updatedMessage :: MessageHeader
+</span><a href="#local-6989586621679148057"><span class="hs-identifier hs-var hs-var">updatedMessage</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">([SolanaPublicKey], [SolanaPublicKey], [SolanaPublicKey],
+ [SolanaPublicKey])
+-&gt; MessageHeader
+</span><a href="Network.Solana.Core.Message.html#mkMessageHeaderFromSplittedAccounts"><span class="hs-identifier hs-var">mkMessageHeaderFromSplittedAccounts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148050"><span class="hs-identifier hs-var">rws'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148051"><span class="hs-identifier hs-var">ros'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148052"><span class="hs-identifier hs-var">rwus'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148053"><span class="hs-identifier hs-var">rous'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>      </span><span id="local-6989586621679148062"><span class="annot"><span class="annottext">updatedKeys :: [SolanaPublicKey]
+</span><a href="#local-6989586621679148062"><span class="hs-identifier hs-var hs-var">updatedKeys</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148050"><span class="hs-identifier hs-var">rws'</span></a></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey] -&gt; [SolanaPublicKey] -&gt; [SolanaPublicKey]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148051"><span class="hs-identifier hs-var">ros'</span></a></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey] -&gt; [SolanaPublicKey] -&gt; [SolanaPublicKey]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148052"><span class="hs-identifier hs-var">rwus'</span></a></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey] -&gt; [SolanaPublicKey] -&gt; [SolanaPublicKey]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148053"><span class="hs-identifier hs-var">rous'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MessageHeader
+</span><a href="#local-6989586621679148057"><span class="hs-identifier hs-var">updatedMessage</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148062"><span class="hs-identifier hs-var">updatedKeys</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-118"></span><span>    </span><span id="local-6989586621679147660"><span class="annot"><a href="#local-6989586621679148055"><span class="hs-identifier hs-type">addIfNotExists</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="#local-6989586621679147660"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679147660"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679147660"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679147660"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-119"></span><span>    </span><span id="local-6989586621679148055"><span class="annot"><span class="annottext">addIfNotExists :: forall a. Eq a =&gt; a -&gt; [a] -&gt; [a]
+</span><a href="#local-6989586621679148055"><span class="hs-identifier hs-var hs-var">addIfNotExists</span></a></span></span><span> </span><span id="local-6989586621679148066"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679148066"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679148067"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679148067"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-120"></span><span>      </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679148066"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; [a] -&gt; Bool
+forall a. Eq a =&gt; a -&gt; [a] -&gt; Bool
+forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
+</span><span class="hs-operator hs-var">`elem`</span></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679148067"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-121"></span><span>        </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679148067"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-122"></span><span>        </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679148067"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; [a] -&gt; [a]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679148066"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span>    </span><span id="local-6989586621679148068"><span class="annot"><a href="#local-6989586621679148056"><span class="hs-identifier hs-type">removeAll</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="#local-6989586621679148068"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679148068"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679148068"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679148068"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-125"></span><span>    </span><span id="local-6989586621679148056"><span class="annot"><span class="annottext">removeAll :: forall a. Eq a =&gt; a -&gt; [a] -&gt; [a]
+</span><a href="#local-6989586621679148056"><span class="hs-identifier hs-var hs-var">removeAll</span></a></span></span><span> </span><span id="local-6989586621679148071"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679148071"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; Bool) -&gt; [a] -&gt; [a]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">filter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; a -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">/=</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679148071"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span class="annot"><a href="Network.Solana.Core.Message.html#splitAccountsByPurpose"><span class="hs-identifier hs-type">splitAccountsByPurpose</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-128"></span><span>  </span><span class="annot"><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-type">MessageHeader</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-131"></span><span id="splitAccountsByPurpose"><span class="annot"><span class="annottext">splitAccountsByPurpose :: MessageHeader
+-&gt; [SolanaPublicKey]
+-&gt; ([SolanaPublicKey], [SolanaPublicKey], [SolanaPublicKey],
+    [SolanaPublicKey])
+</span><a href="Network.Solana.Core.Message.html#splitAccountsByPurpose"><span class="hs-identifier hs-var hs-var">splitAccountsByPurpose</span></a></span></span><span>
+</span><span id="line-132"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-type">MessageHeader</span></a></span><span> </span><span id="local-6989586621679148074"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148074"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679148075"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148075"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span id="local-6989586621679148076"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148076"><span class="hs-identifier hs-var">z</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-133"></span><span>  </span><span id="local-6989586621679148077"><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148077"><span class="hs-identifier hs-var">keys</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-134"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679148082"><span class="annot"><span class="annottext">numRequiredSignatures :: Int
+</span><a href="#local-6989586621679148082"><span class="hs-identifier hs-var hs-var">numRequiredSignatures</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148074"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-135"></span><span>        </span><span id="local-6989586621679148085"><span class="annot"><span class="annottext">numReadonlySigned :: Int
+</span><a href="#local-6989586621679148085"><span class="hs-identifier hs-var hs-var">numReadonlySigned</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148075"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-136"></span><span>        </span><span id="local-6989586621679148088"><span class="annot"><span class="annottext">numReadonlyUnsigned :: Int
+</span><a href="#local-6989586621679148088"><span class="hs-identifier hs-var hs-var">numReadonlyUnsigned</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148076"><span class="hs-identifier hs-var">z</span></a></span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span>        </span><span class="hs-comment">-- Split into signed and unsigned keys:</span><span>
+</span><span id="line-139"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621679148089"><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148089"><span class="hs-identifier hs-var">signed</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148090"><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148090"><span class="hs-identifier hs-var">unsigned</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [SolanaPublicKey] -&gt; ([SolanaPublicKey], [SolanaPublicKey])
+forall a. Int -&gt; [a] -&gt; ([a], [a])
+</span><span class="hs-identifier hs-var">splitAt</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679148082"><span class="hs-identifier hs-var">numRequiredSignatures</span></a></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148077"><span class="hs-identifier hs-var">keys</span></a></span><span>
+</span><span id="line-140"></span><span>        </span><span class="hs-comment">-- For signed keys: first part are read and write, last part are read-only.</span><span>
+</span><span id="line-141"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621679148093"><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148093"><span class="hs-identifier hs-var">readAndWriteSigned</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148094"><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148094"><span class="hs-identifier hs-var">readOnlySigned</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [SolanaPublicKey] -&gt; ([SolanaPublicKey], [SolanaPublicKey])
+forall a. Int -&gt; [a] -&gt; ([a], [a])
+</span><span class="hs-identifier hs-var">splitAt</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679148082"><span class="hs-identifier hs-var">numRequiredSignatures</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679148085"><span class="hs-identifier hs-var">numReadonlySigned</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148089"><span class="hs-identifier hs-var">signed</span></a></span><span>
+</span><span id="line-142"></span><span>        </span><span class="hs-comment">-- For unsigned keys:</span><span>
+</span><span id="line-143"></span><span>        </span><span id="local-6989586621679148096"><span class="annot"><span class="annottext">unsignedCount :: Int
+</span><a href="#local-6989586621679148096"><span class="hs-identifier hs-var hs-var">unsignedCount</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148090"><span class="hs-identifier hs-var">unsigned</span></a></span><span>
+</span><span id="line-144"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621679148099"><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148099"><span class="hs-identifier hs-var">readAndWriteUnsigned</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148100"><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148100"><span class="hs-identifier hs-var">readOnlyUnsigned</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [SolanaPublicKey] -&gt; ([SolanaPublicKey], [SolanaPublicKey])
+forall a. Int -&gt; [a] -&gt; ([a], [a])
+</span><span class="hs-identifier hs-var">splitAt</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679148096"><span class="hs-identifier hs-var">unsignedCount</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679148088"><span class="hs-identifier hs-var">numReadonlyUnsigned</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148090"><span class="hs-identifier hs-var">unsigned</span></a></span><span>
+</span><span id="line-145"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148093"><span class="hs-identifier hs-var">readAndWriteSigned</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148094"><span class="hs-identifier hs-var">readOnlySigned</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148099"><span class="hs-identifier hs-var">readAndWriteUnsigned</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148100"><span class="hs-identifier hs-var">readOnlyUnsigned</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-146"></span><span>
+</span><span id="line-147"></span><span class="annot"><a href="Network.Solana.Core.Message.html#mkMessageHeaderFromSplittedAccounts"><span class="hs-identifier hs-type">mkMessageHeaderFromSplittedAccounts</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-148"></span><span>  </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-149"></span><span>  </span><span class="annot"><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-type">MessageHeader</span></a></span><span>
+</span><span id="line-150"></span><span id="mkMessageHeaderFromSplittedAccounts"><span class="annot"><span class="annottext">mkMessageHeaderFromSplittedAccounts :: ([SolanaPublicKey], [SolanaPublicKey], [SolanaPublicKey],
+ [SolanaPublicKey])
+-&gt; MessageHeader
+</span><a href="Network.Solana.Core.Message.html#mkMessageHeaderFromSplittedAccounts"><span class="hs-identifier hs-var hs-var">mkMessageHeaderFromSplittedAccounts</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679148101"><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148101"><span class="hs-identifier hs-var">readAndWriteSigned</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148102"><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148102"><span class="hs-identifier hs-var">readOnlySigned</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148103"><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148103"><span class="hs-identifier hs-var">_readAndWriteUnsigned</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148104"><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148104"><span class="hs-identifier hs-var">readOnlyUnsigned</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-151"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679148112"><span class="annot"><span class="annottext">numRequiredSignatures :: Word8
+</span><a href="#local-6989586621679148112"><span class="hs-identifier hs-var hs-var">numRequiredSignatures</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Word8
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Word8) -&gt; Int -&gt; Word8
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148101"><span class="hs-identifier hs-var">readAndWriteSigned</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148102"><span class="hs-identifier hs-var">readOnlySigned</span></a></span><span>
+</span><span id="line-152"></span><span>      </span><span id="local-6989586621679148117"><span class="annot"><span class="annottext">numReadonlySigned :: Word8
+</span><a href="#local-6989586621679148117"><span class="hs-identifier hs-var hs-var">numReadonlySigned</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Word8
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Word8) -&gt; Int -&gt; Word8
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148102"><span class="hs-identifier hs-var">readOnlySigned</span></a></span><span>
+</span><span id="line-153"></span><span>      </span><span id="local-6989586621679148121"><span class="annot"><span class="annottext">numReadonlyUnsigned :: Word8
+</span><a href="#local-6989586621679148121"><span class="hs-identifier hs-var hs-var">numReadonlyUnsigned</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Word8
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Word8) -&gt; Int -&gt; Word8
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148104"><span class="hs-identifier hs-var">readOnlyUnsigned</span></a></span><span>
+</span><span id="line-154"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Word8 -&gt; MessageHeader
+</span><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-var">MessageHeader</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148112"><span class="hs-identifier hs-var">numRequiredSignatures</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148117"><span class="hs-identifier hs-var">numReadonlySigned</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148121"><span class="hs-identifier hs-var">numReadonlyUnsigned</span></a></span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span class="annot"><span class="hs-comment">-- *** MessageHeader</span></span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-161"></span><span class="hs-comment">{- The structure of the Transaction MessageHeader.
+The message header uses three bytes to define account privileges
+-}</span><span>
+</span><span id="line-164"></span><span class="hs-keyword">data</span><span> </span><span id="MessageHeader"><span class="annot"><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-var">MessageHeader</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MessageHeader"><span class="annot"><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-var">MessageHeader</span></a></span></span><span>
+</span><span id="line-165"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="hs-comment">{-
+    The number of signatures required for this message to be considered
+    valid. The signers of those signatures must match the first
+    `numRequiredSignatures` of Message's accountKeys.
+    -}</span><span>
+</span><span id="line-170"></span><span>    </span><span id="numRequiredSignatures"><span class="annot"><span class="annottext">MessageHeader -&gt; Word8
+</span><a href="Network.Solana.Core.Message.html#numRequiredSignatures"><span class="hs-identifier hs-var hs-var">numRequiredSignatures</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span class="hs-special">,</span><span>
+</span><span id="line-171"></span><span>    </span><span class="hs-comment">{-
+    The last `numRequiredSignatures` of the signed keys are read-only accounts.
+    -}</span><span>
+</span><span id="line-174"></span><span>    </span><span id="numReadonlySignedAccounts"><span class="annot"><span class="annottext">MessageHeader -&gt; Word8
+</span><a href="Network.Solana.Core.Message.html#numReadonlySignedAccounts"><span class="hs-identifier hs-var hs-var">numReadonlySignedAccounts</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span class="hs-special">,</span><span>
+</span><span id="line-175"></span><span>    </span><span class="hs-comment">{-
+    The last `numReadonlyUnsigned` of the unsigned keys are read-only accounts.
+    -}</span><span>
+</span><span id="line-178"></span><span>    </span><span id="numReadonlyUnsignedAccounts"><span class="annot"><span class="annottext">MessageHeader -&gt; Word8
+</span><a href="Network.Solana.Core.Message.html#numReadonlyUnsignedAccounts"><span class="hs-identifier hs-var hs-var">numReadonlyUnsignedAccounts</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span>
+</span><span id="line-179"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-180"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679148126"><span id="local-6989586621679148133"><span id="local-6989586621679148136"><span class="annot"><span class="annottext">Int -&gt; MessageHeader -&gt; ShowS
+[MessageHeader] -&gt; ShowS
+MessageHeader -&gt; String
+(Int -&gt; MessageHeader -&gt; ShowS)
+-&gt; (MessageHeader -&gt; String)
+-&gt; ([MessageHeader] -&gt; ShowS)
+-&gt; Show MessageHeader
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; MessageHeader -&gt; ShowS
+showsPrec :: Int -&gt; MessageHeader -&gt; ShowS
+$cshow :: MessageHeader -&gt; String
+show :: MessageHeader -&gt; String
+$cshowList :: [MessageHeader] -&gt; ShowS
+showList :: [MessageHeader] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148139"><span id="local-6989586621679148145"><span class="annot"><span class="annottext">MessageHeader -&gt; MessageHeader -&gt; Bool
+(MessageHeader -&gt; MessageHeader -&gt; Bool)
+-&gt; (MessageHeader -&gt; MessageHeader -&gt; Bool) -&gt; Eq MessageHeader
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: MessageHeader -&gt; MessageHeader -&gt; Bool
+== :: MessageHeader -&gt; MessageHeader -&gt; Bool
+$c/= :: MessageHeader -&gt; MessageHeader -&gt; Bool
+/= :: MessageHeader -&gt; MessageHeader -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148148"><span id="local-6989586621679148150"><span class="annot"><span class="annottext">(forall x. MessageHeader -&gt; Rep MessageHeader x)
+-&gt; (forall x. Rep MessageHeader x -&gt; MessageHeader)
+-&gt; Generic MessageHeader
+forall x. Rep MessageHeader x -&gt; MessageHeader
+forall x. MessageHeader -&gt; Rep MessageHeader x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. MessageHeader -&gt; Rep MessageHeader x
+from :: forall x. MessageHeader -&gt; Rep MessageHeader x
+$cto :: forall x. Rep MessageHeader x -&gt; MessageHeader
+to :: forall x. Rep MessageHeader x -&gt; MessageHeader
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-181"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679148153"><span id="local-6989586621679148160"><span id="local-6989586621679148163"><span id="local-6989586621679148166"><span class="annot"><span class="annottext">[MessageHeader] -&gt; Value
+[MessageHeader] -&gt; Encoding
+MessageHeader -&gt; Value
+MessageHeader -&gt; Encoding
+(MessageHeader -&gt; Value)
+-&gt; (MessageHeader -&gt; Encoding)
+-&gt; ([MessageHeader] -&gt; Value)
+-&gt; ([MessageHeader] -&gt; Encoding)
+-&gt; ToJSON MessageHeader
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+$ctoJSON :: MessageHeader -&gt; Value
+toJSON :: MessageHeader -&gt; Value
+$ctoEncoding :: MessageHeader -&gt; Encoding
+toEncoding :: MessageHeader -&gt; Encoding
+$ctoJSONList :: [MessageHeader] -&gt; Value
+toJSONList :: [MessageHeader] -&gt; Value
+$ctoEncodingList :: [MessageHeader] -&gt; Encoding
+toEncodingList :: [MessageHeader] -&gt; Encoding
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148277"><span id="local-6989586621679148284"><span class="annot"><span class="annottext">Value -&gt; Parser [MessageHeader]
+Value -&gt; Parser MessageHeader
+(Value -&gt; Parser MessageHeader)
+-&gt; (Value -&gt; Parser [MessageHeader]) -&gt; FromJSON MessageHeader
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser MessageHeader
+parseJSON :: Value -&gt; Parser MessageHeader
+$cparseJSONList :: Value -&gt; Parser [MessageHeader]
+parseJSONList :: Value -&gt; Parser [MessageHeader]
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-182"></span><span>
+</span><span id="line-183"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679148363"><span class="annot"><span class="hs-identifier hs-type">Binary</span></span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-type">MessageHeader</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-184"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">put</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-type">MessageHeader</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Put</span></span><span>
+</span><span id="line-185"></span><span>  </span><span id="local-6989586621679148375"><span class="annot"><span class="annottext">put :: MessageHeader -&gt; Put
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">put</span></span></span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-type">MessageHeader</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679148376"><span id="local-6989586621679148377"><span id="local-6989586621679148378"><span class="annot"><span class="annottext">Word8
+numRequiredSignatures :: MessageHeader -&gt; Word8
+numReadonlySignedAccounts :: MessageHeader -&gt; Word8
+numReadonlyUnsignedAccounts :: MessageHeader -&gt; Word8
+numRequiredSignatures :: Word8
+numReadonlySignedAccounts :: Word8
+numReadonlyUnsignedAccounts :: Word8
+</span><a href="Network.Solana.Core.Message.html#numRequiredSignatures"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-186"></span><span>    </span><span class="annot"><span class="annottext">Word8 -&gt; Put
+forall t. Binary t =&gt; t -&gt; Put
+</span><span class="hs-identifier hs-var">put</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148376"><span class="hs-identifier hs-var">numRequiredSignatures</span></a></span><span>
+</span><span id="line-187"></span><span>    </span><span class="annot"><span class="annottext">Word8 -&gt; Put
+forall t. Binary t =&gt; t -&gt; Put
+</span><span class="hs-identifier hs-var">put</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148377"><span class="hs-identifier hs-var">numReadonlySignedAccounts</span></a></span><span>
+</span><span id="line-188"></span><span>    </span><span class="annot"><span class="annottext">Word8 -&gt; Put
+forall t. Binary t =&gt; t -&gt; Put
+</span><span class="hs-identifier hs-var">put</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148378"><span class="hs-identifier hs-var">numReadonlyUnsignedAccounts</span></a></span><span>
+</span><span id="line-189"></span><span>
+</span><span id="line-190"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">get</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Get</span></span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-type">MessageHeader</span></a></span><span>
+</span><span id="line-191"></span><span>  </span><span id="local-6989586621679148388"><span class="annot"><span class="annottext">get :: Get MessageHeader
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">get</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Word8 -&gt; MessageHeader
+</span><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-var">MessageHeader</span></a></span><span> </span><span class="annot"><span class="annottext">(Word8 -&gt; Word8 -&gt; Word8 -&gt; MessageHeader)
+-&gt; Get Word8 -&gt; Get (Word8 -&gt; Word8 -&gt; MessageHeader)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Get Word8
+forall t. Binary t =&gt; Get t
+</span><span class="hs-identifier hs-var">get</span></span><span> </span><span class="annot"><span class="annottext">Get (Word8 -&gt; Word8 -&gt; MessageHeader)
+-&gt; Get Word8 -&gt; Get (Word8 -&gt; MessageHeader)
+forall a b. Get (a -&gt; b) -&gt; Get a -&gt; Get b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Get Word8
+forall t. Binary t =&gt; Get t
+</span><span class="hs-identifier hs-var">get</span></span><span> </span><span class="annot"><span class="annottext">Get (Word8 -&gt; MessageHeader) -&gt; Get Word8 -&gt; Get MessageHeader
+forall a b. Get (a -&gt; b) -&gt; Get a -&gt; Get b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Get Word8
+forall t. Binary t =&gt; Get t
+</span><span class="hs-identifier hs-var">get</span></span><span>
+</span><span id="line-192"></span><span>
+</span><span id="line-193"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679148391"><span id="local-6989586621679148395"><span class="annot"><span class="hs-identifier hs-type">Semigroup</span></span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-type">MessageHeader</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-194"></span><span>  </span><span class="annot"><span class="hs-operator hs-type">(&lt;&gt;)</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-type">MessageHeader</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-type">MessageHeader</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-type">MessageHeader</span></a></span><span>
+</span><span id="line-195"></span><span>  </span><span id="local-6989586621679148403"><span class="annot"><span class="annottext">&lt;&gt; :: MessageHeader -&gt; MessageHeader -&gt; MessageHeader
+</span><span class="hs-operator hs-var hs-var hs-var hs-var">(&lt;&gt;)</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-type">MessageHeader</span></a></span><span> </span><span id="local-6989586621679148404"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148404"><span class="hs-identifier hs-var">rqs</span></a></span></span><span> </span><span id="local-6989586621679148405"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148405"><span class="hs-identifier hs-var">ros</span></a></span></span><span> </span><span id="local-6989586621679148406"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148406"><span class="hs-identifier hs-var">rou</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-type">MessageHeader</span></a></span><span> </span><span id="local-6989586621679148407"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148407"><span class="hs-identifier hs-var">rqs'</span></a></span></span><span> </span><span id="local-6989586621679148408"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148408"><span class="hs-identifier hs-var">ros'</span></a></span></span><span> </span><span id="local-6989586621679148409"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148409"><span class="hs-identifier hs-var">rou'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Word8 -&gt; MessageHeader
+</span><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-var">MessageHeader</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148404"><span class="hs-identifier hs-var">rqs</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Word8
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148407"><span class="hs-identifier hs-var">rqs'</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148405"><span class="hs-identifier hs-var">ros</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Word8
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148408"><span class="hs-identifier hs-var">ros'</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148406"><span class="hs-identifier hs-var">rou</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Word8
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679148409"><span class="hs-identifier hs-var">rou'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-196"></span><span>
+</span><span id="line-197"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679148414"><span id="local-6989586621679148417"><span class="annot"><span class="hs-identifier hs-type">Monoid</span></span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-type">MessageHeader</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-198"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">mempty</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-type">MessageHeader</span></a></span><span>
+</span><span id="line-199"></span><span>  </span><span id="local-6989586621679148423"><span class="annot"><span class="annottext">mempty :: MessageHeader
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Word8 -&gt; MessageHeader
+</span><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-var">MessageHeader</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-200"></span><span>
+</span><span id="line-201"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-202"></span><span>
+</span><span id="line-203"></span><span class="annot"><span class="hs-comment">-- ** Compiled Message</span></span><span>
+</span><span id="line-204"></span><span>
+</span><span id="line-205"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-206"></span><span>
+</span><span id="line-207"></span><span class="annot"><span class="hs-comment">-- | The structure of a Compiled Message.</span></span><span>
+</span><span id="line-208"></span><span class="hs-keyword">data</span><span> </span><span id="CompiledMessage"><span class="annot"><a href="Network.Solana.Core.Message.html#CompiledMessage"><span class="hs-identifier hs-var">CompiledMessage</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="CompiledMessage"><span class="annot"><a href="Network.Solana.Core.Message.html#CompiledMessage"><span class="hs-identifier hs-var">CompiledMessage</span></a></span></span><span>
+</span><span id="line-209"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="hs-comment">-- | Specifies the number of signer and read-only account.</span></span><span>
+</span><span id="line-210"></span><span>    </span><span id="cmHeader"><span class="annot"><span class="annottext">CompiledMessage -&gt; MessageHeader
+</span><a href="Network.Solana.Core.Message.html#cmHeader"><span class="hs-identifier hs-var hs-var">cmHeader</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#MessageHeader"><span class="hs-identifier hs-type">MessageHeader</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-211"></span><span>    </span><span class="annot"><span class="hs-comment">-- |  Compact array of account keys used by this transaction (used by all the instructions on the transaction).</span></span><span>
+</span><span id="line-212"></span><span>    </span><span id="cmAccountKeys"><span class="annot"><span class="annottext">CompiledMessage -&gt; CompactArray SolanaPublicKey
+</span><a href="Network.Solana.Core.Message.html#cmAccountKeys"><span class="hs-identifier hs-var hs-var">cmAccountKeys</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Compact.html#CompactArray"><span class="hs-identifier hs-type">CompactArray</span></a></span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaPublicKey"><span class="hs-identifier hs-type">SolanaPublicKey</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-213"></span><span>    </span><span class="annot"><span class="hs-comment">-- | The id of a recent ledger entry. Acts as a timestamp for the transaction.</span></span><span>
+</span><span id="line-214"></span><span>    </span><span id="cmRecentBlockhash"><span class="annot"><span class="annottext">CompiledMessage -&gt; BlockHash
+</span><a href="Network.Solana.Core.Message.html#cmRecentBlockhash"><span class="hs-identifier hs-var hs-var">cmRecentBlockhash</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Block.html#BlockHash"><span class="hs-identifier hs-type">BlockHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-215"></span><span>    </span><span class="hs-comment">{-  Compact array of compiled instructions to be executed.
+    -}</span><span>
+</span><span id="line-217"></span><span>    </span><span id="cmInstructions"><span class="annot"><span class="annottext">CompiledMessage -&gt; CompactArray CompiledInstruction
+</span><a href="Network.Solana.Core.Message.html#cmInstructions"><span class="hs-identifier hs-var hs-var">cmInstructions</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Compact.html#CompactArray"><span class="hs-identifier hs-type">CompactArray</span></a></span><span> </span><span class="annot"><a href="Network.Solana.Core.Instruction.html#CompiledInstruction"><span class="hs-identifier hs-type">CompiledInstruction</span></a></span><span>
+</span><span id="line-218"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-219"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679148430"><span id="local-6989586621679148440"><span id="local-6989586621679148444"><span class="annot"><span class="annottext">Int -&gt; CompiledMessage -&gt; ShowS
+[CompiledMessage] -&gt; ShowS
+CompiledMessage -&gt; String
+(Int -&gt; CompiledMessage -&gt; ShowS)
+-&gt; (CompiledMessage -&gt; String)
+-&gt; ([CompiledMessage] -&gt; ShowS)
+-&gt; Show CompiledMessage
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; CompiledMessage -&gt; ShowS
+showsPrec :: Int -&gt; CompiledMessage -&gt; ShowS
+$cshow :: CompiledMessage -&gt; String
+show :: CompiledMessage -&gt; String
+$cshowList :: [CompiledMessage] -&gt; ShowS
+showList :: [CompiledMessage] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148448"><span id="local-6989586621679148457"><span class="annot"><span class="annottext">CompiledMessage -&gt; CompiledMessage -&gt; Bool
+(CompiledMessage -&gt; CompiledMessage -&gt; Bool)
+-&gt; (CompiledMessage -&gt; CompiledMessage -&gt; Bool)
+-&gt; Eq CompiledMessage
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: CompiledMessage -&gt; CompiledMessage -&gt; Bool
+== :: CompiledMessage -&gt; CompiledMessage -&gt; Bool
+$c/= :: CompiledMessage -&gt; CompiledMessage -&gt; Bool
+/= :: CompiledMessage -&gt; CompiledMessage -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148462"><span id="local-6989586621679148464"><span class="annot"><span class="annottext">(forall x. CompiledMessage -&gt; Rep CompiledMessage x)
+-&gt; (forall x. Rep CompiledMessage x -&gt; CompiledMessage)
+-&gt; Generic CompiledMessage
+forall x. Rep CompiledMessage x -&gt; CompiledMessage
+forall x. CompiledMessage -&gt; Rep CompiledMessage x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. CompiledMessage -&gt; Rep CompiledMessage x
+from :: forall x. CompiledMessage -&gt; Rep CompiledMessage x
+$cto :: forall x. Rep CompiledMessage x -&gt; CompiledMessage
+to :: forall x. Rep CompiledMessage x -&gt; CompiledMessage
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-220"></span><span>
+</span><span id="line-221"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679148468"><span id="local-6989586621679148472"><span id="local-6989586621679148475"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#CompiledMessage"><span class="hs-identifier hs-type">CompiledMessage</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-222"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">toJSON</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#CompiledMessage"><span class="hs-identifier hs-type">CompiledMessage</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span>
+</span><span id="line-223"></span><span>  </span><span id="local-6989586621679148500"><span class="annot"><span class="annottext">toJSON :: CompiledMessage -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.Core.Message.html#CompiledMessage"><span class="hs-identifier hs-type">CompiledMessage</span></a></span><span> </span><span id="local-6989586621679148501"><span class="annot"><span class="annottext">MessageHeader
+</span><a href="#local-6989586621679148501"><span class="hs-identifier hs-var">header</span></a></span></span><span> </span><span id="local-6989586621679148502"><span class="annot"><span class="annottext">CompactArray SolanaPublicKey
+</span><a href="#local-6989586621679148502"><span class="hs-identifier hs-var">accountKeys</span></a></span></span><span> </span><span id="local-6989586621679148503"><span class="annot"><span class="annottext">BlockHash
+</span><a href="#local-6989586621679148503"><span class="hs-identifier hs-var">recentBlockhash</span></a></span></span><span> </span><span id="local-6989586621679148504"><span class="annot"><span class="annottext">CompactArray CompiledInstruction
+</span><a href="#local-6989586621679148504"><span class="hs-identifier hs-var">instructions</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-224"></span><span>    </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">object</span></span><span>
+</span><span id="line-225"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;header&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; MessageHeader -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">MessageHeader
+</span><a href="#local-6989586621679148501"><span class="hs-identifier hs-var">header</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-226"></span><span>        </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;accountKeys&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; [SolanaPublicKey] -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">CompactArray SolanaPublicKey -&gt; [SolanaPublicKey]
+forall a. CompactArray a -&gt; [a]
+</span><a href="Network.Solana.Core.Compact.html#unCompact"><span class="hs-identifier hs-var">unCompact</span></a></span><span> </span><span class="annot"><span class="annottext">CompactArray SolanaPublicKey
+</span><a href="#local-6989586621679148502"><span class="hs-identifier hs-var">accountKeys</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-227"></span><span>        </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;recentBlockhash&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; BlockHash -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">BlockHash
+</span><a href="#local-6989586621679148503"><span class="hs-identifier hs-var">recentBlockhash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-228"></span><span>        </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;instructions&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; [CompiledInstruction] -&gt; Pair
+forall kv v. (KeyValue kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">CompactArray CompiledInstruction -&gt; [CompiledInstruction]
+forall a. CompactArray a -&gt; [a]
+</span><a href="Network.Solana.Core.Compact.html#unCompact"><span class="hs-identifier hs-var">unCompact</span></a></span><span> </span><span class="annot"><span class="annottext">CompactArray CompiledInstruction
+</span><a href="#local-6989586621679148504"><span class="hs-identifier hs-var">instructions</span></a></span><span>
+</span><span id="line-229"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-230"></span><span>
+</span><span id="line-231"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679148510"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#CompiledMessage"><span class="hs-identifier hs-type">CompiledMessage</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-232"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">parseJSON</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#CompiledMessage"><span class="hs-identifier hs-type">CompiledMessage</span></a></span><span>
+</span><span id="line-233"></span><span>  </span><span id="local-6989586621679148536"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser CompiledMessage
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (Object -&gt; Parser CompiledMessage)
+-&gt; Value
+-&gt; Parser CompiledMessage
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;CompiledMessage&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser CompiledMessage)
+ -&gt; Value -&gt; Parser CompiledMessage)
+-&gt; (Object -&gt; Parser CompiledMessage)
+-&gt; Value
+-&gt; Parser CompiledMessage
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679148538"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679148538"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-234"></span><span>    </span><span class="annot"><span class="annottext">MessageHeader
+-&gt; CompactArray SolanaPublicKey
+-&gt; BlockHash
+-&gt; CompactArray CompiledInstruction
+-&gt; CompiledMessage
+</span><a href="Network.Solana.Core.Message.html#CompiledMessage"><span class="hs-identifier hs-var">CompiledMessage</span></a></span><span>
+</span><span id="line-235"></span><span>      </span><span class="annot"><span class="annottext">(MessageHeader
+ -&gt; CompactArray SolanaPublicKey
+ -&gt; BlockHash
+ -&gt; CompactArray CompiledInstruction
+ -&gt; CompiledMessage)
+-&gt; Parser MessageHeader
+-&gt; Parser
+     (CompactArray SolanaPublicKey
+      -&gt; BlockHash
+      -&gt; CompactArray CompiledInstruction
+      -&gt; CompiledMessage)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679148538"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser MessageHeader
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;header&quot;</span></span><span>
+</span><span id="line-236"></span><span>      </span><span class="annot"><span class="annottext">Parser
+  (CompactArray SolanaPublicKey
+   -&gt; BlockHash
+   -&gt; CompactArray CompiledInstruction
+   -&gt; CompiledMessage)
+-&gt; Parser (CompactArray SolanaPublicKey)
+-&gt; Parser
+     (BlockHash -&gt; CompactArray CompiledInstruction -&gt; CompiledMessage)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[SolanaPublicKey] -&gt; CompactArray SolanaPublicKey
+forall a. [a] -&gt; CompactArray a
+</span><a href="Network.Solana.Core.Compact.html#mkCompact"><span class="hs-identifier hs-var">mkCompact</span></a></span><span> </span><span class="annot"><span class="annottext">([SolanaPublicKey] -&gt; CompactArray SolanaPublicKey)
+-&gt; Parser [SolanaPublicKey]
+-&gt; Parser (CompactArray SolanaPublicKey)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679148538"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser [SolanaPublicKey]
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;accountKeys&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-237"></span><span>      </span><span class="annot"><span class="annottext">Parser
+  (BlockHash -&gt; CompactArray CompiledInstruction -&gt; CompiledMessage)
+-&gt; Parser BlockHash
+-&gt; Parser (CompactArray CompiledInstruction -&gt; CompiledMessage)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679148538"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser BlockHash
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;recentBlockhash&quot;</span></span><span>
+</span><span id="line-238"></span><span>      </span><span class="annot"><span class="annottext">Parser (CompactArray CompiledInstruction -&gt; CompiledMessage)
+-&gt; Parser (CompactArray CompiledInstruction)
+-&gt; Parser CompiledMessage
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[CompiledInstruction] -&gt; CompactArray CompiledInstruction
+forall a. [a] -&gt; CompactArray a
+</span><a href="Network.Solana.Core.Compact.html#mkCompact"><span class="hs-identifier hs-var">mkCompact</span></a></span><span> </span><span class="annot"><span class="annottext">([CompiledInstruction] -&gt; CompactArray CompiledInstruction)
+-&gt; Parser [CompiledInstruction]
+-&gt; Parser (CompactArray CompiledInstruction)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679148538"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser [CompiledInstruction]
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;instructions&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-239"></span><span>
+</span><span id="line-240"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679148542"><span id="local-6989586621679148548"><span class="annot"><span class="hs-identifier hs-type">Binary</span></span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#CompiledMessage"><span class="hs-identifier hs-type">CompiledMessage</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-241"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">put</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#CompiledMessage"><span class="hs-identifier hs-type">CompiledMessage</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Put</span></span><span>
+</span><span id="line-242"></span><span>  </span><span id="local-6989586621679148583"><span class="annot"><span class="annottext">put :: CompiledMessage -&gt; Put
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">put</span></span></span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#CompiledMessage"><span class="hs-identifier hs-type">CompiledMessage</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679148584"><span id="local-6989586621679148585"><span id="local-6989586621679148586"><span id="local-6989586621679148587"><span class="annot"><span class="annottext">CompactArray SolanaPublicKey
+CompactArray CompiledInstruction
+BlockHash
+MessageHeader
+cmHeader :: CompiledMessage -&gt; MessageHeader
+cmAccountKeys :: CompiledMessage -&gt; CompactArray SolanaPublicKey
+cmRecentBlockhash :: CompiledMessage -&gt; BlockHash
+cmInstructions :: CompiledMessage -&gt; CompactArray CompiledInstruction
+cmHeader :: MessageHeader
+cmAccountKeys :: CompactArray SolanaPublicKey
+cmRecentBlockhash :: BlockHash
+cmInstructions :: CompactArray CompiledInstruction
+</span><a href="Network.Solana.Core.Message.html#cmHeader"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-243"></span><span>    </span><span class="annot"><span class="annottext">MessageHeader -&gt; Put
+forall t. Binary t =&gt; t -&gt; Put
+</span><span class="hs-identifier hs-var">put</span></span><span> </span><span class="annot"><span class="annottext">MessageHeader
+</span><a href="#local-6989586621679148584"><span class="hs-identifier hs-var">cmHeader</span></a></span><span>
+</span><span id="line-244"></span><span>    </span><span class="annot"><span class="annottext">CompactArray SolanaPublicKey -&gt; Put
+forall t. Binary t =&gt; t -&gt; Put
+</span><span class="hs-identifier hs-var">put</span></span><span> </span><span class="annot"><span class="annottext">CompactArray SolanaPublicKey
+</span><a href="#local-6989586621679148585"><span class="hs-identifier hs-var">cmAccountKeys</span></a></span><span>
+</span><span id="line-245"></span><span>    </span><span class="annot"><span class="annottext">BlockHash -&gt; Put
+forall t. Binary t =&gt; t -&gt; Put
+</span><span class="hs-identifier hs-var">put</span></span><span> </span><span class="annot"><span class="annottext">BlockHash
+</span><a href="#local-6989586621679148586"><span class="hs-identifier hs-var">cmRecentBlockhash</span></a></span><span>
+</span><span id="line-246"></span><span>    </span><span class="annot"><span class="annottext">CompactArray CompiledInstruction -&gt; Put
+forall t. Binary t =&gt; t -&gt; Put
+</span><span class="hs-identifier hs-var">put</span></span><span> </span><span class="annot"><span class="annottext">CompactArray CompiledInstruction
+</span><a href="#local-6989586621679148587"><span class="hs-identifier hs-var">cmInstructions</span></a></span><span>
+</span><span id="line-247"></span><span>
+</span><span id="line-248"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-249"></span><span>
+</span><span id="line-250"></span><span class="annot"><span class="hs-comment">-- *** Compile Message</span></span><span>
+</span><span id="line-251"></span><span>
+</span><span id="line-252"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-253"></span><span class="annot"><a href="Network.Solana.Core.Message.html#compileMessage"><span class="hs-identifier hs-type">compileMessage</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#Message"><span class="hs-identifier hs-type">Message</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="Network.Solana.Core.Instruction.html#CompileException"><span class="hs-identifier hs-type">CompileException</span></a></span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#CompiledMessage"><span class="hs-identifier hs-type">CompiledMessage</span></a></span><span>
+</span><span id="line-254"></span><span id="compileMessage"><span class="annot"><span class="annottext">compileMessage :: Message -&gt; Either CompileException CompiledMessage
+</span><a href="Network.Solana.Core.Message.html#compileMessage"><span class="hs-identifier hs-var hs-var">compileMessage</span></a></span></span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#Message"><span class="hs-identifier hs-type">Message</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679148588"><span id="local-6989586621679148589"><span id="local-6989586621679148590"><span id="local-6989586621679148591"><span class="annot"><span class="annottext">[SolanaPublicKey]
+[Instruction]
+BlockHash
+MessageHeader
+mHeader :: Message -&gt; MessageHeader
+mAccountKeys :: Message -&gt; [SolanaPublicKey]
+mRecentBlockhash :: Message -&gt; BlockHash
+mInstructions :: Message -&gt; [Instruction]
+mHeader :: MessageHeader
+mAccountKeys :: [SolanaPublicKey]
+mRecentBlockhash :: BlockHash
+mInstructions :: [Instruction]
+</span><a href="Network.Solana.Core.Message.html#mHeader"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-255"></span><span>  </span><span id="local-6989586621679148592"><span class="annot"><span class="annottext">[CompiledInstruction]
+</span><a href="#local-6989586621679148592"><span class="hs-identifier hs-var">compiledInstrctions</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Instruction -&gt; Either CompileException CompiledInstruction)
+-&gt; [Instruction] -&gt; Either CompileException [CompiledInstruction]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><span class="hs-identifier hs-var">mapM</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[SolanaPublicKey]
+-&gt; Instruction -&gt; Either CompileException CompiledInstruction
+</span><a href="Network.Solana.Core.Instruction.html#compileInstruction"><span class="hs-identifier hs-var">compileInstruction</span></a></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148589"><span class="hs-identifier hs-var">mAccountKeys</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Instruction]
+</span><a href="#local-6989586621679148591"><span class="hs-identifier hs-var">mInstructions</span></a></span><span>
+</span><span id="line-256"></span><span>  </span><span class="annot"><span class="annottext">CompiledMessage -&gt; Either CompileException CompiledMessage
+forall a. a -&gt; Either CompileException a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">(CompiledMessage -&gt; Either CompileException CompiledMessage)
+-&gt; CompiledMessage -&gt; Either CompileException CompiledMessage
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-257"></span><span>    </span><span class="annot"><a href="Network.Solana.Core.Message.html#CompiledMessage"><span class="hs-identifier hs-type">CompiledMessage</span></a></span><span>
+</span><span id="line-258"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">cmHeader :: MessageHeader
+</span><a href="Network.Solana.Core.Message.html#cmHeader"><span class="hs-identifier hs-var">cmHeader</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MessageHeader
+</span><a href="#local-6989586621679148588"><span class="hs-identifier hs-var">mHeader</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-259"></span><span>        </span><span class="annot"><span class="annottext">cmAccountKeys :: CompactArray SolanaPublicKey
+</span><a href="Network.Solana.Core.Message.html#cmAccountKeys"><span class="hs-identifier hs-var">cmAccountKeys</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey] -&gt; CompactArray SolanaPublicKey
+forall a. [a] -&gt; CompactArray a
+</span><a href="Network.Solana.Core.Compact.html#mkCompact"><span class="hs-identifier hs-var">mkCompact</span></a></span><span> </span><span class="annot"><span class="annottext">[SolanaPublicKey]
+</span><a href="#local-6989586621679148589"><span class="hs-identifier hs-var">mAccountKeys</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-260"></span><span>        </span><span class="annot"><span class="annottext">cmRecentBlockhash :: BlockHash
+</span><a href="Network.Solana.Core.Message.html#cmRecentBlockhash"><span class="hs-identifier hs-var">cmRecentBlockhash</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BlockHash
+</span><a href="#local-6989586621679148590"><span class="hs-identifier hs-var">mRecentBlockhash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-261"></span><span>        </span><span class="annot"><span class="annottext">cmInstructions :: CompactArray CompiledInstruction
+</span><a href="Network.Solana.Core.Message.html#cmInstructions"><span class="hs-identifier hs-var">cmInstructions</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[CompiledInstruction] -&gt; CompactArray CompiledInstruction
+forall a. [a] -&gt; CompactArray a
+</span><a href="Network.Solana.Core.Compact.html#mkCompact"><span class="hs-identifier hs-var">mkCompact</span></a></span><span> </span><span class="annot"><span class="annottext">[CompiledInstruction]
+</span><a href="#local-6989586621679148592"><span class="hs-identifier hs-var">compiledInstrctions</span></a></span><span>
+</span><span id="line-262"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-263"></span></pre></body></html>

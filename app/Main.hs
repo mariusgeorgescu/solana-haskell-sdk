@@ -5,22 +5,22 @@ module Main where
 import Control.Concurrent (threadDelay)
 import Control.Exception (throw)
 import Control.Monad.IO.Class (MonadIO (..))
-import Core.Block (unsafeBlockHash)
-import Core.Crypto
-import Core.Message (newMessage, newMessageToBase64String, newTransactionIntent)
 import Data.Aeson (ToJSON (toJSON))
 import Data.Either (fromRight)
 import Data.Functor (void)
-import NativePrograms.SystemProgram qualified as SystemProgram
+import Network.Solana.Core.Block (unsafeBlockHash)
+import Network.Solana.Core.Crypto
+import Network.Solana.Core.Message (newMessage, newMessageToBase64String, newTransactionIntent)
+import Network.Solana.NativePrograms.SystemProgram qualified as SystemProgram
+import Network.Solana.RPC.HTTP.Account
+import Network.Solana.RPC.HTTP.Block
+import Network.Solana.RPC.HTTP.Chain
+import Network.Solana.RPC.HTTP.Ledger
+import Network.Solana.RPC.HTTP.Token
+import Network.Solana.RPC.HTTP.Tokenomics
+import Network.Solana.RPC.HTTP.Transaction
+import Network.Solana.RPC.Providers
 import Network.Web3.Provider
-import RPC.HTTP.Account
-import RPC.HTTP.Block
-import RPC.HTTP.Chain
-import RPC.HTTP.Ledger
-import RPC.HTTP.Token
-import RPC.HTTP.Tokenomics
-import RPC.HTTP.Transaction
-import RPC.Providers
 
 testTx :: IO ()
 testTx = void $ runWeb3' localHttpProvider $ do
