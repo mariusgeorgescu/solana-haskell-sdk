@@ -77,6 +77,8 @@ library
     RPC.HTTP.Token
     RPC.HTTP.Transaction
     RPC.HTTP.Types
+    RPC.HTTP.Ledger
+    RPC.HTTP.Tokenomics
     RPC.Providers
 
   -- Modules included in this library but not exported.

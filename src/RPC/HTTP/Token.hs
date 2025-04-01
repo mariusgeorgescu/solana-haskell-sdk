@@ -7,7 +7,6 @@ module RPC.HTTP.Token where
 import Core.Account (Account)
 import Core.Crypto (SolanaPublicKey)
 import Data.Aeson
-import Data.Aeson.Types
 import Data.Word
 import GHC.Generics (Generic)
 import Network.JsonRpc.TinyClient (JsonRpc (..))

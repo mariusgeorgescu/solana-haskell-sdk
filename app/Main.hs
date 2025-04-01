@@ -16,7 +16,9 @@ import Network.Web3.Provider
 import RPC.HTTP.Account
 import RPC.HTTP.Block
 import RPC.HTTP.Chain
+import RPC.HTTP.Ledger
 import RPC.HTTP.Token
+import RPC.HTTP.Tokenomics
 import RPC.HTTP.Transaction
 import RPC.Providers
 
