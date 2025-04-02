@@ -103,12 +103,12 @@ defaultRpcSendTransactionConfig =
     }
 
 -- | Sends a base64-encoded transaction to the cluster using the default configuration.
-sendTransaction :: (JsonRpc m) => String -> m String
+sendTransaction :: (JsonRpc m) => String -> m SolanaSignature
 sendTransaction tx = sendTransaction' tx defaultRpcSendTransactionConfig
 {-# INLINE sendTransaction #-}
 
 -- | Sends a base64-encoded transaction to the cluster with the specified configuration.
-sendTransaction' :: (JsonRpc m) => String -> ConfigurationObject -> m String
+sendTransaction' :: (JsonRpc m) => String -> ConfigurationObject -> m SolanaSignature
 sendTransaction' = do
   remote "sendTransaction"
 {-# INLINE sendTransaction' #-}

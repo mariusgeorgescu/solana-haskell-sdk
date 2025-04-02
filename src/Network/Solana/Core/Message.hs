@@ -23,6 +23,7 @@ import Network.Solana.Core.Compact
 import Network.Solana.Core.Crypto (SolanaPrivateKey, SolanaPublicKey, dsign, toBase64String)
 import Network.Solana.Core.Instruction
 
+
 ------------------------------------------------------------------------------------------------
 
 -- * SignedTransactionIntent
@@ -30,6 +31,7 @@ import Network.Solana.Core.Instruction
 ------------------------------------------------------------------------------------------------
 
 type SignedTransactionIntent = (BlockHash -> Either CompileException String)
+
 
 newTransactionIntent :: [SolanaPrivateKey] -> [Instruction] -> SignedTransactionIntent
 newTransactionIntent signers instructions blockhash = do

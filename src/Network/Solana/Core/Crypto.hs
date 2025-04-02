@@ -40,7 +40,7 @@ import Data.ByteString.Base64 (decodeBase64Lenient, encodeBase64')
 import Data.ByteString.Char8 qualified as BS8
 import Data.Either.Extra (maybeToEither)
 import Data.Maybe (fromJust)
-import Data.String (fromString)
+import Data.String (IsString, fromString)
 import Data.Text qualified as Text
 import GHC.Generics (Generic)
 
@@ -101,6 +101,9 @@ newtype SolanaPublicKey
 instance Show SolanaPublicKey where
   show :: SolanaPublicKey -> String
   show (SolanaPublicKey (Ed25519.PublicKey bs)) = toBase58String bs
+
+instance IsString SolanaPublicKey where
+  fromString = unsafeSolanaPublicKey
 
 instance Binary SolanaPublicKey where
   put :: SolanaPublicKey -> Put
