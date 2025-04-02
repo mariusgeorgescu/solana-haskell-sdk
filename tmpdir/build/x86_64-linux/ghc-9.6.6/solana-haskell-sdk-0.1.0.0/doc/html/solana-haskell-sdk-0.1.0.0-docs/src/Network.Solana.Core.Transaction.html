@@ -1,0 +1,85 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.Solana.Core.Transaction</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson.Types</span></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.Solana.Core.Crypto.html"><span class="hs-identifier">Network.Solana.Core.Crypto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaSignature"><span class="hs-identifier">SolanaSignature</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html"><span class="hs-identifier">Network.Solana.Core.Message</span></a></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">data</span><span> </span><span id="Transaction"><span class="annot"><a href="Network.Solana.Core.Transaction.html#Transaction"><span class="hs-identifier hs-var">Transaction</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Transaction"><span class="annot"><a href="Network.Solana.Core.Transaction.html#Transaction"><span class="hs-identifier hs-var">Transaction</span></a></span></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="message"><span class="annot"><span class="annottext">Transaction -&gt; CompiledMessage
+</span><a href="Network.Solana.Core.Transaction.html#message"><span class="hs-identifier hs-var hs-var">message</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Solana.Core.Message.html#CompiledMessage"><span class="hs-identifier hs-type">CompiledMessage</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>    </span><span id="signatures"><span class="annot"><span class="annottext">Transaction -&gt; [SolanaSignature]
+</span><a href="Network.Solana.Core.Transaction.html#signatures"><span class="hs-identifier hs-var hs-var">signatures</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Network.Solana.Core.Crypto.html#SolanaSignature"><span class="hs-identifier hs-type">SolanaSignature</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679148803"><span id="local-6989586621679148805"><span class="annot"><span class="annottext">(forall x. Transaction -&gt; Rep Transaction x)
+-&gt; (forall x. Rep Transaction x -&gt; Transaction)
+-&gt; Generic Transaction
+forall x. Rep Transaction x -&gt; Transaction
+forall x. Transaction -&gt; Rep Transaction x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Transaction -&gt; Rep Transaction x
+from :: forall x. Transaction -&gt; Rep Transaction x
+$cto :: forall x. Rep Transaction x -&gt; Transaction
+to :: forall x. Rep Transaction x -&gt; Transaction
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148809"><span id="local-6989586621679148818"><span id="local-6989586621679148822"><span class="annot"><span class="annottext">Int -&gt; Transaction -&gt; ShowS
+[Transaction] -&gt; ShowS
+Transaction -&gt; String
+(Int -&gt; Transaction -&gt; ShowS)
+-&gt; (Transaction -&gt; String)
+-&gt; ([Transaction] -&gt; ShowS)
+-&gt; Show Transaction
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Transaction -&gt; ShowS
+showsPrec :: Int -&gt; Transaction -&gt; ShowS
+$cshow :: Transaction -&gt; String
+show :: Transaction -&gt; String
+$cshowList :: [Transaction] -&gt; ShowS
+showList :: [Transaction] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148827"><span id="local-6989586621679148834"><span class="annot"><span class="annottext">Transaction -&gt; Transaction -&gt; Bool
+(Transaction -&gt; Transaction -&gt; Bool)
+-&gt; (Transaction -&gt; Transaction -&gt; Bool) -&gt; Eq Transaction
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Transaction -&gt; Transaction -&gt; Bool
+== :: Transaction -&gt; Transaction -&gt; Bool
+$c/= :: Transaction -&gt; Transaction -&gt; Bool
+/= :: Transaction -&gt; Transaction -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679148840"><span id="local-6989586621679148847"><span id="local-6989586621679148850"><span id="local-6989586621679148853"><span class="annot"><span class="annottext">[Transaction] -&gt; Value
+[Transaction] -&gt; Encoding
+Transaction -&gt; Value
+Transaction -&gt; Encoding
+(Transaction -&gt; Value)
+-&gt; (Transaction -&gt; Encoding)
+-&gt; ([Transaction] -&gt; Value)
+-&gt; ([Transaction] -&gt; Encoding)
+-&gt; ToJSON Transaction
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; ToJSON a
+$ctoJSON :: Transaction -&gt; Value
+toJSON :: Transaction -&gt; Value
+$ctoEncoding :: Transaction -&gt; Encoding
+toEncoding :: Transaction -&gt; Encoding
+$ctoJSONList :: [Transaction] -&gt; Value
+toJSONList :: [Transaction] -&gt; Value
+$ctoEncodingList :: [Transaction] -&gt; Encoding
+toEncodingList :: [Transaction] -&gt; Encoding
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148954"><span id="local-6989586621679148961"><span class="annot"><span class="annottext">Value -&gt; Parser [Transaction]
+Value -&gt; Parser Transaction
+(Value -&gt; Parser Transaction)
+-&gt; (Value -&gt; Parser [Transaction]) -&gt; FromJSON Transaction
+forall a.
+(Value -&gt; Parser a) -&gt; (Value -&gt; Parser [a]) -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser Transaction
+parseJSON :: Value -&gt; Parser Transaction
+$cparseJSONList :: Value -&gt; Parser [Transaction]
+parseJSONList :: Value -&gt; Parser [Transaction]
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span><span class="hs-special">)</span></pre></body></html>
