@@ -1,4 +1,5 @@
 #HASKELL
+tmpdir
 dist
 dist-*
 cabal-dev
