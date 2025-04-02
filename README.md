@@ -71,7 +71,7 @@ Before and after performing the transfer of 1 SOL to the recipient, we check and
 
 This straightforward example highlights the convenience and expressiveness of Haskell when building decentralized applications on Solana.
 
-```
+```haskell
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main where
