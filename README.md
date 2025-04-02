@@ -116,9 +116,6 @@ main = do
     printBalances [myPublicKey, recipient]
 ```
 
-#### System Program
-
-
 ## Contributing
 
 We welcome all contributors! See [contributing guide](./CONTRIBUTING.md) for how to get started.
