@@ -20,8 +20,8 @@ import Text.Printf (printf)
 newtype Lamport = Lamport
   { unLamport :: Word64
   }
-  deriving (Eq, Ord, Generic)
-  deriving newtype (Num)
+  deriving (Eq, Ord, Generic, Enum)
+  deriving newtype (Num, Real, Integral)
 
 instance ToJSON Lamport where
   toJSON :: Lamport -> Value
