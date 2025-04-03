@@ -12,3 +12,7 @@ module Network.Solana.Constants where
 -- Lamports are the smallest indivisible unit of SOL, similar to "satoshis" in Bitcoin , "wei" in Ethereum or 'lovelaces' in Cardano.
 lamportsPerSol :: Integer
 lamportsPerSol = 1_000_000_000
+
+-- maximum length of derived `Pubkey` seed
+maxSeedLen :: Integer
+maxSeedLen = 32

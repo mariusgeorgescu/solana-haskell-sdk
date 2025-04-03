@@ -54,6 +54,7 @@ library
     Network.Solana.RPC.HTTP.Transaction
     Network.Solana.RPC.HTTP.Types
     Network.Solana.SolanaWeb3
+    Network.Solana.Sysvar
 
   -- Modules included in this library but not exported.
   -- other-modules:

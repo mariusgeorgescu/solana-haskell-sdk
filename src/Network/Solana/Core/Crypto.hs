@@ -24,6 +24,8 @@ module Network.Solana.Core.Crypto
     fromBase64String,
     fromBase58String,
     readSigningKeyFromFile,
+    mkPublicKeyFromString,
+    mkPrivateKeyFromString,
   )
 where
 
@@ -39,7 +41,6 @@ import Data.ByteString.Base58
 import Data.ByteString.Base64 (decodeBase64Lenient, encodeBase64')
 import Data.ByteString.Char8 qualified as BS8
 import Data.Either.Extra (maybeToEither)
-import Data.Maybe (fromJust)
 import Data.String (IsString, fromString)
 import Data.Text qualified as Text
 import GHC.Generics (Generic)
