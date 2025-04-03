@@ -1,5 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+-- |
+-- Module      : Network.Solana.Sysvar
+-- Description : Definitions of Solana Sysvar public keys for accessing blockchain state data.
+-- Copyright   : (c) 2024
+--
+-- This module provides convenient access to Solana's sysvars, special accounts that
+-- store critical state data of the blockchain. These sysvars provide real-time data
+-- such as the current slot, epoch schedules, fee rates, recent blockhashes, and more.
+-- They are frequently referenced by Solana programs to obtain necessary blockchain
+-- information during transaction execution.
 module Network.Solana.Sysvar where
 
 import Network.Solana.Core.Crypto (SolanaPublicKey)
