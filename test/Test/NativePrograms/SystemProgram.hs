@@ -2,6 +2,7 @@
 
 module Test.NativePrograms.SystemProgram (tests) where
 
+import Data.Binary (decode, encode)
 import Data.ByteString qualified as BS
 import Network.Solana.Core.Crypto (SolanaPublicKey, unsafeSolanaPublicKeyRaw)
 import Network.Solana.Core.Instruction
@@ -10,6 +11,7 @@ import Network.Solana.Sysvar qualified as Sysvar
 import Test.Fixtures
 import Test.Tasty
 import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
 
 basePk, ownerPk, authorityPk, funderPk, newAccountPk :: SolanaPublicKey
 basePk = unsafeSolanaPublicKeyRaw (replicate 32 3)
@@ -23,6 +25,27 @@ seedStr = "hello-seed"
 
 dataOf :: Instruction -> BS.ByteString
 dataOf = instrData . iData
+
+genSystemInstruction :: Gen SP.SystemInstruction
+genSystemInstruction =
+  oneof
+    [ SP.CreateAccount <$> arbitrary <*> arbitrary <*> genPk,
+      SP.Assign <$> genPk,
+      SP.Transfer <$> arbitrary,
+      SP.CreateAccountWithSeed <$> genPk <*> genSeed <*> arbitrary <*> arbitrary <*> genPk,
+      pure SP.AdvanceNonceAccount,
+      SP.WithdrawNonceAccount <$> arbitrary,
+      SP.InitializeNonceAccount <$> genPk,
+      SP.AuthorizeNonceAccount <$> genPk,
+      SP.Allocate <$> arbitrary,
+      SP.AllocateWithSeed <$> genPk <*> genSeed <*> arbitrary <*> genPk,
+      SP.AssignWithSeed <$> genPk <*> genSeed <*> genPk,
+      SP.TransferWithSeed <$> arbitrary <*> genSeed <*> genPk,
+      pure SP.UpgradeNonceAccount
+    ]
+  where
+    genPk = unsafeSolanaPublicKeyRaw <$> vectorOf 32 arbitrary
+    genSeed = listOf (elements (['a' .. 'z'] ++ ['0' .. '9'] ++ "-_"))
 
 tests :: TestTree
 tests =
@@ -108,5 +131,7 @@ tests =
               @?= [ AccountMeta {accountPubKey = funderPk, isSigner = False, isWritable = True},
                     AccountMeta {accountPubKey = basePk, isSigner = True, isWritable = False},
                     AccountMeta {accountPubKey = newAccountPk, isSigner = False, isWritable = True}
-                  ]
+                  ],
+          testProperty "SystemInstruction Binary round-trip" $
+            forAll genSystemInstruction $ \si -> decode (encode si) === si
         ]

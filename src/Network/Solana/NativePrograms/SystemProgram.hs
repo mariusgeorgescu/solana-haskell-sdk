@@ -3,6 +3,7 @@
 module Network.Solana.NativePrograms.SystemProgram where
 
 import Data.Binary
+import Data.Binary.Get
 import Data.Binary.Put
 import Data.ByteString qualified as BS
 import Data.Text qualified as T
@@ -159,6 +160,25 @@ instance Binary SystemInstruction where
   put UpgradeNonceAccount =
     putWord32le (12 :: Word32)
 
+  get :: Get SystemInstruction
+  get = do
+    disc <- getWord32le
+    case disc of
+      0 -> CreateAccount <$> getWord64le <*> getWord64le <*> get
+      1 -> Assign <$> get
+      2 -> Transfer <$> getWord64le
+      3 -> CreateAccountWithSeed <$> get <*> getBincodeString <*> getWord64le <*> getWord64le <*> get
+      4 -> pure AdvanceNonceAccount
+      5 -> WithdrawNonceAccount <$> getWord64le
+      6 -> InitializeNonceAccount <$> get
+      7 -> AuthorizeNonceAccount <$> get
+      8 -> Allocate <$> getWord64le
+      9 -> AllocateWithSeed <$> get <*> getBincodeString <*> getWord64le <*> get
+      10 -> AssignWithSeed <$> get <*> getBincodeString <*> get
+      11 -> TransferWithSeed <$> getWord64le <*> getBincodeString <*> get
+      12 -> pure UpgradeNonceAccount
+      _ -> fail ("SystemInstruction: unknown discriminant " <> show disc)
+
 -- bincode encodes a Rust String as a u64 little-endian byte length
 -- followed by the UTF-8 bytes
 putBincodeString :: String -> Put
@@ -166,6 +186,16 @@ putBincodeString s = do
   let bs = TE.encodeUtf8 (T.pack s)
   putWord64le (fromIntegral (BS.length bs))
   putByteString bs
+
+-- | bincode decodes a Rust String as a u64 little-endian byte length
+-- followed by that many UTF-8 bytes.
+getBincodeString :: Get String
+getBincodeString = do
+  len <- getWord64le
+  bs <- getByteString (fromIntegral len)
+  case TE.decodeUtf8' bs of
+    Left _ -> fail "getBincodeString: invalid UTF-8"
+    Right t -> pure (T.unpack t)
 
 -- | Creates instruction to "Create a new account"
 -- Receives the funding account, the new account, amount to transfer, the number of bytes of memory to allocate and the owner program account.
