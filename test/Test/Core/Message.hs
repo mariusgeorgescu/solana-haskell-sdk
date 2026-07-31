@@ -10,7 +10,9 @@ import Network.Solana.Core.Block (BlockHash (..))
 import Network.Solana.Core.Crypto
 import Network.Solana.Core.Instruction
 import Network.Solana.Core.Message
+import Network.Solana.NativePrograms.ComputeBudget qualified as CB
 import Network.Solana.NativePrograms.SystemProgram qualified as SP
+import Network.Solana.SplPrograms.Memo qualified as Memo
 import Test.Fixtures
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -102,5 +104,16 @@ tests =
         case newMessage fixedBlockhash [transferIx, allocateIx] of
           Left err -> assertFailure (show err)
           Right bytes -> bytes @?= requireFixture "transfer-allocate-message" fs,
+      testCase "priority-fee transaction matches Rust" $ do
+        fs <- loadFixtures "test/fixtures/transactions.json"
+        let ixs =
+              [ CB.setComputeUnitLimit 200000,
+                CB.setComputeUnitPrice 1000,
+                SP.transfer (fst payerKeys) recipientPk 1000000000,
+                Memo.buildMemo "hello-memo" [fst payerKeys]
+              ]
+        case newTransactionIntent [snd payerKeys] ixs fixedBlockhash of
+          Left err -> assertFailure (show err)
+          Right b64 -> b64 @?= toBase64String (requireFixture "priority-transfer-transaction" fs),
       testProperty "message header/key-ordering invariants" prop_messageInvariants
     ]

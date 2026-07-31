@@ -19,10 +19,11 @@ import Data.Aeson.Types (Parser)
 import Data.Binary
 import Data.ByteString qualified as S
 import Data.Foldable
+import Data.List (sortOn)
 import GHC.Generics (Generic)
 import Network.Solana.Core.Block (BlockHash)
 import Network.Solana.Core.Compact
-import Network.Solana.Core.Crypto (SolanaPrivateKey, SolanaPublicKey, dsign, toBase64String)
+import Network.Solana.Core.Crypto (SolanaPrivateKey, SolanaPublicKey, dsign, getSolanaPublicKeyRaw, toBase64String)
 import Network.Solana.Core.Instruction
 
 
@@ -72,7 +73,22 @@ compileMessageToBinary :: Message -> Either CompileException S.ByteString
 compileMessageToBinary = fmap (S.toStrict . Data.Binary.encode) . compileMessage
 
 mkNewMessage :: BlockHash -> [Instruction] -> Message
-mkNewMessage bh = updateMessageWithInstructions (Message mempty mempty bh mempty)
+mkNewMessage bh =
+  canonicalizeAccountOrder . updateMessageWithInstructions (Message mempty mempty bh mempty)
+
+-- | Sort the account keys within each privilege section by raw pubkey bytes,
+-- keeping the fee payer (first writable signer) pinned in first position.
+-- Matches the Rust SDK's CompiledKeys (BTreeMap) ordering, which is required
+-- for byte-identical messages once several program ids share a section.
+canonicalizeAccountOrder :: Message -> Message
+canonicalizeAccountOrder (Message header keys bh instrs) =
+  let (rws, ros, rwus, rous) = splitAccountsByPurpose header keys
+      sortKeys = sortOn getSolanaPublicKeyRaw
+      rws' = case rws of
+        [] -> []
+        (feePayer : rest) -> feePayer : sortKeys rest
+      keys' = rws' <> sortKeys ros <> sortKeys rwus <> sortKeys rous
+   in Message header keys' bh instrs
 
 updateMessageWithInstructions :: Message -> [Instruction] -> Message
 updateMessageWithInstructions = foldl' updateMessageWithInstruction
