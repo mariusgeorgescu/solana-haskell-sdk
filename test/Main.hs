@@ -6,6 +6,7 @@ import Test.Core.Instruction qualified
 import Test.Core.Message qualified
 import Test.NativePrograms.ComputeBudget qualified
 import Test.NativePrograms.SystemProgram qualified
+import Test.SplPrograms.Memo qualified
 import Test.Tasty
 
 main :: IO ()
@@ -18,6 +19,7 @@ main =
           Test.Core.Instruction.tests,
           Test.Core.Message.tests,
           Test.NativePrograms.ComputeBudget.tests,
-          Test.NativePrograms.SystemProgram.tests
+          Test.NativePrograms.SystemProgram.tests,
+          Test.SplPrograms.Memo.tests
         ]
     )
