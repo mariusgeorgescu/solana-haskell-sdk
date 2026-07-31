@@ -38,8 +38,8 @@
     - [ ] Secp256k1
   - [ ] Clients for Solana Program Library (SPL)
     - [x] Memo
-    - [ ] SPL Token
-    - [ ] Associated Token Account
+    - [x] SPL Token
+    - [x] Associated Token Account
 
 ### Post-1.0
 
