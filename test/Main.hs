@@ -2,6 +2,8 @@ module Main (main) where
 
 import Test.Core.Compact qualified
 import Test.Core.Crypto qualified
+import Test.Core.Instruction qualified
+import Test.Core.Message qualified
 import Test.NativePrograms.SystemProgram qualified
 import Test.Tasty
 
@@ -12,6 +14,8 @@ main =
         "solana-haskell-sdk"
         [ Test.Core.Compact.tests,
           Test.Core.Crypto.tests,
+          Test.Core.Instruction.tests,
+          Test.Core.Message.tests,
           Test.NativePrograms.SystemProgram.tests
         ]
     )

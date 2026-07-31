@@ -123,6 +123,8 @@ test-suite solana-haskell-sdk-test
   other-modules:
     Test.Core.Compact
     Test.Core.Crypto
+    Test.Core.Instruction
+    Test.Core.Message
     Test.Fixtures
     Test.NativePrograms.SystemProgram
   build-depends:

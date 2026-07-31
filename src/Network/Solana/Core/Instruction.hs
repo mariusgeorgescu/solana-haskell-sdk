@@ -51,14 +51,7 @@ mkInstruction :: (Binary.Binary a) => SolanaPublicKey -> [AccountMeta] -> a -> I
 mkInstruction programid accmetas instrData =
   Instruction
     { iProgramId = programid,
-      iAccounts =
-        accmetas
-          <> [ AccountMeta
-                 { accountPubKey = programid,
-                   isSigner = False,
-                   isWritable = False
-                 }
-             ],
+      iAccounts = accmetas,
       iData = InstructionData $ S.toStrict (Binary.encode instrData)
     }
 

@@ -77,8 +77,14 @@ updateMessageWithInstructions = foldl' updateMessageWithInstruction
 
 updateMessageWithInstruction :: Message -> Instruction -> Message
 updateMessageWithInstruction (Message header accountKeys bh instrs) newInstr =
-  let (newHeader, newAccountKeys) =
-        foldl' updateHeaderAndKeys (header, accountKeys) (iAccounts newInstr)
+  let programMeta =
+        AccountMeta
+          { accountPubKey = iProgramId newInstr,
+            isSigner = False,
+            isWritable = False
+          }
+      (newHeader, newAccountKeys) =
+        foldl' updateHeaderAndKeys (header, accountKeys) (iAccounts newInstr <> [programMeta])
       newInstrucionsList = instrs <> [newInstr]
    in Message newHeader newAccountKeys bh newInstrucionsList
 
