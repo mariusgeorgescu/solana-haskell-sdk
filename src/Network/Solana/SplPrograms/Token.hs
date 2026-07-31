@@ -319,3 +319,97 @@ syncNative account =
     tokenProgramId
     [AccountMeta {accountPubKey = account, isSigner = False, isWritable = True}]
     SyncNative
+
+-- | Initialize a multisig account. The signer pubkeys are the full member set;
+-- m is the number of required signatures (the Rust SDK validates 1 <= m <= 11 <= length signers
+-- client-side; this builder, like the others in this module, performs no client-side validation).
+-- # Account references
+-- 0. `[WRITE]` Multisig account
+-- 1. `[]` Rent sysvar
+-- 2..n. `[]` Signer member accounts
+initializeMultisig :: SolanaPublicKey -> [SolanaPublicKey] -> Word8 -> Instruction
+initializeMultisig multisig members m =
+  mkInstruction
+    tokenProgramId
+    ( [ AccountMeta {accountPubKey = multisig, isSigner = False, isWritable = True},
+        AccountMeta {accountPubKey = rentSysvar, isSigner = False, isWritable = False}
+      ]
+        <> [AccountMeta {accountPubKey = s, isSigner = False, isWritable = False} | s <- members]
+    )
+    (InitializeMultisig m)
+
+-- | Like 'initializeMultisig' without the rent sysvar account.
+initializeMultisig2 :: SolanaPublicKey -> [SolanaPublicKey] -> Word8 -> Instruction
+initializeMultisig2 multisig members m =
+  mkInstruction
+    tokenProgramId
+    ( AccountMeta {accountPubKey = multisig, isSigner = False, isWritable = True}
+        : [AccountMeta {accountPubKey = s, isSigner = False, isWritable = False} | s <- members]
+    )
+    (InitializeMultisig2 m)
+
+-- | 'approve' with decimals check. Accounts: 0. `[WRITE]` source, 1. `[]` mint, 2. `[]` delegate, then owner metas.
+approveChecked :: SolanaPublicKey -> SolanaPublicKey -> SolanaPublicKey -> SolanaPublicKey -> [SolanaPublicKey] -> Word64 -> Word8 -> Instruction
+approveChecked source mint delegate owner signers amount decimals =
+  mkInstruction
+    tokenProgramId
+    ( [ AccountMeta {accountPubKey = source, isSigner = False, isWritable = True},
+        AccountMeta {accountPubKey = mint, isSigner = False, isWritable = False},
+        AccountMeta {accountPubKey = delegate, isSigner = False, isWritable = False}
+      ]
+        <> ownerMetas owner signers
+    )
+    (ApproveChecked amount decimals)
+
+-- | 'mintTo' with decimals check. Accounts: 0. `[WRITE]` mint, 1. `[WRITE]` destination, then owner metas.
+mintToChecked :: SolanaPublicKey -> SolanaPublicKey -> SolanaPublicKey -> [SolanaPublicKey] -> Word64 -> Word8 -> Instruction
+mintToChecked mint destination mintAuthority signers amount decimals =
+  mkInstruction
+    tokenProgramId
+    ( [ AccountMeta {accountPubKey = mint, isSigner = False, isWritable = True},
+        AccountMeta {accountPubKey = destination, isSigner = False, isWritable = True}
+      ]
+        <> ownerMetas mintAuthority signers
+    )
+    (MintToChecked amount decimals)
+
+-- | 'burn' with decimals check. Accounts: 0. `[WRITE]` account, 1. `[WRITE]` mint, then owner metas.
+burnChecked :: SolanaPublicKey -> SolanaPublicKey -> SolanaPublicKey -> [SolanaPublicKey] -> Word64 -> Word8 -> Instruction
+burnChecked account mint owner signers amount decimals =
+  mkInstruction
+    tokenProgramId
+    ( [ AccountMeta {accountPubKey = account, isSigner = False, isWritable = True},
+        AccountMeta {accountPubKey = mint, isSigner = False, isWritable = True}
+      ]
+        <> ownerMetas owner signers
+    )
+    (BurnChecked amount decimals)
+
+-- | 'initializeAccount' with the owner in instruction data. Accounts: 0. `[WRITE]` account, 1. `[]` mint, 2. `[]` rent sysvar.
+initializeAccount2 :: SolanaPublicKey -> SolanaPublicKey -> SolanaPublicKey -> Instruction
+initializeAccount2 account mint owner =
+  mkInstruction
+    tokenProgramId
+    [ AccountMeta {accountPubKey = account, isSigner = False, isWritable = True},
+      AccountMeta {accountPubKey = mint, isSigner = False, isWritable = False},
+      AccountMeta {accountPubKey = rentSysvar, isSigner = False, isWritable = False}
+    ]
+    (InitializeAccount2 owner)
+
+-- | Like 'initializeAccount2' without the rent sysvar account. Accounts: 0. `[WRITE]` account, 1. `[]` mint.
+initializeAccount3 :: SolanaPublicKey -> SolanaPublicKey -> SolanaPublicKey -> Instruction
+initializeAccount3 account mint owner =
+  mkInstruction
+    tokenProgramId
+    [ AccountMeta {accountPubKey = account, isSigner = False, isWritable = True},
+      AccountMeta {accountPubKey = mint, isSigner = False, isWritable = False}
+    ]
+    (InitializeAccount3 owner)
+
+-- | Like 'initializeMint' without the rent sysvar account. Accounts: 0. `[WRITE]` mint.
+initializeMint2 :: SolanaPublicKey -> Word8 -> SolanaPublicKey -> Maybe SolanaPublicKey -> Instruction
+initializeMint2 mint decimals mintAuthority freezeAuthority =
+  mkInstruction
+    tokenProgramId
+    [AccountMeta {accountPubKey = mint, isSigner = False, isWritable = True}]
+    (InitializeMint2 decimals mintAuthority freezeAuthority)

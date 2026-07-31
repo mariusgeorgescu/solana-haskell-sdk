@@ -36,6 +36,14 @@
     "name": "SetAuthority-none"
   },
   {
+    "hex": "0600010d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d",
+    "name": "SetAuthority-mint-tokens"
+  },
+  {
+    "hex": "060100",
+    "name": "SetAuthority-freeze"
+  },
+  {
     "hex": "0740420f0000000000",
     "name": "MintTo"
   },

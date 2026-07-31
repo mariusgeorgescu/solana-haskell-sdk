@@ -69,6 +69,8 @@ tests =
         goldenCase getFixtures "Revoke" Tok.Revoke,
         goldenCase getFixtures "SetAuthority-some" (Tok.SetAuthority Tok.AccountOwner (Just delegatePk)),
         goldenCase getFixtures "SetAuthority-none" (Tok.SetAuthority Tok.CloseAuthority Nothing),
+        goldenCase getFixtures "SetAuthority-mint-tokens" (Tok.SetAuthority Tok.MintTokens (Just delegatePk)),
+        goldenCase getFixtures "SetAuthority-freeze" (Tok.SetAuthority Tok.FreezeAuthority Nothing),
         goldenCase getFixtures "MintTo" (Tok.MintTo 1000000),
         goldenCase getFixtures "Burn" (Tok.Burn 1000000),
         goldenCase getFixtures "CloseAccount" Tok.CloseAccount,
@@ -127,6 +129,90 @@ tests =
                   AccountMeta delegatePk False True,
                   AccountMeta walletPk True False
                 ],
+        testCase "approve metas" $
+          iAccounts (Tok.approve accountPk delegatePk walletPk [] 1000000)
+            @?= [ AccountMeta accountPk False True,
+                  AccountMeta delegatePk False False,
+                  AccountMeta walletPk True False
+                ],
+        testCase "revoke metas" $
+          iAccounts (Tok.revoke accountPk walletPk [])
+            @?= [ AccountMeta accountPk False True,
+                  AccountMeta walletPk True False
+                ],
+        testCase "setAuthority metas" $
+          iAccounts (Tok.setAuthority mintPk Tok.AccountOwner (Just delegatePk) walletPk [])
+            @?= [ AccountMeta mintPk False True,
+                  AccountMeta walletPk True False
+                ],
+        testCase "initializeAccount metas" $
+          iAccounts (Tok.initializeAccount accountPk mintPk walletPk)
+            @?= [ AccountMeta accountPk False True,
+                  AccountMeta mintPk False False,
+                  AccountMeta walletPk False False,
+                  AccountMeta Tok.rentSysvar False False
+                ],
+        testCase "freezeAccount metas" $
+          iAccounts (Tok.freezeAccount accountPk mintPk walletPk [])
+            @?= [ AccountMeta accountPk False True,
+                  AccountMeta mintPk False False,
+                  AccountMeta walletPk True False
+                ],
+        testCase "thawAccount metas" $
+          iAccounts (Tok.thawAccount accountPk mintPk walletPk [])
+            @?= [ AccountMeta accountPk False True,
+                  AccountMeta mintPk False False,
+                  AccountMeta walletPk True False
+                ],
+        testCase "syncNative metas" $
+          iAccounts (Tok.syncNative accountPk)
+            @?= [AccountMeta accountPk False True],
+        testCase "initializeMultisig metas" $
+          iAccounts (Tok.initializeMultisig accountPk [sig1Pk, sig2Pk] 2)
+            @?= [ AccountMeta accountPk False True,
+                  AccountMeta Tok.rentSysvar False False,
+                  AccountMeta sig1Pk False False,
+                  AccountMeta sig2Pk False False
+                ],
+        testCase "initializeMultisig2 metas" $
+          iAccounts (Tok.initializeMultisig2 accountPk [sig1Pk, sig2Pk] 2)
+            @?= [ AccountMeta accountPk False True,
+                  AccountMeta sig1Pk False False,
+                  AccountMeta sig2Pk False False
+                ],
+        testCase "approveChecked metas" $
+          iAccounts (Tok.approveChecked accountPk mintPk delegatePk walletPk [] 1000000 6)
+            @?= [ AccountMeta accountPk False True,
+                  AccountMeta mintPk False False,
+                  AccountMeta delegatePk False False,
+                  AccountMeta walletPk True False
+                ],
+        testCase "mintToChecked metas" $
+          iAccounts (Tok.mintToChecked mintPk accountPk walletPk [] 1000000 6)
+            @?= [ AccountMeta mintPk False True,
+                  AccountMeta accountPk False True,
+                  AccountMeta walletPk True False
+                ],
+        testCase "burnChecked metas" $
+          iAccounts (Tok.burnChecked accountPk mintPk walletPk [] 1000000 6)
+            @?= [ AccountMeta accountPk False True,
+                  AccountMeta mintPk False True,
+                  AccountMeta walletPk True False
+                ],
+        testCase "initializeAccount2 (builder) metas" $
+          iAccounts (Tok.initializeAccount2 accountPk mintPk walletPk)
+            @?= [ AccountMeta accountPk False True,
+                  AccountMeta mintPk False False,
+                  AccountMeta Tok.rentSysvar False False
+                ],
+        testCase "initializeAccount3 (builder) metas" $
+          iAccounts (Tok.initializeAccount3 accountPk mintPk walletPk)
+            @?= [ AccountMeta accountPk False True,
+                  AccountMeta mintPk False False
+                ],
+        testCase "initializeMint2 (builder) metas" $
+          iAccounts (Tok.initializeMint2 mintPk 6 walletPk (Just delegatePk))
+            @?= [AccountMeta mintPk False True],
         testProperty "Binary round-trip" $
           forAll genTokenInstruction $ \ti -> decode (encode ti) === ti,
         testCase "decode fails on unknown discriminant" $

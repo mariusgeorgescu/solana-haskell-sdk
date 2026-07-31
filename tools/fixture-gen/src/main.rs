@@ -180,6 +180,8 @@ fn main() {
         ("Revoke", TokenInstruction::Revoke),
         ("SetAuthority-some", TokenInstruction::SetAuthority { authority_type: AuthorityType::AccountOwner, new_authority: COption::Some(delegate) }),
         ("SetAuthority-none", TokenInstruction::SetAuthority { authority_type: AuthorityType::CloseAccount, new_authority: COption::None }),
+        ("SetAuthority-mint-tokens", TokenInstruction::SetAuthority { authority_type: AuthorityType::MintTokens, new_authority: COption::Some(delegate) }),
+        ("SetAuthority-freeze", TokenInstruction::SetAuthority { authority_type: AuthorityType::FreezeAccount, new_authority: COption::None }),
         ("MintTo", TokenInstruction::MintTo { amount }),
         ("Burn", TokenInstruction::Burn { amount }),
         ("CloseAccount", TokenInstruction::CloseAccount),

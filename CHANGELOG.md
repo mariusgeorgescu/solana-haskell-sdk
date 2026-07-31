@@ -7,7 +7,7 @@
   golden-tested against the `spl-token` Rust crate.
 * Added Associated Token Account program client with address derivation.
 * Added Program Derived Address (PDA) support: `createProgramAddress` /
-  `findProgramAddress` with ed25519 on-curve rejection (new `crypton` dependency).
+  `findProgramAddress` with ed25519 on-curve rejection (new `crypton` and `memory` dependencies).
 * Added Compute Budget program client: request heap frame, set compute unit
   limit, set compute unit price (priority fees), set loaded accounts data size
   limit — golden-tested against the Rust SDK.
