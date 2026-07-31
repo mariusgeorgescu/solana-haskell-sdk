@@ -11,6 +11,7 @@ import GHC.Generics
 import Network.Solana.Core.Account (Lamport)
 import Network.Solana.Core.Crypto
 import Network.Solana.Core.Instruction
+import Network.Solana.Sysvar qualified as Sysvar
 
 -- |  System program address. This program contain instructions to:
 -- create new accounts, allocate account data, assign accounts to owning programs,
@@ -50,6 +51,25 @@ data SystemInstruction
         -- | Address of program that will own the new account
         owner :: SolanaPublicKey
       }
+  | -- | Consume a stored nonce, replacing it with a successor
+    AdvanceNonceAccount
+  | -- | Withdraw funds from a nonce account
+    WithdrawNonceAccount
+      { -- | Withdraw amount
+        lamports :: Word64
+      }
+  | -- | Drive state of Uninitialized nonce account to Initialized, setting the nonce value
+    InitializeNonceAccount
+      { -- | Entity authorized to execute nonce instructions on the account
+        authority :: SolanaPublicKey
+      }
+  | -- | Change the entity authorized to execute nonce instructions on the account
+    AuthorizeNonceAccount
+      { -- | New nonce authority
+        authority :: SolanaPublicKey
+      }
+  | -- | One-time idempotent upgrade of legacy nonce versions to bump them out of chain blockhash domain
+    UpgradeNonceAccount
   deriving (Eq, Show, Generic)
 
 instance Binary SystemInstruction where
@@ -72,6 +92,19 @@ instance Binary SystemInstruction where
     putWord64le lamports
     putWord64le space
     putByteString (getSolanaPublicKeyRaw owner)
+  put AdvanceNonceAccount =
+    putWord32le (4 :: Word32)
+  put (WithdrawNonceAccount lamports) = do
+    putWord32le (5 :: Word32)
+    putWord64le lamports
+  put (InitializeNonceAccount authority) = do
+    putWord32le (6 :: Word32)
+    putByteString (getSolanaPublicKeyRaw authority)
+  put (AuthorizeNonceAccount authority) = do
+    putWord32le (7 :: Word32)
+    putByteString (getSolanaPublicKeyRaw authority)
+  put UpgradeNonceAccount =
+    putWord32le (12 :: Word32)
 
 -- bincode encodes a Rust String as a u64 little-endian byte length
 -- followed by the UTF-8 bytes
@@ -169,3 +202,81 @@ createAccountWithSeed baseAccount seed fundingAccount newAccount lamports space 
         }
     ]
     (CreateAccountWithSeed baseAccount seed (fromIntegral lamports) (fromIntegral space) ownerProgramAccount)
+
+-- | Creates instruction to "Consume a stored nonce, replacing it with a successor"
+-- Receives the nonce account and the nonce authority.
+-- # Account references
+-- 0. `[WRITE]` Nonce account
+-- 1. `[]` RecentBlockhashes sysvar
+-- 2. `[SIGNER]` Nonce authority
+advanceNonceAccount :: SolanaPublicKey -> SolanaPublicKey -> Instruction
+advanceNonceAccount nonceAccount nonceAuthority =
+  mkInstruction
+    systemProgramId
+    [ AccountMeta {accountPubKey = nonceAccount, isSigner = False, isWritable = True},
+      AccountMeta {accountPubKey = Sysvar.recentBlockhashes, isSigner = False, isWritable = False},
+      AccountMeta {accountPubKey = nonceAuthority, isSigner = True, isWritable = False}
+    ]
+    AdvanceNonceAccount
+
+-- | Creates instruction to "Withdraw funds from a nonce account"
+-- Receives the nonce account, the nonce authority, the recipient account and the amount.
+-- # Account references
+-- 0. `[WRITE]` Nonce account
+-- 1. `[WRITE]` Recipient account
+-- 2. `[]` RecentBlockhashes sysvar
+-- 3. `[]` Rent sysvar
+-- 4. `[SIGNER]` Nonce authority
+withdrawNonceAccount :: SolanaPublicKey -> SolanaPublicKey -> SolanaPublicKey -> Lamport -> Instruction
+withdrawNonceAccount nonceAccount nonceAuthority recipientAccount amount =
+  mkInstruction
+    systemProgramId
+    [ AccountMeta {accountPubKey = nonceAccount, isSigner = False, isWritable = True},
+      AccountMeta {accountPubKey = recipientAccount, isSigner = False, isWritable = True},
+      AccountMeta {accountPubKey = Sysvar.recentBlockhashes, isSigner = False, isWritable = False},
+      AccountMeta {accountPubKey = Sysvar.rent, isSigner = False, isWritable = False},
+      AccountMeta {accountPubKey = nonceAuthority, isSigner = True, isWritable = False}
+    ]
+    (WithdrawNonceAccount (fromIntegral amount))
+
+-- | Creates instruction to "Drive state of Uninitialized nonce account to Initialized"
+-- Receives the nonce account and the entity authorized to execute nonce instructions on it.
+-- # Account references
+-- 0. `[WRITE]` Nonce account
+-- 1. `[]` RecentBlockhashes sysvar
+-- 2. `[]` Rent sysvar
+initializeNonceAccount :: SolanaPublicKey -> SolanaPublicKey -> Instruction
+initializeNonceAccount nonceAccount nonceAuthority =
+  mkInstruction
+    systemProgramId
+    [ AccountMeta {accountPubKey = nonceAccount, isSigner = False, isWritable = True},
+      AccountMeta {accountPubKey = Sysvar.recentBlockhashes, isSigner = False, isWritable = False},
+      AccountMeta {accountPubKey = Sysvar.rent, isSigner = False, isWritable = False}
+    ]
+    (InitializeNonceAccount nonceAuthority)
+
+-- | Creates instruction to "Change the entity authorized to execute nonce instructions on the account"
+-- Receives the nonce account, the current nonce authority and the new nonce authority.
+-- # Account references
+-- 0. `[WRITE]` Nonce account
+-- 1. `[SIGNER]` Nonce authority
+authorizeNonceAccount :: SolanaPublicKey -> SolanaPublicKey -> SolanaPublicKey -> Instruction
+authorizeNonceAccount nonceAccount nonceAuthority newAuthority =
+  mkInstruction
+    systemProgramId
+    [ AccountMeta {accountPubKey = nonceAccount, isSigner = False, isWritable = True},
+      AccountMeta {accountPubKey = nonceAuthority, isSigner = True, isWritable = False}
+    ]
+    (AuthorizeNonceAccount newAuthority)
+
+-- | Creates instruction to "Upgrade legacy nonce versions"
+-- Receives the nonce account.
+-- # Account references
+-- 0. `[WRITE]` Nonce account
+upgradeNonceAccount :: SolanaPublicKey -> Instruction
+upgradeNonceAccount nonceAccount =
+  mkInstruction
+    systemProgramId
+    [ AccountMeta {accountPubKey = nonceAccount, isSigner = False, isWritable = True}
+    ]
+    UpgradeNonceAccount
