@@ -1,0 +1,94 @@
+[
+  {
+    "hex": "00060b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b010d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d",
+    "name": "InitializeMint-some"
+  },
+  {
+    "hex": "00060b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b00",
+    "name": "InitializeMint-none"
+  },
+  {
+    "hex": "01",
+    "name": "InitializeAccount"
+  },
+  {
+    "hex": "0202",
+    "name": "InitializeMultisig"
+  },
+  {
+    "hex": "0340420f0000000000",
+    "name": "Transfer"
+  },
+  {
+    "hex": "0440420f0000000000",
+    "name": "Approve"
+  },
+  {
+    "hex": "05",
+    "name": "Revoke"
+  },
+  {
+    "hex": "0602010d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d",
+    "name": "SetAuthority-some"
+  },
+  {
+    "hex": "060300",
+    "name": "SetAuthority-none"
+  },
+  {
+    "hex": "0740420f0000000000",
+    "name": "MintTo"
+  },
+  {
+    "hex": "0840420f0000000000",
+    "name": "Burn"
+  },
+  {
+    "hex": "09",
+    "name": "CloseAccount"
+  },
+  {
+    "hex": "0a",
+    "name": "FreezeAccount"
+  },
+  {
+    "hex": "0b",
+    "name": "ThawAccount"
+  },
+  {
+    "hex": "0c40420f000000000006",
+    "name": "TransferChecked"
+  },
+  {
+    "hex": "0d40420f000000000006",
+    "name": "ApproveChecked"
+  },
+  {
+    "hex": "0e40420f000000000006",
+    "name": "MintToChecked"
+  },
+  {
+    "hex": "0f40420f000000000006",
+    "name": "BurnChecked"
+  },
+  {
+    "hex": "100b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "name": "InitializeAccount2"
+  },
+  {
+    "hex": "11",
+    "name": "SyncNative"
+  },
+  {
+    "hex": "120b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "name": "InitializeAccount3"
+  },
+  {
+    "hex": "1302",
+    "name": "InitializeMultisig2"
+  },
+  {
+    "hex": "14060b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b010d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d",
+    "name": "InitializeMint2-some"
+  }
+]

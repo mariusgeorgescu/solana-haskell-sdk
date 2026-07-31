@@ -4,12 +4,14 @@ use solana_sdk::{
     hash::Hash,
     instruction::{AccountMeta, Instruction},
     message::Message,
+    program_option::COption,
     pubkey::Pubkey,
     signature::keypair_from_seed,
     signer::Signer,
     system_instruction::{self, SystemInstruction},
     transaction::Transaction,
 };
+use spl_token::instruction::{AuthorityType, TokenInstruction};
 use std::fs;
 use std::str::FromStr;
 
@@ -161,12 +163,105 @@ fn main() {
     let two_signer_tx = Transaction::new(&[&payer, &new_account], two_signer_msg, blockhash);
 
     let tx = Transaction::new(&[&payer], msg_transfer, blockhash);
+
+    let wallet = Pubkey::new_from_array([11u8; 32]);
+    let mint = Pubkey::new_from_array([12u8; 32]);
+    let delegate = Pubkey::new_from_array([13u8; 32]);
+    let amount: u64 = 1_000_000;
+    let decimals: u8 = 6;
+
+    let token_variants: Vec<(&str, TokenInstruction)> = vec![
+        ("InitializeMint-some", TokenInstruction::InitializeMint { decimals, mint_authority: wallet, freeze_authority: COption::Some(delegate) }),
+        ("InitializeMint-none", TokenInstruction::InitializeMint { decimals, mint_authority: wallet, freeze_authority: COption::None }),
+        ("InitializeAccount", TokenInstruction::InitializeAccount),
+        ("InitializeMultisig", TokenInstruction::InitializeMultisig { m: 2 }),
+        ("Transfer", TokenInstruction::Transfer { amount }),
+        ("Approve", TokenInstruction::Approve { amount }),
+        ("Revoke", TokenInstruction::Revoke),
+        ("SetAuthority-some", TokenInstruction::SetAuthority { authority_type: AuthorityType::AccountOwner, new_authority: COption::Some(delegate) }),
+        ("SetAuthority-none", TokenInstruction::SetAuthority { authority_type: AuthorityType::CloseAccount, new_authority: COption::None }),
+        ("MintTo", TokenInstruction::MintTo { amount }),
+        ("Burn", TokenInstruction::Burn { amount }),
+        ("CloseAccount", TokenInstruction::CloseAccount),
+        ("FreezeAccount", TokenInstruction::FreezeAccount),
+        ("ThawAccount", TokenInstruction::ThawAccount),
+        ("TransferChecked", TokenInstruction::TransferChecked { amount, decimals }),
+        ("ApproveChecked", TokenInstruction::ApproveChecked { amount, decimals }),
+        ("MintToChecked", TokenInstruction::MintToChecked { amount, decimals }),
+        ("BurnChecked", TokenInstruction::BurnChecked { amount, decimals }),
+        ("InitializeAccount2", TokenInstruction::InitializeAccount2 { owner: wallet }),
+        ("SyncNative", TokenInstruction::SyncNative),
+        ("InitializeAccount3", TokenInstruction::InitializeAccount3 { owner: wallet }),
+        ("InitializeMultisig2", TokenInstruction::InitializeMultisig2 { m: 2 }),
+        ("InitializeMint2-some", TokenInstruction::InitializeMint2 { decimals, mint_authority: wallet, freeze_authority: COption::Some(delegate) }),
+    ];
+    let token_fixtures: Vec<_> = token_variants
+        .iter()
+        .map(|(name, v)| json!({ "name": name, "hex": hex(&v.pack()) }))
+        .collect();
+    fs::write(
+        "../../test/fixtures/token_instruction_data.json",
+        serde_json::to_string_pretty(&token_fixtures).unwrap(),
+    )
+    .unwrap();
+
+    let token_program = spl_token::id();
+    let ata_program = spl_associated_token_account::id();
+    let (generic_pda, generic_bump) =
+        Pubkey::find_program_address(&[b"solana-haskell-sdk/1"], &token_program);
+    assert!(generic_bump < 255, "generic PDA bump must be < 255 to prove the search runs");
+    let ata = spl_associated_token_account::get_associated_token_address(&payer.pubkey(), &mint);
+    let (_ata_check, ata_bump) = Pubkey::find_program_address(
+        &[payer.pubkey().as_ref(), token_program.as_ref(), mint.as_ref()],
+        &ata_program,
+    );
+    assert!(ata_bump < 255, "ATA bump must be < 255 to prove the search runs");
+    let dest_ata = spl_associated_token_account::get_associated_token_address(&wallet, &mint);
+    let pda_fixtures = vec![
+        json!({ "name": "generic-pda-address", "hex": hex(&generic_pda.to_bytes()) }),
+        json!({ "name": "generic-pda-bump", "hex": hex(&[generic_bump]) }),
+        json!({ "name": "ata-address", "hex": hex(&ata.to_bytes()) }),
+        json!({ "name": "ata-bump", "hex": hex(&[ata_bump]) }),
+        json!({ "name": "dest-ata-address", "hex": hex(&dest_ata.to_bytes()) }),
+    ];
+    fs::write(
+        "../../test/fixtures/pda.json",
+        serde_json::to_string_pretty(&pda_fixtures).unwrap(),
+    )
+    .unwrap();
+
+    let create_dest_ata_ix =
+        spl_associated_token_account::instruction::create_associated_token_account_idempotent(
+            &payer.pubkey(),
+            &wallet,
+            &mint,
+            &token_program,
+        );
+    let transfer_checked_ix = spl_token::instruction::transfer_checked(
+        &token_program,
+        &ata,
+        &mint,
+        &dest_ata,
+        &payer.pubkey(),
+        &[],
+        amount,
+        decimals,
+    )
+    .unwrap();
+    let ata_msg = Message::new_with_blockhash(
+        &[create_dest_ata_ix, transfer_checked_ix],
+        Some(&payer.pubkey()),
+        &blockhash,
+    );
+    let ata_tx = Transaction::new(&[&payer], ata_msg, blockhash);
+
     let tx_fixtures = vec![
         json!({ "name": "transfer-transaction", "hex": hex(&bincode::serialize(&tx).unwrap()) }),
         json!({ "name": "payer-pubkey", "hex": hex(&payer.pubkey().to_bytes()) }),
         json!({ "name": "priority-transfer-transaction", "hex": hex(&bincode::serialize(&priority_tx).unwrap()) }),
         json!({ "name": "two-signer-create-transaction", "hex": hex(&bincode::serialize(&two_signer_tx).unwrap()) }),
         json!({ "name": "new-account-pubkey", "hex": hex(&new_account.pubkey().to_bytes()) }),
+        json!({ "name": "ata-transfer-transaction", "hex": hex(&bincode::serialize(&ata_tx).unwrap()) }),
     ];
     fs::write(
         "../../test/fixtures/transactions.json",
