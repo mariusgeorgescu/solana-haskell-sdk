@@ -122,6 +122,7 @@ test-suite solana-haskell-sdk-test
   main-is:          Main.hs
   other-modules:
     Test.Core.Compact
+    Test.Core.Crypto
   build-depends:
     , aeson
     , base                ^>=4.18.0.0
