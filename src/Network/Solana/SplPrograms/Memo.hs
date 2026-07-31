@@ -18,7 +18,11 @@ memoProgramId :: SolanaPublicKey
 memoProgramId = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
 
 -- | Memo instruction data: the raw UTF-8 bytes of the memo text
--- (no discriminant, no length prefix).
+-- (no discriminant, no length prefix). The 'Binary' 'get' decodes leniently
+-- by design: invalid UTF-8 sequences are replaced (never fails), and all
+-- remaining input is consumed as the memo text. Encoding via 'put' is the
+-- production path used when building instructions; decoding exists mainly
+-- for round-tripping and inspection.
 newtype MemoData = MemoData String
   deriving (Eq, Show)
 

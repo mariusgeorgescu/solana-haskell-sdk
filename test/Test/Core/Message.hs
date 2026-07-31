@@ -24,11 +24,20 @@ fixedBlockhash = BlockHash (BS.replicate 32 9)
 recipientPk :: SolanaPublicKey
 recipientPk = unsafeSolanaPublicKeyRaw (replicate 32 2)
 
+ownerPk :: SolanaPublicKey
+ownerPk = unsafeSolanaPublicKeyRaw (replicate 32 5)
+
 payerKeys :: (SolanaPublicKey, SolanaPrivateKey)
 payerKeys =
   case createSolanaKeypairFromSeed (BS.replicate 32 1) of
     Just kp -> kp
     Nothing -> error "failed to derive payer keypair from seed"
+
+newAccountKeys :: (SolanaPublicKey, SolanaPrivateKey)
+newAccountKeys =
+  case createSolanaKeypairFromSeed (BS.replicate 32 10) of
+    Just kp -> kp
+    Nothing -> error "failed to derive new-account keypair from seed"
 
 keyPool :: [SolanaPublicKey]
 keyPool = [unsafeSolanaPublicKeyRaw (replicate 32 b) | b <- [10 .. 15]]
@@ -115,5 +124,14 @@ tests =
         case newTransactionIntent [snd payerKeys] ixs fixedBlockhash of
           Left err -> assertFailure (show err)
           Right b64 -> b64 @?= toBase64String (requireFixture "priority-transfer-transaction" fs),
+      testCase "new-account pubkey from seed matches Rust" $ do
+        fs <- loadFixtures "test/fixtures/transactions.json"
+        getSolanaPublicKeyRaw (fst newAccountKeys) @?= requireFixture "new-account-pubkey" fs,
+      testCase "two-signer create-account transaction matches Rust (payer pinned, not sorted)" $ do
+        fs <- loadFixtures "test/fixtures/transactions.json"
+        let ix = SP.createAccount (fst payerKeys) (fst newAccountKeys) 1000000 165 ownerPk
+        case newTransactionIntent [snd payerKeys, snd newAccountKeys] [ix] fixedBlockhash of
+          Left err -> assertFailure (show err)
+          Right b64 -> b64 @?= toBase64String (requireFixture "two-signer-create-transaction" fs),
       testProperty "message header/key-ordering invariants" prop_messageInvariants
     ]

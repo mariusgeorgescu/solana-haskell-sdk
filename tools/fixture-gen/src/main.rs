@@ -144,11 +144,29 @@ fn main() {
     );
     let priority_tx = Transaction::new(&[&payer], priority_msg, blockhash);
 
+    let new_account = keypair_from_seed(&[10u8; 32]).unwrap();
+    assert!(
+        new_account.pubkey().to_bytes() < payer.pubkey().to_bytes(),
+        "seed must yield a pubkey that sorts BEFORE the payer, so the fixture distinguishes pin-payer from sort-everything"
+    );
+    let create_ix = system_instruction::create_account(
+        &payer.pubkey(),
+        &new_account.pubkey(),
+        1_000_000,
+        165,
+        &owner,
+    );
+    let two_signer_msg =
+        Message::new_with_blockhash(&[create_ix], Some(&payer.pubkey()), &blockhash);
+    let two_signer_tx = Transaction::new(&[&payer, &new_account], two_signer_msg, blockhash);
+
     let tx = Transaction::new(&[&payer], msg_transfer, blockhash);
     let tx_fixtures = vec![
         json!({ "name": "transfer-transaction", "hex": hex(&bincode::serialize(&tx).unwrap()) }),
         json!({ "name": "payer-pubkey", "hex": hex(&payer.pubkey().to_bytes()) }),
         json!({ "name": "priority-transfer-transaction", "hex": hex(&bincode::serialize(&priority_tx).unwrap()) }),
+        json!({ "name": "two-signer-create-transaction", "hex": hex(&bincode::serialize(&two_signer_tx).unwrap()) }),
+        json!({ "name": "new-account-pubkey", "hex": hex(&new_account.pubkey().to_bytes()) }),
     ];
     fs::write(
         "../../test/fixtures/transactions.json",

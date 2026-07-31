@@ -10,7 +10,9 @@
   (symmetric `Binary` instances, round-trip tested).
 * Fixed: account keys within each privilege section are now ordered
   canonically (sorted by pubkey, fee payer first) to match the Rust SDK, so
-  multi-program messages serialize byte-identically.
+  multi-program messages serialize byte-identically. For multi-signer
+  transactions, signing keys must be passed in the canonical account order
+  (fee payer first).
 * Test suite: golden vectors generated from the Rust `solana-sdk` (byte-for-byte
   serialization checks at instruction, message, and signed-transaction level),
   plus QuickCheck properties for compact-u16, crypto round-trips, and message

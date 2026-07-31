@@ -192,10 +192,13 @@ putBincodeString s = do
 getBincodeString :: Get String
 getBincodeString = do
   len <- getWord64le
-  bs <- getByteString (fromIntegral len)
-  case TE.decodeUtf8' bs of
-    Left _ -> fail "getBincodeString: invalid UTF-8"
-    Right t -> pure (T.unpack t)
+  if len > fromIntegral (maxBound :: Int)
+    then fail "getBincodeString: length exceeds Int range"
+    else do
+      bs <- getByteString (fromIntegral len)
+      case TE.decodeUtf8' bs of
+        Left _ -> fail "getBincodeString: invalid UTF-8"
+        Right t -> pure (T.unpack t)
 
 -- | Creates instruction to "Create a new account"
 -- Receives the funding account, the new account, amount to transfer, the number of bytes of memory to allocate and the owner program account.

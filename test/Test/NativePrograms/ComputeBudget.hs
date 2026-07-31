@@ -2,8 +2,10 @@
 
 module Test.NativePrograms.ComputeBudget (tests) where
 
-import Data.Binary (decode, encode)
+import Data.Binary (decode, decodeOrFail, encode)
+import Data.Binary.Get (ByteOffset)
 import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as BL
 import Network.Solana.Core.Instruction
 import Network.Solana.NativePrograms.ComputeBudget qualified as CB
 import Test.Fixtures
@@ -50,5 +52,9 @@ tests =
             iAccounts (CB.setComputeUnitPrice 1) @?= []
             iAccounts (CB.setLoadedAccountsDataSizeLimit 1) @?= [],
           testProperty "Binary round-trip" $
-            forAll genComputeBudgetInstruction $ \cbi -> decode (encode cbi) === cbi
+            forAll genComputeBudgetInstruction $ \cbi -> decode (encode cbi) === cbi,
+          testCase "decode fails on unknown discriminant" $
+            case decodeOrFail (BL.pack [5]) :: Either (BL.ByteString, ByteOffset, String) (BL.ByteString, ByteOffset, CB.ComputeBudgetInstruction) of
+              Left _ -> pure ()
+              Right _ -> assertFailure "expected decode failure for discriminant 5"
         ]

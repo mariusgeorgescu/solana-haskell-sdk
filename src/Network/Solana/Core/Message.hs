@@ -36,6 +36,14 @@ import Network.Solana.Core.Instruction
 type SignedTransactionIntent = (BlockHash -> Either CompileException String)
 
 
+-- | Builds and signs a transaction from a list of signing keys and
+-- instructions. The fee payer is the first writable signer encountered
+-- across the instructions' account metas, and account keys are canonically
+-- ordered (fee payer first, then each privilege section sorted by pubkey
+-- bytes; see 'canonicalizeAccountOrder'). The private keys passed here must
+-- be ordered to match the resulting account order (fee payer first),
+-- otherwise the produced signatures will not correspond to the right
+-- account keys.
 newTransactionIntent :: [SolanaPrivateKey] -> [Instruction] -> SignedTransactionIntent
 newTransactionIntent signers instructions blockhash = do
   msg <- newMessage blockhash instructions -- make the binary message

@@ -2,8 +2,10 @@
 
 module Test.NativePrograms.SystemProgram (tests) where
 
-import Data.Binary (decode, encode)
+import Data.Binary (decode, decodeOrFail, encode)
+import Data.Binary.Get (ByteOffset)
 import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as BL
 import Network.Solana.Core.Crypto (SolanaPublicKey, unsafeSolanaPublicKeyRaw)
 import Network.Solana.Core.Instruction
 import Network.Solana.NativePrograms.SystemProgram qualified as SP
@@ -133,5 +135,9 @@ tests =
                     AccountMeta {accountPubKey = newAccountPk, isSigner = False, isWritable = True}
                   ],
           testProperty "SystemInstruction Binary round-trip" $
-            forAll genSystemInstruction $ \si -> decode (encode si) === si
+            forAll genSystemInstruction $ \si -> decode (encode si) === si,
+          testCase "decode fails on unknown discriminant" $
+            case decodeOrFail (BL.pack [13, 0, 0, 0]) :: Either (BL.ByteString, ByteOffset, String) (BL.ByteString, ByteOffset, SP.SystemInstruction) of
+              Left _ -> pure ()
+              Right _ -> assertFailure "expected decode failure for discriminant 13"
         ]
