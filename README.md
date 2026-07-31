@@ -31,13 +31,13 @@
 - [x] Transaction Building
   - [ ] Clients for native programs
     - [x] System Program (all 13 instructions)
-    - [ ] Compute Budget
-    - [ ] Memo
+    - [x] Compute Budget
     - [ ] Stake
     - [ ] Vote
     - [ ] BPF Loader
     - [ ] Secp256k1
   - [ ] Clients for Solana Program Library (SPL)
+    - [x] Memo
     - [ ] SPL Token
     - [ ] Associated Token Account
 
