@@ -5,10 +5,12 @@
 
 module Network.Solana.Core.Message
   ( newTransactionIntent,
-    Message,
+    Message (..),
+    MessageHeader (..),
     CompiledMessage,
     newMessage,
     newMessageToBase64String,
+    mkNewMessage,
   )
 where
 
@@ -92,7 +94,7 @@ updateHeaderAndKeys :: (MessageHeader, [SolanaPublicKey]) -> AccountMeta -> (Mes
 updateHeaderAndKeys (currentHeader, currentKeys) (AccountMeta newKey isSigner isWritable) =
   let (rws, ros, rwus, rous) = splitAccountsByPurpose currentHeader currentKeys
       alreadySignable = newKey `elem` rws <> ros
-      alreadyWritable = newKey `elem` rwus <> rous
+      alreadyWritable = newKey `elem` rws <> rwus
       (rws', ros', rwus', rous') =
         case (isSigner || alreadySignable, isWritable || alreadyWritable) of
           (True, True) ->
