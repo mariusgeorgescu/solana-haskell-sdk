@@ -12,7 +12,9 @@ import Network.Solana.Core.Instruction
 import Network.Solana.Core.Message
 import Network.Solana.NativePrograms.ComputeBudget qualified as CB
 import Network.Solana.NativePrograms.SystemProgram qualified as SP
+import Network.Solana.SplPrograms.AssociatedTokenAccount qualified as Ata
 import Network.Solana.SplPrograms.Memo qualified as Memo
+import Network.Solana.SplPrograms.Token qualified as Tok
 import Test.Fixtures
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -133,5 +135,19 @@ tests =
         case newTransactionIntent [snd payerKeys, snd newAccountKeys] [ix] fixedBlockhash of
           Left err -> assertFailure (show err)
           Right b64 -> b64 @?= toBase64String (requireFixture "two-signer-create-transaction" fs),
+      testCase "ATA create + transferChecked transaction matches Rust" $ do
+        fs <- loadFixtures "test/fixtures/transactions.json"
+        let mintPk = unsafeSolanaPublicKeyRaw (replicate 32 12)
+            walletPk = unsafeSolanaPublicKeyRaw (replicate 32 11)
+            payerPk = fst payerKeys
+            srcAta = maybe (error "no src ata") id (Ata.getAssociatedTokenAddress payerPk mintPk)
+            dstAta = maybe (error "no dst ata") id (Ata.getAssociatedTokenAddress walletPk mintPk)
+            ixs =
+              [ Ata.createAssociatedTokenAccountIdempotent payerPk walletPk mintPk,
+                Tok.transferChecked srcAta mintPk dstAta payerPk [] 1000000 6
+              ]
+        case newTransactionIntent [snd payerKeys] ixs fixedBlockhash of
+          Left err -> assertFailure (show err)
+          Right b64 -> b64 @?= toBase64String (requireFixture "ata-transfer-transaction" fs),
       testProperty "message header/key-ordering invariants" prop_messageInvariants
     ]

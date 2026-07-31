@@ -139,5 +139,11 @@ tests =
           testCase "decode fails on unknown discriminant" $
             case decodeOrFail (BL.pack [13, 0, 0, 0]) :: Either (BL.ByteString, ByteOffset, String) (BL.ByteString, ByteOffset, SP.SystemInstruction) of
               Left _ -> pure ()
-              Right _ -> assertFailure "expected decode failure for discriminant 13"
+              Right _ -> assertFailure "expected decode failure for discriminant 13",
+          testCase "getBincodeString rejects length beyond Int range" $
+            -- discriminant 3 (CreateAccountWithSeed) -> base pk (32 bytes) -> u64 length 2^63
+            let bytes = BL.pack ([3, 0, 0, 0] <> replicate 32 3 <> [0, 0, 0, 0, 0, 0, 0, 0x80])
+             in case decodeOrFail bytes :: Either (BL.ByteString, ByteOffset, String) (BL.ByteString, ByteOffset, SP.SystemInstruction) of
+                  Left _ -> pure ()
+                  Right _ -> assertFailure "expected decode failure for absurd length"
         ]

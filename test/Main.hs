@@ -7,6 +7,7 @@ import Test.Core.Message qualified
 import Test.Core.Pda qualified
 import Test.NativePrograms.ComputeBudget qualified
 import Test.NativePrograms.SystemProgram qualified
+import Test.SplPrograms.AssociatedTokenAccount qualified
 import Test.SplPrograms.Memo qualified
 import Test.SplPrograms.Token qualified
 import Test.Tasty
@@ -23,6 +24,7 @@ main =
           Test.Core.Pda.tests,
           Test.NativePrograms.ComputeBudget.tests,
           Test.NativePrograms.SystemProgram.tests,
+          Test.SplPrograms.AssociatedTokenAccount.tests,
           Test.SplPrograms.Memo.tests,
           Test.SplPrograms.Token.tests
         ]
