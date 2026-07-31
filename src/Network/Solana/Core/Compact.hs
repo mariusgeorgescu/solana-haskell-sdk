@@ -82,11 +82,14 @@ getCompactU16 = go 0 0
           if continue
             then go acc' (byteIndex + 1)
             else
-              if byteIndex == 2 && (byte .&. 0xFC) /= 0
-                then fail "Invalid 3rd byte in compact-u16 (only 2 bits allowed)"
-                else case fromIntegral acc' of
-                  w | w <= 0xFFFF -> return w
-                  _ -> fail "Decoded value exceeds u16 range"
+              if byteIndex > 0 && byte == 0
+                then fail "Aliased (non-canonical) compact-u16 encoding"
+                else
+                  if byteIndex == 2 && (byte .&. 0xFC) /= 0
+                    then fail "Invalid 3rd byte in compact-u16 (only 2 bits allowed)"
+                    else case fromIntegral acc' of
+                      w | w <= 0xFFFF -> return w
+                      _ -> fail "Decoded value exceeds u16 range"
 
 -- Encode a Word16 to compact-u16
 putCompactU16 :: Word16 -> Put

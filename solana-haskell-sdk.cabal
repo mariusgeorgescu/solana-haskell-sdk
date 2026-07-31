@@ -120,6 +120,8 @@ test-suite solana-haskell-sdk-test
   type:             exitcode-stdio-1.0
   hs-source-dirs:   test
   main-is:          Main.hs
+  other-modules:
+    Test.Core.Compact
   build-depends:
     , aeson
     , base                ^>=4.18.0.0
