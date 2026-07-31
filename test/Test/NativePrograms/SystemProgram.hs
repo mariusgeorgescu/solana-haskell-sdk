@@ -68,6 +68,22 @@ tests =
             fs <- getFixtures
             dataOf (SP.upgradeNonceAccount newAccountPk)
               @?= requireFixture "UpgradeNonceAccount" fs,
+          testCase "Allocate" $ do
+            fs <- getFixtures
+            dataOf (SP.allocate newAccountPk 165)
+              @?= requireFixture "Allocate" fs,
+          testCase "AllocateWithSeed" $ do
+            fs <- getFixtures
+            dataOf (SP.allocateWithSeed newAccountPk basePk seedStr 165 ownerPk)
+              @?= requireFixture "AllocateWithSeed" fs,
+          testCase "AssignWithSeed" $ do
+            fs <- getFixtures
+            dataOf (SP.assignWithSeed newAccountPk basePk seedStr ownerPk)
+              @?= requireFixture "AssignWithSeed" fs,
+          testCase "TransferWithSeed" $ do
+            fs <- getFixtures
+            dataOf (SP.transferWithSeed funderPk basePk seedStr ownerPk newAccountPk 1000000)
+              @?= requireFixture "TransferWithSeed" fs,
           testCase "advanceNonceAccount account metas" $
             iAccounts (SP.advanceNonceAccount newAccountPk authorityPk)
               @?= [ AccountMeta {accountPubKey = newAccountPk, isSigner = False, isWritable = True},
@@ -81,5 +97,16 @@ tests =
                     AccountMeta {accountPubKey = Sysvar.recentBlockhashes, isSigner = False, isWritable = False},
                     AccountMeta {accountPubKey = Sysvar.rent, isSigner = False, isWritable = False},
                     AccountMeta {accountPubKey = authorityPk, isSigner = True, isWritable = False}
+                  ],
+          testCase "allocateWithSeed account metas" $
+            iAccounts (SP.allocateWithSeed newAccountPk basePk seedStr 165 ownerPk)
+              @?= [ AccountMeta {accountPubKey = newAccountPk, isSigner = False, isWritable = True},
+                    AccountMeta {accountPubKey = basePk, isSigner = True, isWritable = False}
+                  ],
+          testCase "transferWithSeed account metas" $
+            iAccounts (SP.transferWithSeed funderPk basePk seedStr ownerPk newAccountPk 1000000)
+              @?= [ AccountMeta {accountPubKey = funderPk, isSigner = False, isWritable = True},
+                    AccountMeta {accountPubKey = basePk, isSigner = True, isWritable = False},
+                    AccountMeta {accountPubKey = newAccountPk, isSigner = False, isWritable = True}
                   ]
         ]

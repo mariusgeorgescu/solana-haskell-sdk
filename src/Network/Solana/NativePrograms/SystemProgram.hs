@@ -68,6 +68,40 @@ data SystemInstruction
       { -- | New nonce authority
         authority :: SolanaPublicKey
       }
+  | -- | Allocate space in a (possibly new) account without funding
+    Allocate
+      { -- | Number of bytes of memory to allocate
+        space :: Word64
+      }
+  | -- | Allocate space for and assign an account at an address derived from a base public key and a seed
+    AllocateWithSeed
+      { -- | Base public key
+        base :: SolanaPublicKey,
+        -- | String of ASCII chars, no longer than `maxSeedLen`
+        seed :: String,
+        -- | Number of bytes of memory to allocate
+        space :: Word64,
+        -- | Address of program that will own the account
+        owner :: SolanaPublicKey
+      }
+  | -- | Assign account to a program based on a seed
+    AssignWithSeed
+      { -- | Base public key
+        base :: SolanaPublicKey,
+        -- | String of ASCII chars, no longer than `maxSeedLen`
+        seed :: String,
+        -- | Owner program account
+        owner :: SolanaPublicKey
+      }
+  | -- | Transfer lamports from a derived address
+    TransferWithSeed
+      { -- | Transfer amount
+        lamports :: Word64,
+        -- | Seed to use to derive the funding account address
+        fromSeed :: String,
+        -- | Owner to use to derive the funding account address
+        fromOwner :: SolanaPublicKey
+      }
   | -- | One-time idempotent upgrade of legacy nonce versions to bump them out of chain blockhash domain
     UpgradeNonceAccount
   deriving (Eq, Show, Generic)
@@ -103,6 +137,25 @@ instance Binary SystemInstruction where
   put (AuthorizeNonceAccount authority) = do
     putWord32le (7 :: Word32)
     putByteString (getSolanaPublicKeyRaw authority)
+  put (Allocate space) = do
+    putWord32le (8 :: Word32)
+    putWord64le space
+  put (AllocateWithSeed base seed space owner) = do
+    putWord32le (9 :: Word32)
+    putByteString (getSolanaPublicKeyRaw base)
+    putBincodeString seed
+    putWord64le space
+    putByteString (getSolanaPublicKeyRaw owner)
+  put (AssignWithSeed base seed owner) = do
+    putWord32le (10 :: Word32)
+    putByteString (getSolanaPublicKeyRaw base)
+    putBincodeString seed
+    putByteString (getSolanaPublicKeyRaw owner)
+  put (TransferWithSeed lamports fromSeed fromOwner) = do
+    putWord32le (11 :: Word32)
+    putWord64le lamports
+    putBincodeString fromSeed
+    putByteString (getSolanaPublicKeyRaw fromOwner)
   put UpgradeNonceAccount =
     putWord32le (12 :: Word32)
 
@@ -280,3 +333,59 @@ upgradeNonceAccount nonceAccount =
     [ AccountMeta {accountPubKey = nonceAccount, isSigner = False, isWritable = True}
     ]
     UpgradeNonceAccount
+
+-- | Creates instruction to "Allocate space in a (possibly new) account without funding"
+-- Receives the account and the number of bytes of memory to allocate.
+-- # Account references
+-- 0. `[WRITE, SIGNER]` New account
+allocate :: SolanaPublicKey -> Int -> Instruction
+allocate newAccount space =
+  mkInstruction
+    systemProgramId
+    [ AccountMeta {accountPubKey = newAccount, isSigner = True, isWritable = True}
+    ]
+    (Allocate (fromIntegral space))
+
+-- | Creates instruction to "Allocate space for and assign an account at an address derived from a base public key and a seed"
+-- Receives the allocated account, base account, seed, the number of bytes and the owner program account.
+-- # Account references
+-- 0. `[WRITE]` Allocated account
+-- 1. `[SIGNER]` Base account
+allocateWithSeed :: SolanaPublicKey -> SolanaPublicKey -> String -> Int -> SolanaPublicKey -> Instruction
+allocateWithSeed allocatedAccount baseAccount seed space ownerProgramAccount =
+  mkInstruction
+    systemProgramId
+    [ AccountMeta {accountPubKey = allocatedAccount, isSigner = False, isWritable = True},
+      AccountMeta {accountPubKey = baseAccount, isSigner = True, isWritable = False}
+    ]
+    (AllocateWithSeed baseAccount seed (fromIntegral space) ownerProgramAccount)
+
+-- | Creates instruction to "Assign account to a program based on a seed"
+-- Receives the assigned account, base account, seed and the owner program account.
+-- # Account references
+-- 0. `[WRITE]` Assigned account
+-- 1. `[SIGNER]` Base account
+assignWithSeed :: SolanaPublicKey -> SolanaPublicKey -> String -> SolanaPublicKey -> Instruction
+assignWithSeed assignedAccount baseAccount seed ownerProgramAccount =
+  mkInstruction
+    systemProgramId
+    [ AccountMeta {accountPubKey = assignedAccount, isSigner = False, isWritable = True},
+      AccountMeta {accountPubKey = baseAccount, isSigner = True, isWritable = False}
+    ]
+    (AssignWithSeed baseAccount seed ownerProgramAccount)
+
+-- | Creates instruction to "Transfer lamports from a derived address"
+-- Receives the funding account, base account, seed, the owner of the funding account, the recipient and the amount.
+-- # Account references
+-- 0. `[WRITE]` Funding account
+-- 1. `[SIGNER]` Base for funding account
+-- 2. `[WRITE]` Recipient account
+transferWithSeed :: SolanaPublicKey -> SolanaPublicKey -> String -> SolanaPublicKey -> SolanaPublicKey -> Lamport -> Instruction
+transferWithSeed fundingAccount baseAccount fromSeed fromOwner recipientAccount amount =
+  mkInstruction
+    systemProgramId
+    [ AccountMeta {accountPubKey = fundingAccount, isSigner = False, isWritable = True},
+      AccountMeta {accountPubKey = baseAccount, isSigner = True, isWritable = False},
+      AccountMeta {accountPubKey = recipientAccount, isSigner = False, isWritable = True}
+    ]
+    (TransferWithSeed (fromIntegral amount) fromSeed fromOwner)

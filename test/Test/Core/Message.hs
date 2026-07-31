@@ -95,5 +95,12 @@ tests =
         case newTransactionIntent [snd payerKeys] [ix] fixedBlockhash of
           Left err -> assertFailure (show err)
           Right b64 -> b64 @?= toBase64String (requireFixture "transfer-transaction" fs),
+      testCase "transfer + allocate message bytes match Rust" $ do
+        fs <- loadFixtures "test/fixtures/messages.json"
+        let transferIx = SP.transfer (fst payerKeys) recipientPk 1000000000
+            allocateIx = SP.allocate (fst payerKeys) 200
+        case newMessage fixedBlockhash [transferIx, allocateIx] of
+          Left err -> assertFailure (show err)
+          Right bytes -> bytes @?= requireFixture "transfer-allocate-message" fs,
       testProperty "message header/key-ordering invariants" prop_messageInvariants
     ]
