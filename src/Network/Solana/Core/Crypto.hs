@@ -79,7 +79,7 @@ instance Binary SolanaSignature where
   put :: SolanaSignature -> Put
   put (SolanaSignature (Ed25519.Signature bs)) = putByteString bs
   get :: Get SolanaSignature
-  get = SolanaSignature . Ed25519.Signature <$> getByteString 32
+  get = SolanaSignature . Ed25519.Signature <$> getByteString 64
 
 instance ToJSON SolanaSignature where
   toJSON :: SolanaSignature -> Value

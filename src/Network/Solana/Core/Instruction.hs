@@ -22,7 +22,6 @@ import Data.Binary qualified as Binary
 import Data.ByteString qualified as S
 import Data.Either.Combinators
 import Data.List (elemIndex)
-import Data.Maybe (fromJust)
 import GHC.Generics (Generic)
 import Network.Solana.Core.Compact
 import Network.Solana.Core.Crypto (SolanaPublicKey, fromBase58String, toBase58String, toBase64String)
@@ -51,14 +50,7 @@ mkInstruction :: (Binary.Binary a) => SolanaPublicKey -> [AccountMeta] -> a -> I
 mkInstruction programid accmetas instrData =
   Instruction
     { iProgramId = programid,
-      iAccounts =
-        accmetas
-          <> [ AccountMeta
-                 { accountPubKey = programid,
-                   isSigner = False,
-                   isWritable = False
-                 }
-             ],
+      iAccounts = accmetas,
       iData = InstructionData $ S.toStrict (Binary.encode instrData)
     }
 
@@ -129,11 +121,19 @@ instance ToJSON CompiledInstruction where
 
 instance FromJSON CompiledInstruction where
   parseJSON :: Value -> Parser CompiledInstruction
-  parseJSON = withObject "CompiledInstruction" $ \v ->
-    CompiledInstruction
-      <$> v .: "programIdIndex"
-      <*> (mkCompact <$> (v .: "accounts"))
-      <*> (mkCompact . S.unpack . fromJust . fromBase58String <$> (v .: "data"))
+  parseJSON = withObject "CompiledInstruction" $ \v -> do
+    programIdIndex <- v .: "programIdIndex"
+    accounts <- v .: "accounts"
+    dataStr <- v .: "data"
+    bytes <- case fromBase58String dataStr of
+      Nothing -> fail "CompiledInstruction: data is not valid base58"
+      Just bs -> pure bs
+    pure
+      CompiledInstruction
+        { ciProgramIdIndex = programIdIndex,
+          ciAccounts = mkCompact accounts,
+          ciData = mkCompact (S.unpack bytes)
+        }
 
 instance Binary CompiledInstruction where
   put :: CompiledInstruction -> Put
