@@ -123,6 +123,7 @@ test-suite solana-haskell-sdk-test
   other-modules:
     Test.Core.Compact
     Test.Core.Crypto
+    Test.Fixtures
   build-depends:
     , aeson
     , base                ^>=4.18.0.0
