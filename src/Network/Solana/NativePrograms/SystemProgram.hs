@@ -4,6 +4,9 @@ module Network.Solana.NativePrograms.SystemProgram where
 
 import Data.Binary
 import Data.Binary.Put
+import Data.ByteString qualified as BS
+import Data.Text qualified as T
+import Data.Text.Encoding qualified as TE
 import GHC.Generics
 import Network.Solana.Core.Account (Lamport)
 import Network.Solana.Core.Crypto
@@ -55,23 +58,28 @@ instance Binary SystemInstruction where
     putWord32le (0 :: Word32)
     putWord64le lamports
     putWord64le space
-    put (getSolanaPublicKeyRaw owner)
-  put (Assign owner) =
-    do
-      putWord32le (1 :: Word32)
-      put (getSolanaPublicKeyRaw owner)
-  put (Transfer lamports) =
-    do
-      putWord32le (2 :: Word32)
-      putWord64le lamports
-  put (CreateAccountWithSeed base seed lamports space owner) =
-    do
-      putWord32le (3 :: Word32)
-      put (getSolanaPublicKeyRaw base)
-      putStringUtf8 seed
-      putWord64le lamports
-      putWord64le space
-      put (getSolanaPublicKeyRaw owner)
+    putByteString (getSolanaPublicKeyRaw owner)
+  put (Assign owner) = do
+    putWord32le (1 :: Word32)
+    putByteString (getSolanaPublicKeyRaw owner)
+  put (Transfer lamports) = do
+    putWord32le (2 :: Word32)
+    putWord64le lamports
+  put (CreateAccountWithSeed base seed lamports space owner) = do
+    putWord32le (3 :: Word32)
+    putByteString (getSolanaPublicKeyRaw base)
+    putBincodeString seed
+    putWord64le lamports
+    putWord64le space
+    putByteString (getSolanaPublicKeyRaw owner)
+
+-- bincode encodes a Rust String as a u64 little-endian byte length
+-- followed by the UTF-8 bytes
+putBincodeString :: String -> Put
+putBincodeString s = do
+  let bs = TE.encodeUtf8 (T.pack s)
+  putWord64le (fromIntegral (BS.length bs))
+  putByteString bs
 
 -- | Creates instruction to "Create a new account"
 -- Receives the funding account, the new account, amount to transfer, the number of bytes of memory to allocate and the owner program account.

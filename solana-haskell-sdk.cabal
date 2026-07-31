@@ -124,6 +124,7 @@ test-suite solana-haskell-sdk-test
     Test.Core.Compact
     Test.Core.Crypto
     Test.Fixtures
+    Test.NativePrograms.SystemProgram
   build-depends:
     , aeson
     , base                ^>=4.18.0.0
