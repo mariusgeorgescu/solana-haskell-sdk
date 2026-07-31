@@ -8,6 +8,7 @@ import Test.Core.Pda qualified
 import Test.NativePrograms.ComputeBudget qualified
 import Test.NativePrograms.SystemProgram qualified
 import Test.SplPrograms.Memo qualified
+import Test.SplPrograms.Token qualified
 import Test.Tasty
 
 main :: IO ()
@@ -22,6 +23,7 @@ main =
           Test.Core.Pda.tests,
           Test.NativePrograms.ComputeBudget.tests,
           Test.NativePrograms.SystemProgram.tests,
-          Test.SplPrograms.Memo.tests
+          Test.SplPrograms.Memo.tests,
+          Test.SplPrograms.Token.tests
         ]
     )
