@@ -115,31 +115,23 @@ executable solana-haskell-sdk
   default-language: GHC2021
 
 test-suite solana-haskell-sdk-test
-  -- Import common warning flags.
   import:           warnings
-
-  -- Base language which the package is written in.
   default-language: GHC2021
-
-  -- Modules included in this executable, other than Main.
-  -- other-modules:
-
-  -- LANGUAGE extensions used by modules in this package.
-  -- other-extensions:
-
-  -- The interface type and version of the test suite.
   type:             exitcode-stdio-1.0
-
-  -- Directories containing source files.
   hs-source-dirs:   test
-
-  -- The entrypoint to the test suite.
   main-is:          Main.hs
-
-  -- Test dependencies.
   build-depends:
+    , aeson
     , base                ^>=4.18.0.0
+    , base16-bytestring
+    , binary
+    , bytestring
+    , containers
     , solana-haskell-sdk
+    , tasty
+    , tasty-hunit
+    , tasty-quickcheck
+    , text
 
 source-repository head
   type:     git
