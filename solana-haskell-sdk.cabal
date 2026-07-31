@@ -44,6 +44,7 @@ library
     Network.Solana.Core.Instruction
     Network.Solana.Core.Message
     Network.Solana.Core.Transaction
+    Network.Solana.NativePrograms.ComputeBudget
     Network.Solana.NativePrograms.SystemProgram
     Network.Solana.RPC.HTTP.Account
     Network.Solana.RPC.HTTP.Block
@@ -126,6 +127,7 @@ test-suite solana-haskell-sdk-test
     Test.Core.Instruction
     Test.Core.Message
     Test.Fixtures
+    Test.NativePrograms.ComputeBudget
     Test.NativePrograms.SystemProgram
   build-depends:
     , aeson

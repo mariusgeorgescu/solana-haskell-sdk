@@ -4,6 +4,7 @@ import Test.Core.Compact qualified
 import Test.Core.Crypto qualified
 import Test.Core.Instruction qualified
 import Test.Core.Message qualified
+import Test.NativePrograms.ComputeBudget qualified
 import Test.NativePrograms.SystemProgram qualified
 import Test.Tasty
 
@@ -16,6 +17,7 @@ main =
           Test.Core.Crypto.tests,
           Test.Core.Instruction.tests,
           Test.Core.Message.tests,
+          Test.NativePrograms.ComputeBudget.tests,
           Test.NativePrograms.SystemProgram.tests
         ]
     )
