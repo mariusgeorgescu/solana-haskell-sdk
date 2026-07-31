@@ -19,7 +19,7 @@
   - wallet pubkey: 32 bytes of `11`; mint pubkey: 32 bytes of `12`; delegate pubkey: 32 bytes of `13`; multisig-signer pubkeys: 32 bytes of `14` and 32 bytes of `15`
   - amount: `1000000`; decimals: `6`; multisig m: `2`
   - payer keypair seed: 32 bytes of `1` (existing); blockhash: 32 bytes of `9` (existing)
-  - generic PDA seed string: `"solana-haskell-sdk"` (UTF-8 bytes, one seed)
+  - generic PDA seed string: `"solana-haskell-sdk/1"` (UTF-8 bytes, one seed — renegotiated during Task 1: the original `"solana-haskell-sdk"` derived off-curve at bump 255, proving nothing; `/1` yields bump 252, forcing the search to iterate)
 - Program ids: Token `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`; ATA `ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL`.
 - Wire format (ground truth = spl-token crate): u8 discriminant 0-20; u64 LE amounts; u8 decimals/m; raw 32-byte pubkeys; `COption<Pubkey>` = tag byte 0 (none) | 1 + 32 bytes (some); AuthorityType u8: MintTokens=0, FreezeAccount=1, AccountOwner=2, CloseAccount=3. ATA data: single borsh byte 0 (Create) / 1 (CreateIdempotent).
 - PDA: sha256(seed₁ <> … <> seedₙ <> programId <> "ProgramDerivedAddress"); each seed ≤ 32 bytes, ≤ 16 seeds; result must NOT be on the ed25519 curve; findProgramAddress appends bump 255,254,…,0 as a single byte.
@@ -104,7 +104,7 @@ Append at the end of `main()`:
     let token_program = spl_token::id();
     let ata_program = spl_associated_token_account::id();
     let (generic_pda, generic_bump) =
-        Pubkey::find_program_address(&[b"solana-haskell-sdk"], &token_program);
+        Pubkey::find_program_address(&[b"solana-haskell-sdk/1"], &token_program);
     assert!(generic_bump < 255, "generic PDA bump must be < 255 to prove the search runs");
     let ata = spl_associated_token_account::get_associated_token_address(&payer.pubkey(), &mint);
     let (_ata_check, ata_bump) = Pubkey::find_program_address(
@@ -211,7 +211,7 @@ tests =
       "PDA derivation"
       [ testCase "findProgramAddress matches Rust (address and bump)" $ do
           fs <- getFixtures
-          case findProgramAddress ["solana-haskell-sdk"] tokenProgram of
+          case findProgramAddress ["solana-haskell-sdk/1"] tokenProgram of
             Nothing -> assertFailure "no PDA found"
             Just (addr, bump) -> do
               getSolanaPublicKeyRaw addr @?= requireFixture "generic-pda-address" fs
