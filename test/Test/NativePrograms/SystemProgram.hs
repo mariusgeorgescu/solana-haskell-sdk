@@ -10,10 +10,9 @@ import Test.Fixtures
 import Test.Tasty
 import Test.Tasty.HUnit
 
-basePk, ownerPk, authorityPk, funderPk, newAccountPk :: SolanaPublicKey
+basePk, ownerPk, funderPk, newAccountPk :: SolanaPublicKey
 basePk = unsafeSolanaPublicKeyRaw (replicate 32 3)
 ownerPk = unsafeSolanaPublicKeyRaw (replicate 32 5)
-authorityPk = unsafeSolanaPublicKeyRaw (replicate 32 6)
 funderPk = unsafeSolanaPublicKeyRaw (replicate 32 7)
 newAccountPk = unsafeSolanaPublicKeyRaw (replicate 32 8)
 
