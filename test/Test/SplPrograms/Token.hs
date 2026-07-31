@@ -7,15 +7,20 @@ import Data.Binary.Get (ByteOffset)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BL
 import Network.Solana.Core.Crypto (SolanaPublicKey, unsafeSolanaPublicKeyRaw)
+import Network.Solana.Core.Instruction (AccountMeta (..), iAccounts)
 import Network.Solana.SplPrograms.Token qualified as Tok
 import Test.Fixtures
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
-walletPk, delegatePk :: SolanaPublicKey
+walletPk, delegatePk, mintPk, sig1Pk, sig2Pk, accountPk :: SolanaPublicKey
 walletPk = unsafeSolanaPublicKeyRaw (replicate 32 11)
 delegatePk = unsafeSolanaPublicKeyRaw (replicate 32 13)
+mintPk = unsafeSolanaPublicKeyRaw (replicate 32 12)
+sig1Pk = unsafeSolanaPublicKeyRaw (replicate 32 14)
+sig2Pk = unsafeSolanaPublicKeyRaw (replicate 32 15)
+accountPk = unsafeSolanaPublicKeyRaw (replicate 32 16)
 
 enc :: Tok.TokenInstruction -> BS.ByteString
 enc = BL.toStrict . encode
@@ -78,6 +83,50 @@ tests =
         goldenCase getFixtures "InitializeAccount3" (Tok.InitializeAccount3 walletPk),
         goldenCase getFixtures "InitializeMultisig2" (Tok.InitializeMultisig2 2),
         goldenCase getFixtures "InitializeMint2-some" (Tok.InitializeMint2 6 walletPk (Just delegatePk)),
+        testCase "transfer metas (single owner)" $
+          iAccounts (Tok.transfer accountPk delegatePk walletPk [] 1000000)
+            @?= [ AccountMeta accountPk False True,
+                  AccountMeta delegatePk False True,
+                  AccountMeta walletPk True False
+                ],
+        testCase "transfer metas (multisig)" $
+          iAccounts (Tok.transfer accountPk delegatePk walletPk [sig1Pk, sig2Pk] 1000000)
+            @?= [ AccountMeta accountPk False True,
+                  AccountMeta delegatePk False True,
+                  AccountMeta walletPk False False,
+                  AccountMeta sig1Pk True False,
+                  AccountMeta sig2Pk True False
+                ],
+        testCase "transferChecked metas" $
+          iAccounts (Tok.transferChecked accountPk mintPk delegatePk walletPk [] 1000000 6)
+            @?= [ AccountMeta accountPk False True,
+                  AccountMeta mintPk False False,
+                  AccountMeta delegatePk False True,
+                  AccountMeta walletPk True False
+                ],
+        testCase "initializeMint metas" $
+          iAccounts (Tok.initializeMint mintPk 6 walletPk (Just delegatePk))
+            @?= [ AccountMeta mintPk False True,
+                  AccountMeta Tok.rentSysvar False False
+                ],
+        testCase "mintTo metas" $
+          iAccounts (Tok.mintTo mintPk accountPk walletPk [] 1000000)
+            @?= [ AccountMeta mintPk False True,
+                  AccountMeta accountPk False True,
+                  AccountMeta walletPk True False
+                ],
+        testCase "burn metas" $
+          iAccounts (Tok.burn accountPk mintPk walletPk [] 1000000)
+            @?= [ AccountMeta accountPk False True,
+                  AccountMeta mintPk False True,
+                  AccountMeta walletPk True False
+                ],
+        testCase "closeAccount metas" $
+          iAccounts (Tok.closeAccount accountPk delegatePk walletPk [])
+            @?= [ AccountMeta accountPk False True,
+                  AccountMeta delegatePk False True,
+                  AccountMeta walletPk True False
+                ],
         testProperty "Binary round-trip" $
           forAll genTokenInstruction $ \ti -> decode (encode ti) === ti,
         testCase "decode fails on unknown discriminant" $
