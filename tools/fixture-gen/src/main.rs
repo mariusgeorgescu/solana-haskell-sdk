@@ -1,6 +1,8 @@
 use serde_json::json;
 use solana_sdk::{
+    compute_budget::ComputeBudgetInstruction,
     hash::Hash,
+    instruction::{AccountMeta, Instruction},
     message::Message,
     pubkey::Pubkey,
     signature::keypair_from_seed,
@@ -9,6 +11,7 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use std::fs;
+use std::str::FromStr;
 
 fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
@@ -97,10 +100,55 @@ fn main() {
     )
     .unwrap();
 
+    let cb_variants: Vec<(&str, Instruction)> = vec![
+        ("RequestHeapFrame", ComputeBudgetInstruction::request_heap_frame(32768)),
+        ("SetComputeUnitLimit", ComputeBudgetInstruction::set_compute_unit_limit(200_000)),
+        ("SetComputeUnitPrice", ComputeBudgetInstruction::set_compute_unit_price(1_000)),
+        (
+            "SetLoadedAccountsDataSizeLimit",
+            ComputeBudgetInstruction::set_loaded_accounts_data_size_limit(65_536),
+        ),
+    ];
+    let cb_fixtures: Vec<_> = cb_variants
+        .iter()
+        .map(|(name, ix)| json!({ "name": name, "hex": hex(&ix.data) }))
+        .collect();
+    fs::write(
+        "../../test/fixtures/compute_budget_instruction_data.json",
+        serde_json::to_string_pretty(&cb_fixtures).unwrap(),
+    )
+    .unwrap();
+
+    let memo_program = Pubkey::from_str("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr").unwrap();
+    let memo_ix = Instruction {
+        program_id: memo_program,
+        accounts: vec![AccountMeta::new_readonly(payer.pubkey(), true)],
+        data: b"hello-memo".to_vec(),
+    };
+    let memo_fixtures = vec![json!({ "name": "memo-data", "hex": hex(&memo_ix.data) })];
+    fs::write(
+        "../../test/fixtures/memo_instruction_data.json",
+        serde_json::to_string_pretty(&memo_fixtures).unwrap(),
+    )
+    .unwrap();
+
+    let priority_msg = Message::new_with_blockhash(
+        &[
+            ComputeBudgetInstruction::set_compute_unit_limit(200_000),
+            ComputeBudgetInstruction::set_compute_unit_price(1_000),
+            system_instruction::transfer(&payer.pubkey(), &recipient, 1_000_000_000),
+            memo_ix.clone(),
+        ],
+        Some(&payer.pubkey()),
+        &blockhash,
+    );
+    let priority_tx = Transaction::new(&[&payer], priority_msg, blockhash);
+
     let tx = Transaction::new(&[&payer], msg_transfer, blockhash);
     let tx_fixtures = vec![
         json!({ "name": "transfer-transaction", "hex": hex(&bincode::serialize(&tx).unwrap()) }),
         json!({ "name": "payer-pubkey", "hex": hex(&payer.pubkey().to_bytes()) }),
+        json!({ "name": "priority-transfer-transaction", "hex": hex(&bincode::serialize(&priority_tx).unwrap()) }),
     ];
     fs::write(
         "../../test/fixtures/transactions.json",

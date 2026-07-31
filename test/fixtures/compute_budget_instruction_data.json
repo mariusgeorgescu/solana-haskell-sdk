@@ -1,0 +1,18 @@
+[
+  {
+    "hex": "0100800000",
+    "name": "RequestHeapFrame"
+  },
+  {
+    "hex": "02400d0300",
+    "name": "SetComputeUnitLimit"
+  },
+  {
+    "hex": "03e803000000000000",
+    "name": "SetComputeUnitPrice"
+  },
+  {
+    "hex": "0400000100",
+    "name": "SetLoadedAccountsDataSizeLimit"
+  }
+]
