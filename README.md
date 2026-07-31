@@ -5,7 +5,7 @@
   </a>
   <h1 align="center">Solana SDK library for Haskellers</h2>
   <p align="center">
-    <a href="https://https://hackage.haskell.org/">
+    <a href="https://hackage.haskell.org/">
       <img src="https://img.shields.io/badge/-Haddock-5E5184?style=flat-square&logo=haskell&logoColor=white" />
     </a>
     <a href="./CONTRIBUTING.md">
@@ -28,23 +28,29 @@
 
 - [x] [Full JSON RPC API](#usage-examples-for-json-rpc-api)
 - [x] Wallet, account and keys management
-- [x] Transaction Building 
-  - [x] Clients for native programs
-    - [x] System Program 
-    - [ ] config
-    - [ ] stake
-    - [ ] vote
+- [x] Transaction Building
+  - [ ] Clients for native programs
+    - [x] System Program (all 13 instructions)
+    - [ ] Compute Budget
+    - [ ] Memo
+    - [ ] Stake
+    - [ ] Vote
     - [ ] BPF Loader
     - [ ] Secp256k1
   - [ ] Clients for Solana Program Library (SPL)
-  - [ ] Metaplex
-  - [ ] More programs
+    - [ ] SPL Token
+    - [ ] Associated Token Account
+
+### Post-1.0
+
+- Metaplex (Token Metadata; requires Borsh serialization)
+- Versioned (v0) transactions and Address Lookup Tables
 
 
 
 ### Current development status
 
-There is currently **no stable release**. The SDK is actively developed and latest is `v1.0.0` which is an `alpha` release.
+There is currently **no stable release**. The SDK is actively developed and latest is `v1.0.0` which is an `alpha` release. Serialization is verified byte-for-byte against the official Rust SDK by golden-vector tests (see test/fixtures/).
 
 
 
