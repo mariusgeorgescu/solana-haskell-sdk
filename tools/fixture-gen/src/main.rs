@@ -12,21 +12,28 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use solana_sdk::stake::instruction::{LockupArgs, StakeInstruction};
-use solana_sdk::stake::state::{Authorized, Lockup, StakeAuthorize};
+use solana_sdk::stake::state::{Authorized, Delegation, Lockup, Meta, Stake, StakeAuthorize, StakeStateV2};
+use solana_sdk::stake::stake_flags::StakeFlags;
 use solana_sdk::vote::instruction::VoteInstruction;
 use solana_sdk::vote::state::{VoteAuthorize, VoteInit};
 use solana_sdk::stake::{self};
 use solana_sdk::loader_upgradeable_instruction::UpgradeableLoaderInstruction;
 use solana_sdk::secp256k1_instruction::new_secp256k1_instruction;
 use solana_sdk::address_lookup_table::{self, instruction::ProgramInstruction, AddressLookupTableAccount};
+use solana_sdk::address_lookup_table::state::{AddressLookupTable, LookupTableMeta};
+use borsh::BorshSerialize;
 use solana_sdk::message::{v0, VersionedMessage};
+use solana_sdk::nonce::state::{Data as NonceData, DurableNonce, State as NonceState, Versions as NonceVersions};
+use solana_sdk::program_pack::Pack;
 use solana_sdk::transaction::VersionedTransaction;
 use spl_token::instruction::{AuthorityType, TokenInstruction};
+use spl_token::state::{Account as TokenAccount, AccountState, Mint};
 use mpl_token_metadata::accounts::{MasterEdition, Metadata};
 use mpl_token_metadata::instructions::{
     CreateMasterEditionV3Builder, CreateMetadataAccountV3Builder, UpdateMetadataAccountV2Builder,
 };
-use mpl_token_metadata::types::{Collection, CollectionDetails, Creator, DataV2, UseMethod, Uses};
+use mpl_token_metadata::types::{Collection, CollectionDetails, Creator, DataV2, Key, TokenStandard, UseMethod, Uses};
+use std::borrow::Cow;
 use std::fs;
 use std::str::FromStr;
 
@@ -552,6 +559,169 @@ fn main() {
     fs::write(
         "../../test/fixtures/secp256k1.json",
         serde_json::to_string_pretty(&secp_fixtures).unwrap(),
+    )
+    .unwrap();
+
+    // --- On-chain account state fixtures (SPL token, ALT, nonce, stake, metadata) ---
+
+    let token_account_full = TokenAccount {
+        mint,
+        owner: payer.pubkey(),
+        amount: 5_000_000,
+        delegate: COption::Some(delegate),
+        state: AccountState::Frozen,
+        is_native: COption::Some(2_039_280),
+        delegated_amount: 1_000,
+        close_authority: COption::Some(new_auth),
+    };
+    let mut token_account_full_buf = [0u8; TokenAccount::LEN];
+    token_account_full.pack_into_slice(&mut token_account_full_buf);
+
+    let token_account_minimal = TokenAccount {
+        mint,
+        owner: payer.pubkey(),
+        amount: 5_000_000,
+        delegate: COption::None,
+        state: AccountState::Initialized,
+        is_native: COption::None,
+        delegated_amount: 0,
+        close_authority: COption::None,
+    };
+    let mut token_account_minimal_buf = [0u8; TokenAccount::LEN];
+    token_account_minimal.pack_into_slice(&mut token_account_minimal_buf);
+
+    let mint_full = Mint {
+        mint_authority: COption::Some(payer.pubkey()),
+        supply: 1_000_000_000,
+        decimals: 6,
+        is_initialized: true,
+        freeze_authority: COption::Some(new_auth),
+    };
+    let mut mint_full_buf = [0u8; Mint::LEN];
+    mint_full.pack_into_slice(&mut mint_full_buf);
+
+    let mint_minimal = Mint {
+        mint_authority: COption::None,
+        supply: 1_000_000_000,
+        decimals: 6,
+        is_initialized: true,
+        freeze_authority: COption::None,
+    };
+    let mut mint_minimal_buf = [0u8; Mint::LEN];
+    mint_minimal.pack_into_slice(&mut mint_minimal_buf);
+
+    // ALT: `serialize_for_tests` is a public (non-cfg-test-gated) method on
+    // `AddressLookupTable`, so no manual bincode/zero-buffer construction is needed.
+    let lut_meta = LookupTableMeta {
+        deactivation_slot: u64::MAX,
+        last_extended_slot: 12345,
+        last_extended_slot_start_index: 1,
+        authority: Some(payer.pubkey()),
+        _padding: 0,
+    };
+    let lut_table = AddressLookupTable {
+        meta: lut_meta,
+        addresses: Cow::Owned(vec![recipient, alt_addr_a, alt_addr_b]),
+    };
+    let lut_bytes = lut_table.serialize_for_tests().unwrap();
+
+    // Nonce: `DurableNonce::from_blockhash` hashes its input (sha256 with a
+    // "DURABLE_NONCE" domain prefix), so the durable-nonce bytes stored on-chain are
+    // NOT the raw 32x35 blockhash. Emit the actual hashed bytes separately so the
+    // Haskell test asserts against ground truth rather than the seed blockhash.
+    let nonce_blockhash = Hash::new_from_array([35u8; 32]);
+    let durable_nonce = DurableNonce::from_blockhash(&nonce_blockhash);
+    let nonce_data = NonceData::new(payer.pubkey(), durable_nonce, 5000);
+    let nonce_versions = NonceVersions::new(NonceState::Initialized(nonce_data));
+    let nonce_bytes = bincode::serialize(&nonce_versions).unwrap();
+    let durable_nonce_bytes = durable_nonce.as_hash().to_bytes();
+
+    let stake_meta = Meta {
+        rent_exempt_reserve: 2_282_880,
+        authorized,
+        lockup,
+    };
+    let stake_delegation = Delegation {
+        voter_pubkey: vote_acct,
+        stake: 1_000_000,
+        activation_epoch: 250,
+        deactivation_epoch: u64::MAX,
+        warmup_cooldown_rate: 0.25,
+    };
+    let stake_stake = Stake {
+        delegation: stake_delegation,
+        credits_observed: 42,
+    };
+    let stake_state = StakeStateV2::Stake(stake_meta, stake_stake, StakeFlags::empty());
+    let stake_initialized_state = StakeStateV2::Initialized(stake_meta);
+    let stake_bytes = bincode::serialize(&stake_state).unwrap();
+    let stake_initialized_bytes = bincode::serialize(&stake_initialized_state).unwrap();
+
+    let metadata_full = Metadata {
+        key: Key::MetadataV1,
+        update_authority: payer.pubkey(),
+        mint,
+        name: format!("{:\0<32}", "Solana Haskell NFT"),
+        symbol: format!("{:\0<10}", "SHSDK"),
+        uri: format!("{:\0<200}", "https://example.com/nft.json"),
+        seller_fee_basis_points: 550,
+        creators: Some(vec![
+            Creator { address: payer.pubkey(), verified: true, share: 60 },
+            Creator { address: second_creator, verified: false, share: 40 },
+        ]),
+        primary_sale_happened: false,
+        is_mutable: true,
+        edition_nonce: Some(253),
+        token_standard: Some(TokenStandard::NonFungible),
+        collection: Some(Collection { verified: false, key: collection_key }),
+        uses: Some(Uses { use_method: UseMethod::Multiple, remaining: 10, total: 10 }),
+        collection_details: None,
+        programmable_config: None,
+    };
+    // metadata-account-legacy: truncate right after the is_mutable byte. Rather than
+    // trusting a hand-computed offset, serialize a variant with every tail field set to
+    // None (identical prefix, 6 trailing 1-byte Option::None tags for edition_nonce,
+    // token_standard, collection, uses, collection_details, programmable_config) and
+    // strip those 6 known tag bytes to find where the shared prefix ends.
+    let metadata_tail_none = Metadata {
+        edition_nonce: None,
+        token_standard: None,
+        collection: None,
+        uses: None,
+        collection_details: None,
+        programmable_config: None,
+        ..metadata_full.clone()
+    };
+    let metadata_full_bytes = metadata_full.try_to_vec().unwrap();
+    let metadata_tail_none_bytes = metadata_tail_none.try_to_vec().unwrap();
+    let metadata_legacy_len = metadata_tail_none_bytes.len() - 6;
+    assert_eq!(
+        metadata_full_bytes[..metadata_legacy_len],
+        metadata_tail_none_bytes[..metadata_legacy_len],
+    );
+    // Cross-check against the hand-computed offset from the task brief:
+    // key(1) + update_authority(32) + mint(32) + name(4+32) + symbol(4+10) + uri(4+200)
+    // + seller_fee_basis_points(2) + creators(1 + 4 + 2*(32+1+1)) + primary_sale_happened(1)
+    // + is_mutable(1) = 396.
+    assert_eq!(metadata_legacy_len, 396);
+    let metadata_legacy_bytes = &metadata_full_bytes[..metadata_legacy_len];
+
+    let state_fixtures = vec![
+        json!({ "name": "token-account", "hex": hex(&token_account_full_buf) }),
+        json!({ "name": "token-account-minimal", "hex": hex(&token_account_minimal_buf) }),
+        json!({ "name": "mint", "hex": hex(&mint_full_buf) }),
+        json!({ "name": "mint-minimal", "hex": hex(&mint_minimal_buf) }),
+        json!({ "name": "lookup-table", "hex": hex(&lut_bytes) }),
+        json!({ "name": "nonce-account", "hex": hex(&nonce_bytes) }),
+        json!({ "name": "nonce-durable-hash", "hex": hex(&durable_nonce_bytes) }),
+        json!({ "name": "stake-account", "hex": hex(&stake_bytes) }),
+        json!({ "name": "stake-account-initialized", "hex": hex(&stake_initialized_bytes) }),
+        json!({ "name": "metadata-account", "hex": hex(&metadata_full_bytes) }),
+        json!({ "name": "metadata-account-legacy", "hex": hex(metadata_legacy_bytes) }),
+    ];
+    fs::write(
+        "../../test/fixtures/state_fixtures.json",
+        serde_json::to_string_pretty(&state_fixtures).unwrap(),
     )
     .unwrap();
 

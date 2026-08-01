@@ -828,6 +828,7 @@ name = "fixture-gen"
 version = "0.1.0"
 dependencies = [
  "bincode",
+ "borsh 0.10.4",
  "libsecp256k1",
  "mpl-token-metadata",
  "serde_json",

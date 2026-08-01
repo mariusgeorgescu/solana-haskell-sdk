@@ -11,3 +11,4 @@ spl-token = { version = "4", features = ["no-entrypoint"] }
 spl-associated-token-account = { version = "3", features = ["no-entrypoint"] }
 libsecp256k1 = "0.6"
 mpl-token-metadata = "4"
+borsh = "0.10"
