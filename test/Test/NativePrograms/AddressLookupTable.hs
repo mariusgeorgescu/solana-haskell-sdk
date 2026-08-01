@@ -22,11 +22,16 @@ payerPk =
     Just (pk, _) -> pk
     Nothing -> error "failed to derive payer"
 
-tablePk, addrA, addrB, recipientPk :: SolanaPublicKey
+tablePk, addrA, addrB, recipientPk, funderPk :: SolanaPublicKey
 tablePk = unsafeSolanaPublicKeyRaw (replicate 32 31)
 addrA = unsafeSolanaPublicKeyRaw (replicate 32 29)
 addrB = unsafeSolanaPublicKeyRaw (replicate 32 30)
 recipientPk = unsafeSolanaPublicKeyRaw (replicate 32 22)
+
+-- | Distinct from 'payerPk' (used as the authority) so that a builder
+-- accidentally swapping its authority/payer arguments would be caught by
+-- the meta tests below.
+funderPk = unsafeSolanaPublicKeyRaw (replicate 32 32)
 
 -- | The bump seed for (payerPk, 12345), used to build the CreateLookupTable
 -- golden without hard-coding it (it must equal the derivation, which is
@@ -78,12 +83,12 @@ tests =
               Right _ -> assertFailure "expected decode failure for discriminant 5",
           testCase "createLookupTable metas (and returned table address)" $ do
             fs <- getPdaFixtures
-            let (ix, table) = ALT.createLookupTable payerPk payerPk 12345
+            let (ix, table) = ALT.createLookupTable payerPk funderPk 12345
             getSolanaPublicKeyRaw table @?= requireFixture "lookup-table-address" fs
             iAccounts ix
               @?= [ AccountMeta table False True,
                     AccountMeta payerPk False False,
-                    AccountMeta payerPk True True,
+                    AccountMeta funderPk True True,
                     AccountMeta SP.systemProgramId False False
                   ],
           testCase "freezeLookupTable metas" $
@@ -97,10 +102,10 @@ tests =
                     AccountMeta payerPk True False
                   ],
           testCase "extendLookupTable metas (with payer)" $
-            iAccounts (ALT.extendLookupTable tablePk payerPk (Just payerPk) [addrA, addrB])
+            iAccounts (ALT.extendLookupTable tablePk payerPk (Just funderPk) [addrA, addrB])
               @?= [ AccountMeta tablePk False True,
                     AccountMeta payerPk True False,
-                    AccountMeta payerPk True True,
+                    AccountMeta funderPk True True,
                     AccountMeta SP.systemProgramId False False
                   ],
           testCase "deactivateLookupTable metas" $

@@ -87,6 +87,8 @@ deriveLookupTableAddress authority slot =
 -- with the table's derived address.
 -- Receives the authority (not required to sign), the payer (which must
 -- sign) and the recent slot used to derive the table's address.
+-- Calls 'error' if the lookup-table address cannot be derived (practically
+-- unreachable: requires every bump candidate to land on-curve).
 -- # Account references
 -- 0. `[WRITE]` Uninitialized lookup table account
 -- 1. `[]` Authority
