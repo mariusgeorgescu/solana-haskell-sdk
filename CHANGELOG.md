@@ -1,5 +1,9 @@
 # Revision history for solana-haskell-sdk
 
+## Unreleased
+
+* Added on-chain account-state decoders (SPL token accounts and mints, address lookup tables, stake and nonce accounts, Metaplex metadata) with typed SolanaWeb3 fetch helpers; decoded lookup tables feed compileV0Message directly.
+
 ## 1.1.0.0 -- 2026-08-01
 
 * Added Metaplex Token Metadata client (CreateMetadataAccountV3, UpdateMetadataAccountV2, CreateMasterEditionV3) with metadata/master-edition PDA derivation, built on a new minimal Borsh serialization layer.
