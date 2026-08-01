@@ -8,6 +8,7 @@
 -- Description : Building, canonically ordering, compiling and signing transaction messages.
 module Network.Solana.Core.Message
   ( newTransactionIntent,
+    newTransactionIntentWithPayer,
     SignedTransactionIntent,
     Message (..),
     MessageHeader (..),
@@ -27,7 +28,7 @@ import Data.List (sortOn)
 import GHC.Generics (Generic)
 import Network.Solana.Core.Block (BlockHash)
 import Network.Solana.Core.Compact
-import Network.Solana.Core.Crypto (SolanaPrivateKey, SolanaPublicKey, dsign, getSolanaPublicKeyRaw, toBase64String)
+import Network.Solana.Core.Crypto (SolanaPrivateKey, SolanaPublicKey, dsign, getSolanaPublicKeyRaw, toBase64String, toSolanaPublicKey)
 import Network.Solana.Core.Instruction
 
 
@@ -49,12 +50,43 @@ type SignedTransactionIntent = (BlockHash -> Either CompileException String)
 -- bytes; see @canonicalizeAccountOrder@). The private keys passed here must
 -- be ordered to match the resulting account order (fee payer first),
 -- otherwise the produced signatures will not correspond to the right
--- account keys.
+-- account keys. If you would rather name the fee payer explicitly and not
+-- worry about signer order, consider 'newTransactionIntentWithPayer',
+-- which orders signatures automatically.
 newTransactionIntent :: [SolanaPrivateKey] -> [Instruction] -> SignedTransactionIntent
 newTransactionIntent signers instructions blockhash = do
   msg <- newMessage blockhash instructions -- make the binary message
   let signatures = S.toStrict . Data.Binary.encode $ mkCompact $ flip dsign msg <$> signers -- sign the binary message
   return $ toBase64String $ S.append signatures msg -- return signed transaction
+
+-- | Builds and signs a transaction with an explicitly named fee payer.
+-- Unlike 'newTransactionIntent', the fee payer is always account 0
+-- (sponsored fees are supported: the payer need not appear in any
+-- instruction at all), and the given private keys may be listed in any
+-- order — they are matched against the compiled message's required
+-- signers and the resulting signatures are placed in message order
+-- automatically. 'Left' if a required signer has no corresponding private
+-- key, or if a given private key does not correspond to any required
+-- signer.
+newTransactionIntentWithPayer :: SolanaPublicKey -> [SolanaPrivateKey] -> [Instruction] -> BlockHash -> Either CompileException String
+newTransactionIntentWithPayer payer signingKeys instructions blockhash = do
+  let msg = mkNewMessageWithPayer payer blockhash instructions
+  msgBytes <- compileMessageToBinary msg
+  let requiredSigners = take (fromIntegral (numRequiredSignatures (mHeader msg))) (mAccountKeys msg)
+      keyedByPubkey = [(toSolanaPublicKey k, k) | k <- signingKeys]
+  orderedKeys <- mapM (findSigningKey keyedByPubkey) requiredSigners
+  mapM_ (checkKeyIsRequired requiredSigners . fst) keyedByPubkey
+  let signatures = S.toStrict . Data.Binary.encode $ mkCompact $ flip dsign msgBytes <$> orderedKeys
+  return $ toBase64String $ S.append signatures msgBytes
+  where
+    findSigningKey keyedByPubkey pk =
+      case lookup pk keyedByPubkey of
+        Just k -> Right k
+        Nothing -> Left (MissingIndex ("missing signer for " <> show pk))
+    checkKeyIsRequired requiredSigners pk =
+      if pk `elem` requiredSigners
+        then Right ()
+        else Left (MissingIndex ("unused signing key " <> show pk))
 
 ------------------------------------------------------------------------------------------------
 
@@ -96,6 +128,19 @@ compileMessageToBinary = fmap (S.toStrict . Data.Binary.encode) . compileMessage
 mkNewMessage :: BlockHash -> [Instruction] -> Message
 mkNewMessage bh =
   canonicalizeAccountOrder . updateMessageWithInstructions (Message mempty mempty bh mempty)
+
+-- | Like 'mkNewMessage', but with an explicitly named fee payer. The payer
+-- is seeded as a writable signer before the instructions' account metas are
+-- folded in, so it ends up in the message (and pinned first by
+-- 'canonicalizeAccountOrder') even if no instruction references it —
+-- enabling sponsored-fee transactions.
+mkNewMessageWithPayer :: SolanaPublicKey -> BlockHash -> [Instruction] -> Message
+mkNewMessageWithPayer payer bh =
+  canonicalizeAccountOrder . updateMessageWithInstructions seeded
+  where
+    payerMeta = AccountMeta {accountPubKey = payer, isSigner = True, isWritable = True}
+    (seededHeader, seededKeys) = updateHeaderAndKeys (mempty, mempty) payerMeta
+    seeded = Message seededHeader seededKeys bh mempty
 
 -- | Sort the account keys within each privilege section by raw pubkey bytes,
 -- keeping the fee payer (first writable signer) pinned in first position.

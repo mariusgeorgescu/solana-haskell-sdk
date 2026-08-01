@@ -3,7 +3,7 @@
 module Test.Core.Message (tests) where
 
 import Data.ByteString qualified as BS
-import Data.List (nub)
+import Data.List (isInfixOf, nub)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
@@ -48,6 +48,12 @@ newAccountKeys =
   case createSolanaKeypairFromSeed (BS.replicate 32 10) of
     Just kp -> kp
     Nothing -> error "failed to derive new-account keypair from seed"
+
+extraKeys :: (SolanaPublicKey, SolanaPrivateKey)
+extraKeys =
+  case createSolanaKeypairFromSeed (BS.replicate 32 40) of
+    Just kp -> kp
+    Nothing -> error "failed to derive extra keypair from seed"
 
 keyPool :: [SolanaPublicKey]
 keyPool = [unsafeSolanaPublicKeyRaw (replicate 32 b) | b <- [10 .. 15]]
@@ -170,5 +176,33 @@ tests =
         case newTransactionIntent [snd payerKeys, snd newAccountKeys] ixs fixedBlockhash of
           Left err -> assertFailure (show err)
           Right b64 -> b64 @?= toBase64String (requireFixture "stake-setup-transaction" fs),
+      testCase "sponsored transfer via explicit fee payer matches Rust (signers in wrong order)" $ do
+        fs <- loadFixtures "test/fixtures/transactions.json"
+        let ix = SP.transfer (fst payerKeys) recipientPk 1000000000
+        case newTransactionIntentWithPayer (fst newAccountKeys) [snd payerKeys, snd newAccountKeys] [ix] fixedBlockhash of
+          Left err -> assertFailure (show err)
+          Right b64 -> b64 @?= toBase64String (requireFixture "sponsored-transfer-transaction" fs),
+      testCase "sponsored transfer via explicit fee payer matches Rust (signers in message order)" $ do
+        fs <- loadFixtures "test/fixtures/transactions.json"
+        let ix = SP.transfer (fst payerKeys) recipientPk 1000000000
+        case newTransactionIntentWithPayer (fst newAccountKeys) [snd newAccountKeys, snd payerKeys] [ix] fixedBlockhash of
+          Left err -> assertFailure (show err)
+          Right b64 -> b64 @?= toBase64String (requireFixture "sponsored-transfer-transaction" fs),
+      testCase "two-signer create-account via explicit fee payer matches Rust (signers permuted)" $ do
+        fs <- loadFixtures "test/fixtures/transactions.json"
+        let ix = SP.createAccount (fst payerKeys) (fst newAccountKeys) 1000000 165 ownerPk
+        case newTransactionIntentWithPayer (fst payerKeys) [snd newAccountKeys, snd payerKeys] [ix] fixedBlockhash of
+          Left err -> assertFailure (show err)
+          Right b64 -> b64 @?= toBase64String (requireFixture "two-signer-create-transaction" fs),
+      testCase "explicit fee payer: missing signer key is reported" $ do
+        let ix = SP.transfer (fst payerKeys) recipientPk 1000000000
+        case newTransactionIntentWithPayer (fst newAccountKeys) [snd payerKeys] [ix] fixedBlockhash of
+          Right _ -> assertFailure "expected Left for missing signer"
+          Left (MissingIndex msg) -> assertBool ("expected \"missing signer\" in: " <> msg) ("missing signer" `isInfixOf` msg),
+      testCase "explicit fee payer: unused signing key is reported" $ do
+        let ix = SP.transfer (fst payerKeys) recipientPk 1000000000
+        case newTransactionIntentWithPayer (fst newAccountKeys) [snd payerKeys, snd newAccountKeys, snd extraKeys] [ix] fixedBlockhash of
+          Right _ -> assertFailure "expected Left for unused signing key"
+          Left (MissingIndex msg) -> assertBool ("expected \"unused signing key\" in: " <> msg) ("unused signing key" `isInfixOf` msg),
       testProperty "message header/key-ordering invariants" prop_messageInvariants
     ]
