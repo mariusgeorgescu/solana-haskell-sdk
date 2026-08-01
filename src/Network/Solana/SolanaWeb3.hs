@@ -13,10 +13,11 @@ module Network.Solana.SolanaWeb3 where
 import Control.Concurrent (threadDelay)
 import Control.Exception (throwIO)
 import Control.Monad.IO.Class
+import Data.Maybe (isNothing)
 import Network.Solana.Core.Crypto
 import Network.Solana.Core.Instruction
 import Network.Solana.Core.Message (newTransactionIntent)
-import Network.Solana.RPC.HTTP.Account (confirmationStatusTxStatus, getBalance, getSignatureStatuses)
+import Network.Solana.RPC.HTTP.Account (confirmationStatusTxStatus, errTxStatus, getBalance, getSignatureStatuses)
 import Network.Solana.RPC.HTTP.Block (getTheLatestBlockhash)
 import Network.Solana.RPC.HTTP.Transaction
 import Network.Web3
@@ -57,13 +58,23 @@ wait s = liftIO $ do
 
 -- | Polls 'Network.Solana.RPC.HTTP.Account.getSignatureStatuses' once a
 -- second, up to 30 times, until the given signature reaches @confirmed@ or
--- @finalized@ status. Returns 'False' if it does not confirm in time.
+-- @finalized@ status.
+--
+-- Returns 'True' only if the status reaches the target commitment /and/ the
+-- node reports no on-chain error for it (its @err@ field is 'Nothing'); a
+-- transaction that landed but failed on-chain (e.g. a program error) yields
+-- 'False', not 'True'. Also returns 'False' if it does not confirm within
+-- the poll budget.
 confirmTransaction :: SolanaSignature -> Web3 Bool
 confirmTransaction sig = go (30 :: Int)
   where
     go 0 = pure False
     go n = do
-      [st] <- getSignatureStatuses [sig]
-      case st of
-        Just s | confirmationStatusTxStatus s `elem` [Just "confirmed", Just "finalized"] -> pure True
-        _ -> wait 1 >> go (n - 1)
+      statuses <- getSignatureStatuses [sig]
+      case statuses of
+        [Just s]
+          | confirmationStatusTxStatus s `elem` [Just "confirmed", Just "finalized"] ->
+              pure (isNothing (errTxStatus s))
+        [_] -> wait 1 >> go (n - 1)
+        _ -> liftIO . throwIO . userError $
+          "confirmTransaction: expected exactly one status for one signature, got " <> show (length statuses)

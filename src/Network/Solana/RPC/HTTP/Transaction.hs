@@ -57,7 +57,9 @@ getTransaction' = do
 -- | Returns metadata and content for a confirmed transaction identified by
 -- its signature. Sets @maxSupportedTransactionVersion@ so that versioned
 -- (v0) transactions can be decoded (without it, the node responds with
--- error -32015).
+-- error -32015); as a result, v0 transactions are returned without their
+-- address-lookup-table data, so instruction account indices may reference
+-- addresses not present in the parsed account keys.
 -- Returns 'Nothing' if the signature is unknown or has expired.
 getTransaction :: (JsonRpc m) => SolanaSignature -> m (Maybe TransactionResult)
 getTransaction sig = getTransaction' sig (defaultConfigObject {encoding = Just "json", maxSupportedTransactionVersion = Just 0})

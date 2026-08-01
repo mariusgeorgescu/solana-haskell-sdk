@@ -46,8 +46,11 @@ instance ToJSON BlockHash where
 
 instance FromJSON BlockHash where
   parseJSON :: Value -> Parser BlockHash
-  parseJSON = withText "BlockHash" $ \t ->
-    maybe (fail "BlockHash: invalid base58") (pure . BlockHash) (fromBase58String (Text.unpack t))
+  parseJSON = withText "BlockHash" $ \t -> do
+    bs <- maybe (fail "BlockHash: invalid base58") pure (fromBase58String (Text.unpack t))
+    if S.length bs == 32
+      then pure (BlockHash bs)
+      else fail "BlockHash: expected 32 bytes"
 
 -- | Build a 'BlockHash' from Base58 text. Calls 'error' if the text is not
 -- valid Base58; the decoded length is not checked.

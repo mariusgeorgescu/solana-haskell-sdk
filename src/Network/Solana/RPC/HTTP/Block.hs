@@ -41,7 +41,10 @@ getBlock' = do
 -- | Returns identity and transaction information about a confirmed block in
 -- the ledger. Sets @maxSupportedTransactionVersion@ so that blocks
 -- containing versioned (v0) transactions can be decoded (without it, such
--- blocks make the node respond with error -32015).
+-- blocks make the node respond with error -32015); as a result, v0
+-- transactions are returned without their address-lookup-table data, so
+-- instruction account indices may reference addresses not present in the
+-- parsed account keys.
 -- Returns 'Nothing' if the slot has been skipped or pruned from the ledger.
 getBlock :: (JsonRpc m) => Slot -> m (Maybe BlockInfo)
 getBlock slot = getBlock' slot (defaultConfigObject {encoding = Just "json", maxSupportedTransactionVersion = Just 0})

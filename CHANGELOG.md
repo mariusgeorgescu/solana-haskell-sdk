@@ -4,6 +4,12 @@
 
 First stable release: byte-verified clients for System, Compute Budget, Stake, Vote, BPF Loader (upgradeable), Secp256k1, SPL Memo, SPL Token, and Associated Token Account programs; PDA derivation; canonical Rust-identical message compilation.
 
+* Changed: `sendTransaction`'s default configuration no longer skips preflight
+  simulation and no longer caps retries — submissions now follow the node's
+  defaults (preflight runs; the node rebroadcasts until blockhash expiry).
+  Transactions failing simulation return an RPC error instead of a signature.
+* Changed: account-fetching RPC methods now request `base64` encoding
+  explicitly for reliable binary account data.
 * Hardened all RPC-facing JSON parsers to be total: malformed or unexpected
   node responses (failed transactions, v0 transactions, pruned/unknown slots)
   no longer crash the client.
@@ -12,9 +18,12 @@ First stable release: byte-verified clients for System, Compute Budget, Stake, V
 * Fixed: `BlockHash` and `CompactArray` `Binary` decoding were asymmetric
   with their `put` (falling back to an incompatible/length-prefixed
   decoder); both now round-trip correctly.
-* Renamed RPC fields for consistency (`Ammount*` -> `Amount*`, `RpcResponse`
-  -> `RPCResponse`) and changed transaction/account error fields to
+* Fixed documentation typos referring to the `RPCResponse` type (the
+  exported name never changed) and renamed RPC fields for consistency
+  (`Ammount*` -> `Amount*`); changed transaction/account error fields to
   structured `Maybe Value` instead of partial `Maybe String`.
+* Renamed `ClusterNodes.sharedVersion` to `shredVersion` (typo fix; matches
+  the RPC field).
 * Added `confirmTransaction` to `SolanaWeb3`: polls for `confirmed`/
   `finalized` status instead of a fixed `wait`.
 * Haddock coverage completed for the Core, RPC/HTTP, and SolanaWeb3 modules
