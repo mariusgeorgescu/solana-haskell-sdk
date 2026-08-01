@@ -67,7 +67,49 @@ genStakeInstruction =
         <*> oneof [pure Nothing, Just <$> genPk]
 
 tests :: TestTree
-tests =
+tests = testGroup "Stake" [instructionDataTests, stakeStateTests]
+
+stakeStateTests :: TestTree
+stakeStateTests =
+  withResource (loadFixtures "test/fixtures/state_fixtures.json") (const (pure ())) $ \getStateFixtures ->
+    testGroup
+      "Stake account state (golden + rejection)"
+      [ testCase "decodeStakeAccount: stake-account golden (StakeActive)" $ do
+          fs <- getStateFixtures
+          let bs = requireFixture "stake-account" fs
+          case Stake.decodeStakeAccount bs of
+            Left err -> assertFailure $ "decode failed: " <> err
+            Right (Stake.StakeActive meta delegation credits flags) -> do
+              Stake.smRentExemptReserve meta @?= 2282880
+              Stake.smAuthorized meta @?= fixedAuthorized
+              Stake.smLockup meta @?= fixedLockup
+              Stake.sdVoter delegation @?= votePk
+              Stake.sdStake delegation @?= 1000000
+              Stake.sdActivationEpoch delegation @?= 250
+              Stake.sdDeactivationEpoch delegation @?= maxBound
+              Stake.sdWarmupCooldownRate delegation @?= 0.25
+              credits @?= 42
+              flags @?= 0
+            Right other -> assertFailure ("expected StakeActive, got " <> show other),
+        testCase "decodeStakeAccount: stake-account-initialized golden (StakeInitialized)" $ do
+          fs <- getStateFixtures
+          let bs = requireFixture "stake-account-initialized" fs
+          case Stake.decodeStakeAccount bs of
+            Left err -> assertFailure $ "decode failed: " <> err
+            Right (Stake.StakeInitialized meta) -> do
+              Stake.smRentExemptReserve meta @?= 2282880
+              Stake.smAuthorized meta @?= fixedAuthorized
+              Stake.smLockup meta @?= fixedLockup
+            Right other -> assertFailure ("expected StakeInitialized, got " <> show other),
+        testCase "decodeStakeAccount: rejects discriminant 4" $ do
+          let bs = BS.pack ([4, 0, 0, 0] <> replicate 196 0)
+          case Stake.decodeStakeAccount bs of
+            Left _ -> pure ()
+            Right _ -> assertFailure "expected decode failure for discriminant 4"
+      ]
+
+instructionDataTests :: TestTree
+instructionDataTests =
   withResource (loadFixtures "test/fixtures/stake_instruction_data.json") (const (pure ())) $ \getFixtures ->
     testGroup
       "Stake instruction data (golden + properties)"

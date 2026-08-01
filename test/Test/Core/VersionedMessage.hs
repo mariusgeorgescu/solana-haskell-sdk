@@ -8,6 +8,7 @@ import Network.Solana.Core.Block (BlockHash (..))
 import Network.Solana.Core.Crypto
 import Network.Solana.Core.Instruction (AccountMeta (..), CompileException (..), mkInstruction)
 import Network.Solana.Core.VersionedMessage
+import Network.Solana.NativePrograms.AddressLookupTable qualified as ALT
 import Network.Solana.NativePrograms.SystemProgram qualified as SP
 import Test.Fixtures
 import Test.Tasty
@@ -122,7 +123,21 @@ tests =
             oversizedTable = AddressLookupTableAccount tableKey (replicate 256 fillerKey <> [recipientPk])
         case compileV0Message fixedBlockhash [ix] [oversizedTable] of
           Left (MissingIndex msg) -> assertBool ("expected an \"overflow\" message, got: " <> msg) ("overflow" `isInfixOf` msg)
-          Right _ -> assertFailure "expected an oversized lookup table to fail compilation"
+          Right _ -> assertFailure "expected an oversized lookup table to fail compilation",
+      testCase "decoded lookup table state feeds v0 compilation end-to-end (bridge)" $ do
+        stateFs <- loadFixtures "test/fixtures/state_fixtures.json"
+        txFs <- loadFixtures "test/fixtures/transactions.json"
+        case ALT.decodeLookupTable (requireFixture "lookup-table" stateFs) of
+          Left err -> assertFailure ("decode failed: " <> err)
+          Right lts -> do
+            let table = ALT.lookupTableToAccount tableKey lts
+                ixs =
+                  [ SP.transfer (fst payerKeys) recipientPk 1000000000,
+                    SP.transfer (fst payerKeys) addr29 500000
+                  ]
+            case compileV0Message fixedBlockhash ixs [table] of
+              Left err -> assertFailure (show err)
+              Right bytes -> bytes @?= requireFixture "v0-message" txFs
     ]
 
 -- | Compare two compile results by their message bytes ('CompileException'

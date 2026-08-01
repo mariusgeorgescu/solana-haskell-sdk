@@ -9,6 +9,7 @@ import Data.ByteString.Lazy qualified as BL
 import Data.Word (Word8)
 import Network.Solana.Core.Crypto (SolanaPublicKey, createSolanaKeypairFromSeed, getSolanaPublicKeyRaw, unsafeSolanaPublicKeyRaw)
 import Network.Solana.Core.Instruction (AccountMeta (..), iAccounts)
+import Network.Solana.Core.VersionedMessage qualified as VM
 import Network.Solana.NativePrograms.AddressLookupTable qualified as ALT
 import Network.Solana.NativePrograms.SystemProgram qualified as SP
 import Test.Fixtures
@@ -61,65 +62,107 @@ tests :: TestTree
 tests =
   withResource (loadFixtures "test/fixtures/alt_instruction_data.json") (const (pure ())) $ \getFixtures ->
     withResource (loadFixtures "test/fixtures/pda.json") (const (pure ())) $ \getPdaFixtures ->
-      testGroup
-        "AddressLookupTable instruction data (golden + properties)"
-        [ testCase "deriveLookupTableAddress matches Rust (address and bump)" $ do
-            fs <- getPdaFixtures
-            case ALT.deriveLookupTableAddress payerPk 12345 of
-              Nothing -> assertFailure "no lookup table PDA found"
-              Just (addr, bump) -> do
-                getSolanaPublicKeyRaw addr @?= requireFixture "lookup-table-address" fs
-                BS.singleton bump @?= requireFixture "lookup-table-bump" fs,
-          goldenCase getFixtures "CreateLookupTable" (ALT.CreateLookupTable 12345 lutBump),
-          goldenCase getFixtures "FreezeLookupTable" ALT.FreezeLookupTable,
-          goldenCase getFixtures "ExtendLookupTable" (ALT.ExtendLookupTable [addrA, addrB]),
-          goldenCase getFixtures "DeactivateLookupTable" ALT.DeactivateLookupTable,
-          goldenCase getFixtures "CloseLookupTable" ALT.CloseLookupTable,
-          testProperty "Binary round-trip" $
-            forAll genAltInstruction $ \ai -> decode (encode ai) === ai,
-          testCase "decode fails on unknown discriminant" $
-            case decodeOrFail (BL.pack [5, 0, 0, 0]) :: Either (BL.ByteString, ByteOffset, String) (BL.ByteString, ByteOffset, ALT.AddressLookupTableInstruction) of
-              Left _ -> pure ()
-              Right _ -> assertFailure "expected decode failure for discriminant 5",
-          testCase "createLookupTable metas (and returned table address)" $ do
-            fs <- getPdaFixtures
-            let (ix, table) = ALT.createLookupTable payerPk funderPk 12345
-            getSolanaPublicKeyRaw table @?= requireFixture "lookup-table-address" fs
-            iAccounts ix
-              @?= [ AccountMeta table False True,
-                    AccountMeta payerPk False False,
-                    AccountMeta funderPk True True,
-                    AccountMeta SP.systemProgramId False False
-                  ],
-          testCase "freezeLookupTable metas" $
-            iAccounts (ALT.freezeLookupTable tablePk payerPk)
-              @?= [ AccountMeta tablePk False True,
-                    AccountMeta payerPk True False
-                  ],
-          testCase "extendLookupTable metas (no payer)" $
-            iAccounts (ALT.extendLookupTable tablePk payerPk Nothing [addrA, addrB])
-              @?= [ AccountMeta tablePk False True,
-                    AccountMeta payerPk True False
-                  ],
-          testCase "extendLookupTable metas (with payer)" $
-            iAccounts (ALT.extendLookupTable tablePk payerPk (Just funderPk) [addrA, addrB])
-              @?= [ AccountMeta tablePk False True,
-                    AccountMeta payerPk True False,
-                    AccountMeta funderPk True True,
-                    AccountMeta SP.systemProgramId False False
-                  ],
-          testCase "deactivateLookupTable metas" $
-            iAccounts (ALT.deactivateLookupTable tablePk payerPk)
-              @?= [ AccountMeta tablePk False True,
-                    AccountMeta payerPk True False
-                  ],
-          testCase "closeLookupTable metas" $
-            iAccounts (ALT.closeLookupTable tablePk payerPk recipientPk)
-              @?= [ AccountMeta tablePk False True,
-                    AccountMeta payerPk True False,
-                    AccountMeta recipientPk False True
-                  ]
-        ]
+      withResource (loadFixtures "test/fixtures/state_fixtures.json") (const (pure ())) $ \getStateFixtures ->
+        testGroup
+          "AddressLookupTable instruction data (golden + properties)"
+          [ testCase "decodeLookupTable: lookup-table golden" $ do
+              fs <- getStateFixtures
+              let bs = requireFixture "lookup-table" fs
+              case ALT.decodeLookupTable bs of
+                Left err -> assertFailure $ "decode failed: " <> err
+                Right lts -> do
+                  ALT.ltDeactivationSlot lts @?= maxBound
+                  ALT.ltLastExtendedSlot lts @?= 12345
+                  ALT.ltLastExtendedSlotStartIndex lts @?= 1
+                  ALT.ltAuthority lts @?= Just payerPk
+                  ALT.ltAddresses lts
+                    @?= [ unsafeSolanaPublicKeyRaw (replicate 32 2),
+                          addrA,
+                          addrB
+                        ],
+            testCase "lookupTableToAccount builds the VersionedMessage account" $ do
+              fs <- getStateFixtures
+              let bs = requireFixture "lookup-table" fs
+              case ALT.decodeLookupTable bs of
+                Left err -> assertFailure $ "decode failed: " <> err
+                Right lts ->
+                  ALT.lookupTableToAccount tablePk lts
+                    @?= VM.AddressLookupTableAccount
+                      tablePk
+                      [unsafeSolanaPublicKeyRaw (replicate 32 2), addrA, addrB],
+            testCase "decodeLookupTable: rejects 55 bytes (below the fixed meta region)" $ do
+              let bs = BS.replicate 55 0
+              case ALT.decodeLookupTable bs of
+                Left _ -> pure ()
+                Right _ -> assertFailure "expected decode failure for 55 bytes",
+            testCase "decodeLookupTable: rejects an addresses remainder not divisible by 32" $ do
+              fs <- getStateFixtures
+              let bs = requireFixture "lookup-table" fs <> BS.singleton 0
+              case ALT.decodeLookupTable bs of
+                Left _ -> pure ()
+                Right _ -> assertFailure "expected decode failure for a non-multiple-of-32 remainder",
+            testCase "decodeLookupTable: rejects uninitialized (discriminant 0)" $ do
+              let bs = BS.replicate 56 0
+              case ALT.decodeLookupTable bs of
+                Left err -> assertBool "error message mentions uninitialized" ("uninitialized" `elem` words err)
+                Right _ -> assertFailure "expected decode failure for discriminant 0",
+            testCase "deriveLookupTableAddress matches Rust (address and bump)" $ do
+              fs <- getPdaFixtures
+              case ALT.deriveLookupTableAddress payerPk 12345 of
+                Nothing -> assertFailure "no lookup table PDA found"
+                Just (addr, bump) -> do
+                  getSolanaPublicKeyRaw addr @?= requireFixture "lookup-table-address" fs
+                  BS.singleton bump @?= requireFixture "lookup-table-bump" fs,
+            goldenCase getFixtures "CreateLookupTable" (ALT.CreateLookupTable 12345 lutBump),
+            goldenCase getFixtures "FreezeLookupTable" ALT.FreezeLookupTable,
+            goldenCase getFixtures "ExtendLookupTable" (ALT.ExtendLookupTable [addrA, addrB]),
+            goldenCase getFixtures "DeactivateLookupTable" ALT.DeactivateLookupTable,
+            goldenCase getFixtures "CloseLookupTable" ALT.CloseLookupTable,
+            testProperty "Binary round-trip" $
+              forAll genAltInstruction $ \ai -> decode (encode ai) === ai,
+            testCase "decode fails on unknown discriminant" $
+              case decodeOrFail (BL.pack [5, 0, 0, 0]) :: Either (BL.ByteString, ByteOffset, String) (BL.ByteString, ByteOffset, ALT.AddressLookupTableInstruction) of
+                Left _ -> pure ()
+                Right _ -> assertFailure "expected decode failure for discriminant 5",
+            testCase "createLookupTable metas (and returned table address)" $ do
+              fs <- getPdaFixtures
+              let (ix, table) = ALT.createLookupTable payerPk funderPk 12345
+              getSolanaPublicKeyRaw table @?= requireFixture "lookup-table-address" fs
+              iAccounts ix
+                @?= [ AccountMeta table False True,
+                      AccountMeta payerPk False False,
+                      AccountMeta funderPk True True,
+                      AccountMeta SP.systemProgramId False False
+                    ],
+            testCase "freezeLookupTable metas" $
+              iAccounts (ALT.freezeLookupTable tablePk payerPk)
+                @?= [ AccountMeta tablePk False True,
+                      AccountMeta payerPk True False
+                    ],
+            testCase "extendLookupTable metas (no payer)" $
+              iAccounts (ALT.extendLookupTable tablePk payerPk Nothing [addrA, addrB])
+                @?= [ AccountMeta tablePk False True,
+                      AccountMeta payerPk True False
+                    ],
+            testCase "extendLookupTable metas (with payer)" $
+              iAccounts (ALT.extendLookupTable tablePk payerPk (Just funderPk) [addrA, addrB])
+                @?= [ AccountMeta tablePk False True,
+                      AccountMeta payerPk True False,
+                      AccountMeta funderPk True True,
+                      AccountMeta SP.systemProgramId False False
+                    ],
+            testCase "deactivateLookupTable metas" $
+              iAccounts (ALT.deactivateLookupTable tablePk payerPk)
+                @?= [ AccountMeta tablePk False True,
+                      AccountMeta payerPk True False
+                    ],
+            testCase "closeLookupTable metas" $
+              iAccounts (ALT.closeLookupTable tablePk payerPk recipientPk)
+                @?= [ AccountMeta tablePk False True,
+                      AccountMeta payerPk True False,
+                      AccountMeta recipientPk False True
+                    ]
+          ]
   where
     goldenCase getFixtures name li =
       testCase name $ do

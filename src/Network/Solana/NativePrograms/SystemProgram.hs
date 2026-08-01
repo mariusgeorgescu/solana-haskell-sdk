@@ -6,10 +6,12 @@ import Data.Binary
 import Data.Binary.Get
 import Data.Binary.Put
 import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as BL
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import GHC.Generics
 import Network.Solana.Core.Account (Lamport)
+import Network.Solana.Core.Block (BlockHash)
 import Network.Solana.Core.Crypto
 import Network.Solana.Core.Instruction
 import Network.Solana.Sysvar qualified as Sysvar
@@ -199,6 +201,36 @@ getBincodeString = do
       case TE.decodeUtf8' bs of
         Left _ -> fail "getBincodeString: invalid UTF-8"
         Right t -> pure (T.unpack t)
+
+-- | A nonce account's on-chain state (bincode-encoded @Versions<State>@:
+-- a u32 version tag around a u32 state tag).
+data NonceState
+  = NonceUninitialized
+  | NonceInitialized
+      { nsAuthority :: SolanaPublicKey,
+        nsDurableNonce :: BlockHash,
+        nsLamportsPerSignature :: Word64
+      }
+  deriving (Eq, Show)
+
+-- | Decodes a nonce account's data: a u32 version (0 or 1), then a u32 state
+-- discriminant (0 uninitialized, 1 initialized with authority, durable
+-- nonce, and fee-rate fields). Trailing bytes (account padding) are allowed.
+decodeNonceAccount :: BS.ByteString -> Either String NonceState
+decodeNonceAccount bs = case runGetOrFail getNonceState (BL.fromStrict bs) of
+  Left (_, _, err) -> Left err
+  Right (_, _, ns) -> Right ns
+  where
+    getNonceState = do
+      version <- getWord32le
+      if version /= 0 && version /= 1
+        then fail ("NonceState: unsupported version " <> show version)
+        else do
+          st <- getWord32le
+          case st of
+            0 -> pure NonceUninitialized
+            1 -> NonceInitialized <$> get <*> get <*> getWord64le
+            _ -> fail ("NonceState: unknown state " <> show st)
 
 -- | Creates instruction to "Create a new account"
 -- Receives the funding account, the new account, amount to transfer, the number of bytes of memory to allocate and the owner program account.

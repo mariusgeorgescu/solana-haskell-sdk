@@ -6,7 +6,8 @@ import Data.Binary (decode, decodeOrFail, encode)
 import Data.Binary.Get (ByteOffset)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BL
-import Network.Solana.Core.Crypto (SolanaPublicKey, unsafeSolanaPublicKeyRaw)
+import Network.Solana.Core.Block (BlockHash (..))
+import Network.Solana.Core.Crypto (SolanaPublicKey, createSolanaKeypairFromSeed, unsafeSolanaPublicKeyRaw)
 import Network.Solana.Core.Instruction
 import Network.Solana.NativePrograms.SystemProgram qualified as SP
 import Network.Solana.Sysvar qualified as Sysvar
@@ -49,8 +50,46 @@ genSystemInstruction =
     genPk = unsafeSolanaPublicKeyRaw <$> vectorOf 32 arbitrary
     genSeed = listOf (elements (['a' .. 'z'] ++ ['0' .. '9'] ++ "-_"))
 
+payerPk :: SolanaPublicKey
+payerPk =
+  case createSolanaKeypairFromSeed (BS.replicate 32 1) of
+    Just (pk, _) -> pk
+    Nothing -> error "failed to derive payer"
+
 tests :: TestTree
-tests =
+tests = testGroup "SystemProgram" [instructionDataTests, nonceStateTests]
+
+nonceStateTests :: TestTree
+nonceStateTests =
+  withResource (loadFixtures "test/fixtures/state_fixtures.json") (const (pure ())) $ \getStateFixtures ->
+    testGroup
+      "SystemProgram nonce account state (golden + rejection)"
+      [ testCase "decodeNonceAccount: nonce-account golden" $ do
+          fs <- getStateFixtures
+          let bs = requireFixture "nonce-account" fs
+              durableNonceBytes = requireFixture "nonce-durable-hash" fs
+          case SP.decodeNonceAccount bs of
+            Left err -> assertFailure $ "decode failed: " <> err
+            Right ns -> case ns of
+              SP.NonceUninitialized -> assertFailure "expected NonceInitialized, got NonceUninitialized"
+              SP.NonceInitialized {SP.nsAuthority = auth, SP.nsDurableNonce = BlockHash nonceBytes, SP.nsLamportsPerSignature = fee} -> do
+                auth @?= payerPk
+                nonceBytes @?= durableNonceBytes
+                fee @?= 5000,
+        testCase "decodeNonceAccount: rejects unsupported version" $ do
+          let bs = BS.pack ([2, 0, 0, 0] <> replicate 76 0)
+          case SP.decodeNonceAccount bs of
+            Left _ -> pure ()
+            Right _ -> assertFailure "expected decode failure for unsupported version",
+        testCase "decodeNonceAccount: rejects unknown state" $ do
+          let bs = BS.pack ([1, 0, 0, 0, 2, 0, 0, 0] <> replicate 72 0)
+          case SP.decodeNonceAccount bs of
+            Left _ -> pure ()
+            Right _ -> assertFailure "expected decode failure for unknown state"
+      ]
+
+instructionDataTests :: TestTree
+instructionDataTests =
   withResource
     (loadFixtures "test/fixtures/system_instruction_data.json")
     (const (pure ()))

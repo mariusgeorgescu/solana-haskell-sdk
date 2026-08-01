@@ -11,12 +11,14 @@ import Control.Monad (replicateM)
 import Data.Binary
 import Data.Binary.Get
 import Data.Binary.Put
+import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BL
 import Data.Maybe (fromMaybe)
 import GHC.Generics (Generic)
 import Network.Solana.Core.Crypto
 import Network.Solana.Core.Instruction
 import Network.Solana.Core.Pda (findProgramAddress)
+import Network.Solana.Core.VersionedMessage qualified as VM
 import Network.Solana.NativePrograms.SystemProgram qualified as SP
 
 -- | Address Lookup Table program address.
@@ -71,6 +73,65 @@ instance Binary AddressLookupTableInstruction where
       3 -> pure DeactivateLookupTable
       4 -> pure CloseLookupTable
       _ -> fail ("AddressLookupTableInstruction: unknown discriminant " <> show disc)
+
+-- | An address lookup table account's on-chain state: the fixed-size
+-- @LookupTableMeta@ fields followed by the raw stored addresses.
+data LookupTableState = LookupTableState
+  { ltDeactivationSlot :: Word64,
+    ltLastExtendedSlot :: Word64,
+    ltLastExtendedSlotStartIndex :: Word8,
+    ltAuthority :: Maybe SolanaPublicKey,
+    ltAddresses :: [SolanaPublicKey]
+  }
+  deriving (Eq, Show)
+
+-- | Decodes an address lookup table account's data. The first 56 bytes are
+-- the fixed @LookupTableMeta@ region (u32 discriminant, two u64 slots, a u8
+-- start index, a bincode @Option\<Pubkey\>@ authority, and trailing padding
+-- up to the 56-byte boundary); the remainder is the raw table of 32-byte
+-- addresses.
+decodeLookupTable :: BS.ByteString -> Either String LookupTableState
+decodeLookupTable bs
+  | BS.length bs < 56 =
+      Left ("LookupTableState: expected at least 56 bytes, got " <> show (BS.length bs))
+  | otherwise = do
+      (deactivationSlot, lastExtendedSlot, startIndex, authority) <- parseMeta (BS.take 56 bs)
+      addresses <- parseAddresses (BS.drop 56 bs)
+      Right (LookupTableState deactivationSlot lastExtendedSlot startIndex authority addresses)
+  where
+    parseMeta chunk = case runGetOrFail getMeta (BL.fromStrict chunk) of
+      Left (_, _, err) -> Left err
+      Right (_, _, v) -> Right v
+    getMeta = do
+      disc <- getWord32le
+      case disc of
+        0 -> fail "uninitialized lookup table"
+        1 ->
+          (,,,)
+            <$> getWord64le
+            <*> getWord64le
+            <*> getWord8
+            <*> getOptionalAuthority
+        _ -> fail ("LookupTableState: unknown discriminant " <> show disc)
+    getOptionalAuthority = do
+      tag <- getWord8
+      case tag of
+        0 -> pure Nothing
+        1 -> Just <$> get
+        _ -> fail ("LookupTableState: invalid authority option tag " <> show tag)
+    parseAddresses addrBytes
+      | remainder /= 0 =
+          Left ("LookupTableState: addresses length " <> show (BS.length addrBytes) <> " is not a multiple of 32")
+      | otherwise = case runGetOrFail (replicateM count get) (BL.fromStrict addrBytes) of
+          Left (_, _, err) -> Left err
+          Right (_, _, addrs) -> Right addrs
+      where
+        (count, remainder) = BS.length addrBytes `divMod` 32
+
+-- | Builds the 'VM.AddressLookupTableAccount' 'compileV0Message' expects from
+-- the table's own address and its decoded on-chain state.
+lookupTableToAccount :: SolanaPublicKey -> LookupTableState -> VM.AddressLookupTableAccount
+lookupTableToAccount key state = VM.AddressLookupTableAccount key (ltAddresses state)
 
 -- | Derives the address of a lookup table for a given authority and recent
 -- slot: the PDA of @[authority, recentSlot as 8 little-endian bytes]@ under

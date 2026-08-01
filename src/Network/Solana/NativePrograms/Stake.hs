@@ -10,6 +10,8 @@ module Network.Solana.NativePrograms.Stake where
 import Data.Binary
 import Data.Binary.Get
 import Data.Binary.Put
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as BL
 import Data.Int (Int64)
 import GHC.Generics (Generic)
 import Network.Solana.Core.Crypto
@@ -55,6 +57,58 @@ instance Binary Lockup where
     putByteString (getSolanaPublicKeyRaw cust)
   get :: Get Lockup
   get = Lockup <$> getInt64le <*> getWord64le <*> get
+
+-- | A stake's delegation to a vote account.
+data StakeDelegation = StakeDelegation
+  { sdVoter :: SolanaPublicKey,
+    sdStake :: Word64,
+    sdActivationEpoch :: Word64,
+    sdDeactivationEpoch :: Word64,
+    sdWarmupCooldownRate :: Double
+  }
+  deriving (Eq, Show)
+
+-- | A stake account's metadata: rent-exempt reserve, authorities, and lockup.
+data StakeMeta = StakeMeta
+  { smRentExemptReserve :: Word64,
+    smAuthorized :: Authorized,
+    smLockup :: Lockup
+  }
+  deriving (Eq, Show)
+
+-- | A stake account's on-chain state (bincode-encoded @StakeStateV2@).
+data StakeState
+  = StakeUninitialized
+  | StakeInitialized StakeMeta
+  | -- | Meta, delegation, credits observed, stake flags (wire order).
+    StakeActive StakeMeta StakeDelegation Word64 Word8
+  | StakeRewardsPool
+  deriving (Eq, Show)
+
+-- | Decodes a stake account's data: a u32 discriminant (0 uninitialized,
+-- 1 initialized, 2 active/delegated, 3 rewards pool). Trailing bytes
+-- (account padding) are allowed.
+decodeStakeAccount :: BS.ByteString -> Either String StakeState
+decodeStakeAccount bs = case runGetOrFail getStakeState (BL.fromStrict bs) of
+  Left (_, _, err) -> Left err
+  Right (_, _, s) -> Right s
+  where
+    getStakeState = do
+      disc <- getWord32le
+      case disc of
+        0 -> pure StakeUninitialized
+        1 -> StakeInitialized <$> getMeta
+        2 -> StakeActive <$> getMeta <*> getDelegation <*> getWord64le <*> getWord8
+        3 -> pure StakeRewardsPool
+        _ -> fail ("StakeState: unknown discriminant " <> show disc)
+    getMeta = StakeMeta <$> getWord64le <*> get <*> get
+    getDelegation =
+      StakeDelegation
+        <$> get
+        <*> getWord64le
+        <*> getWord64le
+        <*> getWord64le
+        <*> getDoublele
 
 -- | Which stake authority an operation concerns (bincode u32: 0 staker, 1 withdrawer).
 data StakeAuthorize = AuthorizeStaker | AuthorizeWithdrawer
