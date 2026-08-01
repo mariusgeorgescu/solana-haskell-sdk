@@ -4,6 +4,10 @@
 -- data is bincode-encoded (u32 little-endian discriminant), like the System
 -- Program; the @Write@ variant's byte vector is bincode's @Vec\<u8\>@ encoding
 -- (u64 little-endian length followed by the raw bytes).
+--
+-- Rust's composite helpers (@create_buffer@, @deploy_with_max_program_len@)
+-- are deliberately not mirrored: compose them from the System Program client
+-- (createAccount) plus 'initializeBuffer' / 'deployWithMaxDataLen'.
 module Network.Solana.NativePrograms.BpfLoaderUpgradeable where
 
 import Data.Binary
@@ -228,15 +232,15 @@ closeAccount account recipient authority mProgram =
 
 -- | Creates instruction to "Extend a program's ProgramData account by the
 -- given number of bytes"
--- Receives the ProgramData account, the Program account, an optional
--- (system program, payer) pair to fund the extension, and the number of
--- additional bytes.
+-- Receives the ProgramData account, the Program account, an optional payer
+-- to fund the extension (the system program is always included alongside
+-- it), and the number of additional bytes.
 -- # Account references
 -- 0. `[WRITE]` ProgramData account
 -- 1. `[WRITE]` Program account
 -- 2. `[]` (optional) System program
 -- 3. `[WRITE, SIGNER]` (optional) Payer account
-extendProgram :: SolanaPublicKey -> SolanaPublicKey -> Maybe (SolanaPublicKey, SolanaPublicKey) -> Word32 -> Instruction
+extendProgram :: SolanaPublicKey -> SolanaPublicKey -> Maybe SolanaPublicKey -> Word32 -> Instruction
 extendProgram programdata program mPayer additionalBytes =
   mkInstruction
     bpfLoaderUpgradeableId
@@ -245,8 +249,8 @@ extendProgram programdata program mPayer additionalBytes =
       ]
         ++ maybe
           []
-          ( \(sys, payer) ->
-              [ AccountMeta {accountPubKey = sys, isSigner = False, isWritable = False},
+          ( \payer ->
+              [ AccountMeta {accountPubKey = SP.systemProgramId, isSigner = False, isWritable = False},
                 AccountMeta {accountPubKey = payer, isSigner = True, isWritable = True}
               ]
           )

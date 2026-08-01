@@ -22,9 +22,10 @@ programPk = unsafeSolanaPublicKeyRaw (replicate 32 23)
 spillPk = unsafeSolanaPublicKeyRaw (replicate 32 22)
 newAuthPk = unsafeSolanaPublicKeyRaw (replicate 32 20)
 
-programDataPk, recipientPk :: SolanaPublicKey
+programDataPk, recipientPk, authorityPk' :: SolanaPublicKey
 programDataPk = unsafeSolanaPublicKeyRaw (replicate 32 25)
 recipientPk = unsafeSolanaPublicKeyRaw (replicate 32 26)
+authorityPk' = unsafeSolanaPublicKeyRaw (replicate 32 27)
 
 payerPk :: SolanaPublicKey
 payerPk =
@@ -84,7 +85,7 @@ tests =
                     AccountMeta payerPk True False
                   ],
           testCase "deployWithMaxDataLen metas" $
-            iAccounts (Loader.deployWithMaxDataLen payerPk programDataPk programPk bufferPk payerPk 1048576)
+            iAccounts (Loader.deployWithMaxDataLen payerPk programDataPk programPk bufferPk authorityPk' 1048576)
               @?= [ AccountMeta payerPk True True,
                     AccountMeta programDataPk False True,
                     AccountMeta programPk False True,
@@ -92,7 +93,7 @@ tests =
                     AccountMeta Sysvar.rent False False,
                     AccountMeta Sysvar.clock False False,
                     AccountMeta SP.systemProgramId False False,
-                    AccountMeta payerPk True False
+                    AccountMeta authorityPk' True False
                   ],
           testCase "upgrade metas" $
             iAccounts (Loader.upgrade programDataPk programPk bufferPk spillPk payerPk)
@@ -135,7 +136,7 @@ tests =
                     AccountMeta programPk False True
                   ],
           testCase "extendProgram metas (with payer)" $
-            iAccounts (Loader.extendProgram programDataPk programPk (Just (SP.systemProgramId, payerPk)) 4096)
+            iAccounts (Loader.extendProgram programDataPk programPk (Just payerPk) 4096)
               @?= [ AccountMeta programDataPk False True,
                     AccountMeta programPk False True,
                     AccountMeta SP.systemProgramId False False,
