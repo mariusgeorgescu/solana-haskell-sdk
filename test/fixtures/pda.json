@@ -30,5 +30,13 @@
   {
     "hex": "fe",
     "name": "lookup-table-bump"
+  },
+  {
+    "hex": "56a9c8b183e68c0582ef458b28a9f28894971e5aa21bd380aa210f6824f6ea89",
+    "name": "metadata-address"
+  },
+  {
+    "hex": "a8b0140612ffc013e3300b768c9e666c6e1712d945bf6ca2cead99fbaa29c1e7",
+    "name": "master-edition-address"
   }
 ]

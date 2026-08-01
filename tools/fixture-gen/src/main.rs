@@ -22,6 +22,11 @@ use solana_sdk::address_lookup_table::{self, instruction::ProgramInstruction, Ad
 use solana_sdk::message::{v0, VersionedMessage};
 use solana_sdk::transaction::VersionedTransaction;
 use spl_token::instruction::{AuthorityType, TokenInstruction};
+use mpl_token_metadata::accounts::{MasterEdition, Metadata};
+use mpl_token_metadata::instructions::{
+    CreateMasterEditionV3Builder, CreateMetadataAccountV3Builder, UpdateMetadataAccountV2Builder,
+};
+use mpl_token_metadata::types::{Collection, CollectionDetails, Creator, DataV2, UseMethod, Uses};
 use std::fs;
 use std::str::FromStr;
 
@@ -258,6 +263,9 @@ fn main() {
     )
     .unwrap();
 
+    let (metadata_pda, _metadata_bump) = Metadata::find_pda(&mint);
+    let (master_edition_pda, _master_edition_bump) = MasterEdition::find_pda(&mint);
+
     let pda_fixtures = vec![
         json!({ "name": "generic-pda-address", "hex": hex(&generic_pda.to_bytes()) }),
         json!({ "name": "generic-pda-bump", "hex": hex(&[generic_bump]) }),
@@ -267,10 +275,113 @@ fn main() {
         json!({ "name": "programdata-address", "hex": hex(&programdata.to_bytes()) }),
         json!({ "name": "lookup-table-address", "hex": hex(&lut_addr.to_bytes()) }),
         json!({ "name": "lookup-table-bump", "hex": hex(&[lut_bump]) }),
+        json!({ "name": "metadata-address", "hex": hex(&metadata_pda.to_bytes()) }),
+        json!({ "name": "master-edition-address", "hex": hex(&master_edition_pda.to_bytes()) }),
     ];
     fs::write(
         "../../test/fixtures/pda.json",
         serde_json::to_string_pretty(&pda_fixtures).unwrap(),
+    )
+    .unwrap();
+
+    let second_creator = Pubkey::new_from_array([33u8; 32]);
+    let collection_key = Pubkey::new_from_array([34u8; 32]);
+
+    let data_v2_full = DataV2 {
+        name: "Solana Haskell NFT".to_string(),
+        symbol: "SHSDK".to_string(),
+        uri: "https://example.com/nft.json".to_string(),
+        seller_fee_basis_points: 550,
+        creators: Some(vec![
+            Creator { address: payer.pubkey(), verified: true, share: 60 },
+            Creator { address: second_creator, verified: false, share: 40 },
+        ]),
+        collection: Some(Collection { verified: false, key: collection_key }),
+        uses: Some(Uses { use_method: UseMethod::Multiple, remaining: 10, total: 10 }),
+    };
+    let data_v2_minimal = DataV2 {
+        name: "Solana Haskell NFT".to_string(),
+        symbol: "SHSDK".to_string(),
+        uri: "https://example.com/nft.json".to_string(),
+        seller_fee_basis_points: 550,
+        creators: None,
+        collection: None,
+        uses: None,
+    };
+
+    let create_v3_full_ix = CreateMetadataAccountV3Builder::new()
+        .metadata(metadata_pda)
+        .mint(mint)
+        .mint_authority(payer.pubkey())
+        .payer(payer.pubkey())
+        .update_authority(payer.pubkey(), true)
+        .data(data_v2_full.clone())
+        .is_mutable(true)
+        .collection_details(CollectionDetails::V1 { size: 0 })
+        .instruction();
+
+    let create_v3_minimal_ix = CreateMetadataAccountV3Builder::new()
+        .metadata(metadata_pda)
+        .mint(mint)
+        .mint_authority(payer.pubkey())
+        .payer(payer.pubkey())
+        .update_authority(payer.pubkey(), true)
+        .data(data_v2_minimal.clone())
+        .is_mutable(true)
+        .instruction();
+
+    let update_some_ix = UpdateMetadataAccountV2Builder::new()
+        .metadata(metadata_pda)
+        .update_authority(payer.pubkey())
+        .data(data_v2_full.clone())
+        .new_update_authority(payer.pubkey())
+        .primary_sale_happened(true)
+        .is_mutable(true)
+        .instruction();
+
+    let update_none_ix = UpdateMetadataAccountV2Builder::new()
+        .metadata(metadata_pda)
+        .update_authority(payer.pubkey())
+        .instruction();
+
+    let master_edition_some_ix = CreateMasterEditionV3Builder::new()
+        .edition(master_edition_pda)
+        .mint(mint)
+        .update_authority(payer.pubkey())
+        .mint_authority(payer.pubkey())
+        .payer(payer.pubkey())
+        .metadata(metadata_pda)
+        .max_supply(100)
+        .instruction();
+
+    let master_edition_none_ix = CreateMasterEditionV3Builder::new()
+        .edition(master_edition_pda)
+        .mint(mint)
+        .update_authority(payer.pubkey())
+        .mint_authority(payer.pubkey())
+        .payer(payer.pubkey())
+        .metadata(metadata_pda)
+        .instruction();
+
+    let metadata_fixtures = vec![
+        json!({ "name": "CreateMetadataAccountV3-full", "hex": hex(&create_v3_full_ix.data) }),
+        json!({ "name": "CreateMetadataAccountV3-minimal", "hex": hex(&create_v3_minimal_ix.data) }),
+        json!({ "name": "UpdateMetadataAccountV2-some", "hex": hex(&update_some_ix.data) }),
+        json!({ "name": "UpdateMetadataAccountV2-none", "hex": hex(&update_none_ix.data) }),
+        json!({ "name": "CreateMasterEditionV3-some", "hex": hex(&master_edition_some_ix.data) }),
+        json!({ "name": "CreateMasterEditionV3-none", "hex": hex(&master_edition_none_ix.data) }),
+        json!({
+            "name": "create-v3-full-accounts",
+            "accounts": create_v3_full_ix.accounts.iter().map(|m| json!({
+                "pubkey": hex(&m.pubkey.to_bytes()),
+                "signer": m.is_signer,
+                "writable": m.is_writable,
+            })).collect::<Vec<_>>(),
+        }),
+    ];
+    fs::write(
+        "../../test/fixtures/metadata_instruction_data.json",
+        serde_json::to_string_pretty(&metadata_fixtures).unwrap(),
     )
     .unwrap();
 
