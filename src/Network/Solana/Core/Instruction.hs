@@ -32,20 +32,21 @@ import Network.Solana.Core.Crypto (SolanaPublicKey, fromBase58String, toBase58St
 
 ------------------------------------------------------------------------------------------------
 
+-- | A single program invocation: which program to call, the accounts it
+-- may read or write, and the input bytes to pass it.
 data Instruction = Instruction
-  { {-  Pubkey of the program that executes this instruction.
-        The program being invoked to execute the instruction.
-    -}
+  { -- | Address of the program that executes this instruction.
     iProgramId :: SolanaPublicKey,
     -- |  List of metadata describing accounts that should be passed to the program.
     iAccounts :: [AccountMeta],
-    {-  Byte array specifying the instruction on the program to invoke
-        and any function arguments required by the instruction.
-    -}
+    -- | Bytes selecting which instruction of the program to invoke, plus
+    -- any arguments it needs.
     iData :: InstructionData
   }
   deriving (Show, Eq, Generic)
 
+-- | Build an 'Instruction' from a program id, account metas, and
+-- 'Binary'-encodable instruction data.
 mkInstruction :: (Binary.Binary a) => SolanaPublicKey -> [AccountMeta] -> a -> Instruction
 mkInstruction programid accmetas instrData =
   Instruction
@@ -81,6 +82,7 @@ data AccountMeta = AccountMeta
 
 ------------------------------------------------------------------------------------------------
 
+-- | Raw instruction input bytes. 'Show' renders them in Base64.
 newtype InstructionData = InstructionData {instrData :: S.ByteString}
   deriving (Eq, Generic)
 
@@ -94,14 +96,14 @@ instance Show InstructionData where
 
 ------------------------------------------------------------------------------------------------
 
--- | The structure of a Compiled Instructuin.
+-- | The structure of a compiled instruction.
 data CompiledInstruction = CompiledInstruction
   { {-
     Index that points to the program's address in the account addresses array.
     This specifies the program that will process the instruction.
     -}
     ciProgramIdIndex :: Word8,
-    -- |  Compact array of indexes that point to the account addresses required for this instruction..
+    -- |  Compact array of indexes that point to the account addresses required for this instruction.
     ciAccounts :: CompactArray Word8,
     {-  Compact byte array specifying the instruction on the program to invoke
         and any function arguments required by the instruction.
@@ -144,6 +146,9 @@ instance Binary CompiledInstruction where
   get :: Get CompiledInstruction
   get = CompiledInstruction <$> get <*> get <*> get
 
+-- | Replace each pubkey referenced by an instruction with its index into
+-- the given account-key table. 'Left' when a key is not present in the
+-- table.
 compileInstruction :: [SolanaPublicKey] -> Instruction -> Either CompileException CompiledInstruction
 compileInstruction keys instruction = do
   programIdIndex <- keyToIndex (iProgramId instruction) keys
@@ -163,6 +168,8 @@ keyToIndex k keys = maybeToRight (MissingIndex $ show k) $ k `elemIndex` keys
 -- *** CompileException
 
 ------------------------------------------------------------------------------------------------
+-- | Compilation failure: an instruction references an account key that is
+-- missing from the message's account table.
 newtype CompileException = MissingIndex String
   deriving (Show)
 

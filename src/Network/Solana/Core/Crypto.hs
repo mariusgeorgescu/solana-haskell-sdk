@@ -1,5 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+-- |
+-- Module      : Network.Solana.Core.Crypto
+-- Description : Ed25519 keys, signatures, and Base58\/Base64 helpers for Solana.
+--
+-- Wrappers around "Crypto.Sign.Ed25519" providing the core cryptographic
+-- types: 'SolanaPublicKey', 'SolanaPrivateKey' and 'SolanaSignature'.
+-- All three 'show' as the Base58 strings used across the Solana ecosystem.
 module Network.Solana.Core.Crypto
   ( createSolanaKeyPair,
     createSolanaKeypairFromSeed,
@@ -45,15 +52,23 @@ import Data.String (IsString, fromString)
 import Data.Text qualified as Text
 import GHC.Generics (Generic)
 
+-- | Encode a byte string as Base58 text (Bitcoin alphabet), the encoding
+-- Solana uses for addresses, signatures and hashes.
 toBase58String :: BS.ByteString -> String
 toBase58String = tail . init . show . encodeBase58 bitcoinAlphabet
 
+-- | Encode a byte string as Base64 text.
 toBase64String :: BS.ByteString -> String
 toBase64String = tail . init . show . encodeBase64'
 
+-- | Decode Base58 text (Bitcoin alphabet); 'Nothing' if the input contains
+-- characters outside the alphabet.
 fromBase58String :: String -> Maybe BS.ByteString
 fromBase58String = decodeBase58 bitcoinAlphabet . fromString
 
+-- | Decode Base64 text /leniently/: invalid characters are skipped rather
+-- than reported, so this never fails but may silently accept malformed
+-- input.
 fromBase64String :: String -> BS.ByteString
 fromBase64String = decodeBase64Lenient . fromString
 
@@ -68,6 +83,8 @@ fromBase64String = decodeBase64Lenient . fromString
 
 ------------------------------------------------------------------------------------------------
 
+-- | A 64-byte detached Ed25519 signature. 'Show' and the JSON instances use
+-- the Base58 rendering.
 newtype SolanaSignature = SolanaSignature Ed25519.Signature
   deriving (Eq, Ord, Generic)
 
@@ -87,7 +104,7 @@ instance ToJSON SolanaSignature where
 
 instance FromJSON SolanaSignature where
   parseJSON :: Value -> Parser SolanaSignature
-  parseJSON = withText "SolanaSignature" $ return . unsafeSigFromString . Text.unpack
+  parseJSON = withText "SolanaSignature" $ either fail pure . mkSigFromString . Text.unpack
 
 ------------------------------------------------------------------------------------------------
 
@@ -95,6 +112,9 @@ instance FromJSON SolanaSignature where
 
 ------------------------------------------------------------------------------------------------
 
+-- | A 32-byte Ed25519 public key: the address of an account, program or
+-- signer. 'Show' and the JSON instances use the Base58 rendering; the
+-- 'IsString' instance is partial (see 'unsafeSolanaPublicKey').
 newtype SolanaPublicKey
   = SolanaPublicKey Ed25519.PublicKey
   deriving (Eq, Ord, Generic)
@@ -118,11 +138,11 @@ instance ToJSON SolanaPublicKey where
 
 instance FromJSON SolanaPublicKey where
   parseJSON :: Value -> Parser SolanaPublicKey
-  parseJSON = withText "SolanaPublicKey" $ return . unsafeSolanaPublicKey . Text.unpack
+  parseJSON = withText "SolanaPublicKey" $ either fail pure . mkPublicKeyFromString . Text.unpack
 
 instance FromJSONKey SolanaPublicKey where
   fromJSONKey :: FromJSONKeyFunction SolanaPublicKey
-  fromJSONKey = FromJSONKeyText (unsafeSolanaPublicKey . Text.unpack)
+  fromJSONKey = FromJSONKeyTextParser (either fail pure . mkPublicKeyFromString . Text.unpack)
 
 instance ToJSONKey SolanaPublicKey where
   toJSONKey :: ToJSONKeyFunction SolanaPublicKey
@@ -134,6 +154,8 @@ instance ToJSONKey SolanaPublicKey where
 
 ------------------------------------------------------------------------------------------------
 
+-- | A 64-byte Ed25519 secret key (seed plus public key, NaCl layout).
+-- 'Show' renders it in Base58 — avoid logging values of this type.
 newtype SolanaPrivateKey
   = SolanaPrivateKey Ed25519.SecretKey
   deriving (Eq, Ord, Generic)
@@ -155,67 +177,94 @@ mkSigFromString str = do
     then Right $ (SolanaSignature . Ed25519.Signature) bs
     else Left "Invalid string length for sig"
 
+-- | Build a 'SolanaSignature' from Base58 text. Calls 'error' unless the
+-- input decodes to exactly 64 bytes.
 unsafeSigFromString :: String -> SolanaSignature
 unsafeSigFromString = either error id . mkSigFromString
 
-mkKeyromString :: forall f. (BS.ByteString -> f) -> String -> Either String f
-mkKeyromString cstr str = do
+mkKeyFromString :: forall f. Int -> (BS.ByteString -> f) -> String -> Either String f
+mkKeyFromString n cstr str = do
   bs <- maybeToEither "Not base58" $ fromBase58String str
-  if BS.length bs == 32
+  if BS.length bs == n
     then Right $ cstr bs
     else Left "Invalid string length for key"
 
+-- | Parse Base58 text into a 'SolanaPublicKey'. 'Left' if the input is not
+-- Base58 or does not decode to exactly 32 bytes.
 mkPublicKeyFromString :: String -> Either String SolanaPublicKey
-mkPublicKeyFromString = mkKeyromString (SolanaPublicKey . Ed25519.PublicKey)
+mkPublicKeyFromString = mkKeyFromString 32 (SolanaPublicKey . Ed25519.PublicKey)
 
+-- | Parse Base58 text into a 'SolanaPrivateKey'. 'Left' if the input is not
+-- Base58 or has the wrong length.
 mkPrivateKeyFromString :: String -> Either String SolanaPrivateKey
-mkPrivateKeyFromString = mkKeyromString (SolanaPrivateKey . Ed25519.SecretKey)
+mkPrivateKeyFromString = mkKeyFromString 64 (SolanaPrivateKey . Ed25519.SecretKey)
 
-unsafeKeyFromString :: forall f. (BS.ByteString -> f) -> String -> f
-unsafeKeyFromString cstr str = either error id $ mkKeyromString cstr str
+unsafeKeyFromString :: forall f. Int -> (BS.ByteString -> f) -> String -> f
+unsafeKeyFromString n cstr str = either error id $ mkKeyFromString n cstr str
 
 unsafeKeyFromWords :: forall f. (BS.ByteString -> f) -> [Word8] -> f
 unsafeKeyFromWords cstr ws = cstr (BS.pack ws)
 
+-- | Partial version of 'mkPublicKeyFromString': calls 'error' on invalid
+-- input. Prefer the total variant outside of literals and tests.
 unsafeSolanaPublicKey :: String -> SolanaPublicKey
-unsafeSolanaPublicKey = unsafeKeyFromString (SolanaPublicKey . Ed25519.PublicKey)
+unsafeSolanaPublicKey = unsafeKeyFromString 32 (SolanaPublicKey . Ed25519.PublicKey)
 
+-- | Build a 'SolanaPublicKey' directly from raw bytes. No length check is
+-- performed — the caller must supply exactly 32 bytes.
 unsafeSolanaPublicKeyRaw :: [Word8] -> SolanaPublicKey
 unsafeSolanaPublicKeyRaw = unsafeKeyFromWords (SolanaPublicKey . Ed25519.PublicKey)
 
+-- | Partial version of 'mkPrivateKeyFromString': calls 'error' on invalid
+-- input.
 unsafeSolanaPrivateKey :: String -> SolanaPrivateKey
-unsafeSolanaPrivateKey = unsafeKeyFromString (SolanaPrivateKey . Ed25519.SecretKey)
+unsafeSolanaPrivateKey = unsafeKeyFromString 64 (SolanaPrivateKey . Ed25519.SecretKey)
 
+-- | Build a 'SolanaPrivateKey' directly from raw bytes (e.g. the 64 numbers
+-- in a @solana-keygen@ keypair file). No length check is performed.
 unsafeSolanaPrivateKeyRaw :: [Word8] -> SolanaPrivateKey
 unsafeSolanaPrivateKeyRaw = unsafeKeyFromWords (SolanaPrivateKey . Ed25519.SecretKey)
 
+-- | The raw 32 bytes of a public key.
 getSolanaPublicKeyRaw :: SolanaPublicKey -> BS.ByteString
 getSolanaPublicKeyRaw (SolanaPublicKey (Ed25519.PublicKey bs)) = bs
 
+-- | The raw bytes of a secret key. Handle with care.
 getSolanaPrivateKeyRaw :: SolanaPrivateKey -> BS.ByteString
 getSolanaPrivateKeyRaw (SolanaPrivateKey (Ed25519.SecretKey bs)) = bs
 
+-- | The raw 64 bytes of a signature.
 getSolanaSignatureRaw :: SolanaSignature -> BS.ByteString
 getSolanaSignatureRaw (SolanaSignature (Ed25519.Signature bs)) = bs
 
+-- | Generate a fresh random Ed25519 keypair.
 createSolanaKeyPair :: IO (SolanaPublicKey, SolanaPrivateKey)
 createSolanaKeyPair = bimap SolanaPublicKey SolanaPrivateKey <$> Ed25519.createKeypair
 
+-- | Derive a keypair deterministically from a seed. 'Nothing' unless the
+-- seed is exactly 32 bytes.
 createSolanaKeypairFromSeed :: BS.ByteString -> Maybe (SolanaPublicKey, SolanaPrivateKey)
 createSolanaKeypairFromSeed bs = bimap SolanaPublicKey SolanaPrivateKey <$> Ed25519.createKeypairFromSeed_ bs
 
+-- | The public key corresponding to a private key.
 toSolanaPublicKey :: SolanaPrivateKey -> SolanaPublicKey
 toSolanaPublicKey (SolanaPrivateKey pv) = SolanaPublicKey $ Ed25519.toPublicKey pv
 
+-- | Sign a message, returning the /joined/ signed message (signature
+-- prepended to the message). For transaction signatures use 'dsign'.
 sign :: SolanaPrivateKey -> BS.ByteString -> BS.ByteString
 sign (SolanaPrivateKey sk) = Ed25519.sign sk
 
+-- | Verify a joined signed message produced by 'sign'.
 verify :: SolanaPublicKey -> BS.ByteString -> Bool
 verify (SolanaPublicKey pk) = Ed25519.verify pk
 
+-- | Produce a detached 'SolanaSignature' over a byte string. This is the
+-- primitive used to sign transaction messages.
 dsign :: SolanaPrivateKey -> BS.ByteString -> SolanaSignature
 dsign (SolanaPrivateKey sk) bs = SolanaSignature $ Ed25519.dsign sk bs
 
+-- | Verify a detached 'SolanaSignature' over a byte string.
 dverify :: SolanaPublicKey -> BS.ByteString -> SolanaSignature -> Bool
 dverify (SolanaPublicKey pk) bs (SolanaSignature sig) = Ed25519.dverify pk bs sig
 
@@ -224,6 +273,9 @@ dverify (SolanaPublicKey pk) bs (SolanaSignature sig) = Ed25519.dverify pk bs si
 ----
 ----
 
+-- | Read a private key from a @solana-keygen@-style keypair file containing
+-- a list of byte values (e.g. @[1,2,...]@). Throws if the file cannot be
+-- read or its contents cannot be parsed.
 readSigningKeyFromFile :: FilePath -> IO SolanaPrivateKey
 readSigningKeyFromFile path = do
   contents <- BS8.readFile path

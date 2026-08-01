@@ -1,18 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-{-
-Recap rapid: cum funcționează ShortU16
-Codifică un u16 (0–65535) folosind între 1 și 3 bytes.
-
-Fiecare byte are un bit de continuare (MSB = 1 înseamnă că urmează alt byte).
-
-Fiecare byte contribuie cu 7 biți de date, începând cu cei mai puțin semnificativi (little-endian).
-
-Al treilea byte (dacă există) poate conține doar 2 biți de date, iar ceilalți 6 trebuie să fie 0.
-
-Se interzic alias-urile (de exemplu, codificări valide, dar redundante, pentru aceeași valoare).
-
--}
+-- |
+-- Module      : Network.Solana.Core.Compact
+-- Description : compact-u16 (ShortU16) encoding and compact arrays.
+--
+-- Solana serializes lengths as /compact-u16/: a 'Word16' packed into 1–3
+-- bytes, little-endian, 7 data bits per byte, with the high bit of each
+-- byte flagging a continuation byte. The third byte may only carry 2 data
+-- bits, and aliased (non-canonical) encodings are rejected when decoding.
+-- A 'CompactArray' is a sequence serialized as its compact-u16 length
+-- followed by the serialized items.
 module Network.Solana.Core.Compact
   ( getCompactU16,
     putCompactU16,
@@ -38,8 +35,12 @@ import GHC.Generics
 
 ------------------------------------------------------------------------------------------------
 
+-- | A list paired with its length, serialized ('Binary' 'put') as a
+-- compact-u16 length prefix followed by each item. Build with 'mkCompact'.
 data CompactArray a = CompactArray
-  { getCompactArrayLength :: Word16,
+  { -- | The recorded number of items.
+    getCompactArrayLength :: Word16,
+    -- | The items of the array.
     unCompact :: [a]
   }
   deriving (Eq, Ord, Show, Generic)
@@ -58,6 +59,8 @@ instance (Binary a) => Binary (CompactArray a) where
     putCompactU16 i
     mapM_ put xs -- not default putList
 
+-- | Wrap a list into a 'CompactArray', recording its length. The length is
+-- truncated to 'Word16'.
 mkCompact :: [a] -> CompactArray a
 mkCompact xs = CompactArray (fromIntegral $ length xs) xs
 
@@ -67,7 +70,9 @@ mkCompact xs = CompactArray (fromIntegral $ length xs) xs
 
 ------------------------------------------------------------------------------------------------
 
--- Decode a compact-u16 encoded value
+-- | Decode a compact-u16 value. Fails on encodings longer than 3 bytes, on
+-- aliased (non-canonical) encodings, on an invalid third byte, and on
+-- values exceeding 'Word16'.
 getCompactU16 :: Get Word16
 getCompactU16 = go 0 0
   where
@@ -91,7 +96,7 @@ getCompactU16 = go 0 0
                       w | w <= 0xFFFF -> return w
                       _ -> fail "Decoded value exceeds u16 range"
 
--- Encode a Word16 to compact-u16
+-- | Encode a 'Word16' as compact-u16 (1–3 bytes).
 putCompactU16 :: Word16 -> Put
 putCompactU16 val = go (fromIntegral val :: Word32)
   where
@@ -102,10 +107,12 @@ putCompactU16 val = go (fromIntegral val :: Word32)
           putWord8 (fromIntegral (v .&. 0x7F) .|. 0x80)
           go (v `shiftR` 7)
 
--- Convenient helpers
+-- | Run 'putCompactU16' to a lazy byte string.
 encodeCompactU16 :: Word16 -> BL.ByteString
 encodeCompactU16 = runPut . putCompactU16
 
+-- | Run 'getCompactU16' over a lazy byte string, returning the decoder's
+-- error message on failure.
 decodeCompactU16 :: BL.ByteString -> Either String Word16
 decodeCompactU16 bs =
   case runGetOrFail getCompactU16 bs of

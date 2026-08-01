@@ -1,5 +1,7 @@
 module Main (main) where
 
+import Test.Core.Account qualified
+import Test.Core.Block qualified
 import Test.Core.Compact qualified
 import Test.Core.Crypto qualified
 import Test.Core.Instruction qualified
@@ -21,7 +23,9 @@ main =
   defaultMain
     ( testGroup
         "solana-haskell-sdk"
-        [ Test.Core.Compact.tests,
+        [ Test.Core.Account.tests,
+          Test.Core.Block.tests,
+          Test.Core.Compact.tests,
           Test.Core.Crypto.tests,
           Test.Core.Instruction.tests,
           Test.Core.Message.tests,

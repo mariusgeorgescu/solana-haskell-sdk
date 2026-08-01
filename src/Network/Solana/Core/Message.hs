@@ -3,8 +3,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
+-- |
+-- Module      : Network.Solana.Core.Message
+-- Description : Building, canonically ordering, compiling and signing transaction messages.
 module Network.Solana.Core.Message
   ( newTransactionIntent,
+    SignedTransactionIntent,
     Message (..),
     MessageHeader (..),
     CompiledMessage,
@@ -33,6 +37,8 @@ import Network.Solana.Core.Instruction
 
 ------------------------------------------------------------------------------------------------
 
+-- | A transaction awaiting a recent block hash: applying one yields the
+-- Base64-encoded signed transaction, or a 'CompileException'.
 type SignedTransactionIntent = (BlockHash -> Either CompileException String)
 
 
@@ -40,7 +46,7 @@ type SignedTransactionIntent = (BlockHash -> Either CompileException String)
 -- instructions. The fee payer is the first writable signer encountered
 -- across the instructions' account metas, and account keys are canonically
 -- ordered (fee payer first, then each privilege section sorted by pubkey
--- bytes; see 'canonicalizeAccountOrder'). The private keys passed here must
+-- bytes; see @canonicalizeAccountOrder@). The private keys passed here must
 -- be ordered to match the resulting account order (fee payer first),
 -- otherwise the produced signatures will not correspond to the right
 -- account keys.
@@ -71,15 +77,22 @@ data Message = Message
   }
   deriving (Show, Eq, Generic)
 
+-- | Compile instructions into serialized legacy-message bytes using the
+-- given recent block hash. Account keys are collected and canonically
+-- ordered as described at 'newTransactionIntent'.
 newMessage :: BlockHash -> [Instruction] -> Either CompileException S.ByteString
 newMessage bh is = compileMessageToBinary (mkNewMessage bh is)
 
+-- | Like 'newMessage', but returns the message bytes Base64-encoded.
 newMessageToBase64String :: BlockHash -> [Instruction] -> Either CompileException String
 newMessageToBase64String = fmap (fmap toBase64String) . newMessage
 
 compileMessageToBinary :: Message -> Either CompileException S.ByteString
 compileMessageToBinary = fmap (S.toStrict . Data.Binary.encode) . compileMessage
 
+-- | Assemble the uncompiled 'Message': fold the instructions' account
+-- metas into a deduplicated, privilege-merged key list, then put it in
+-- canonical order.
 mkNewMessage :: BlockHash -> [Instruction] -> Message
 mkNewMessage bh =
   canonicalizeAccountOrder . updateMessageWithInstructions (Message mempty mempty bh mempty)
@@ -192,23 +205,17 @@ mkMessageHeaderFromSplittedAccounts (readAndWriteSigned, readOnlySigned, _readAn
 -- *** MessageHeader
 
 ------------------------------------------------------------------------------------------------
-{- The structure of the Transaction MessageHeader.
-The message header uses three bytes to define account privileges
--}
+-- | Three bytes at the front of every message declaring account privileges.
 data MessageHeader = MessageHeader
-  { {-
-    The number of signatures required for this message to be considered
-    valid. The signers of those signatures must match the first
-    `numRequiredSignatures` of Message's accountKeys.
-    -}
+  { -- | Number of signatures required for the message to be valid; the
+    -- first @numRequiredSignatures@ account keys of the message must sign,
+    -- in order.
     numRequiredSignatures :: Word8,
-    {-
-    The last `numRequiredSignatures` of the signed keys are read-only accounts.
-    -}
+    -- | Of the signed keys, the last @numReadonlySignedAccounts@ are
+    -- read-only.
     numReadonlySignedAccounts :: Word8,
-    {-
-    The last `numReadonlyUnsigned` of the unsigned keys are read-only accounts.
-    -}
+    -- | Of the unsigned keys, the last @numReadonlyUnsignedAccounts@ are
+    -- read-only.
     numReadonlyUnsignedAccounts :: Word8
   }
   deriving (Show, Eq, Generic)

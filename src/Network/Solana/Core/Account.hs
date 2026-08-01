@@ -2,11 +2,13 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- |
+-- Module      : Network.Solana.Core.Account
+-- Description : Accounts, account state, and the 'Lamport' unit.
 module Network.Solana.Core.Account where
 
 import Data.Aeson.Types
 import Data.ByteString qualified as S
-import Data.Maybe (fromJust)
 import Data.Text qualified as T
 import Data.Vector qualified as V
 import Data.Word (Word64)
@@ -17,8 +19,10 @@ import Network.Solana.Core.Crypto
 import Text.Printf (printf)
 
 -- | Lamport is the smallest unit of SOL (1 SOL = 1 billion lamports).
+-- 'Show' renders the amount converted to SOL (e.g. @0.000000001 SOL ◎@), not the raw count.
 newtype Lamport = Lamport
-  { unLamport :: Word64
+  { -- | The raw lamport amount.
+    unLamport :: Word64
   }
   deriving (Eq, Ord, Generic, Enum)
   deriving newtype (Num, Real, Integral)
@@ -45,8 +49,12 @@ instance Show Lamport where
 
 ------------------------------------------------------------------------------------------------
 
+-- | An account paired with its address, as returned by RPC methods such as
+-- @getProgramAccounts@.
 data Account = Account
-  { pubkey :: SolanaPublicKey,
+  { -- | The account's address.
+    pubkey :: SolanaPublicKey,
+    -- | The account's state.
     account :: AccountInfo
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
@@ -57,20 +65,17 @@ data Account = Account
 
 ------------------------------------------------------------------------------------------------
 
-{- Solana Account structure.
-    Accounts have a max size of 10MiB and every account on Solana has the same base Account type.
--}
+-- | The base state shared by every Solana account. Accounts hold at most
+-- 10 MiB of data.
 data AccountInfo = AccountInfo
   { -- | Amount of lamports in the account
     lamports :: Lamport,
-    {-  For non-executable accounts, this generally stores state that is meant to be read-only.
-        For program accounts (smart contracts), this contains the executable program code.
-        The data field is commonly referred to as "account data".
-    -}
+    -- | The account's data: executable code for program accounts,
+    -- program-defined state otherwise. Named @dataField@ because @data@ is
+    -- reserved in Haskell; serialized as @data@ in JSON.
     dataField :: AccountData,
-    {- The  program ID  'SolanaPublicKey' associated with the program that owns this account.
-       Only the owner program can modify the account's data or deduct its lamports balance.
-    -}
+    -- | The program that owns this account. Only the owner program may
+    -- modify the account's data or debit its lamports.
     owner :: SolanaPublicKey,
     -- |   A boolean flag that indicates whether this account contains a loaded program.
     executable :: Bool
@@ -122,18 +127,23 @@ instance FromJSON AccountData where
         base58StringParser =
           withText
             "AccountDataText"
-            (return . AccountDataBinary . fromJust . fromBase58String . T.unpack)
+            ( maybe (fail "AccountData: invalid base58") (pure . AccountDataBinary)
+                . fromBase58String
+                . T.unpack
+            )
 
         encodedParser =
           withArray
             "AccountDataArray"
-            ( \arr -> do
-                case V.last arr of
-                  "base58" -> base58StringParser $ V.head arr
-                  "base64" -> base64StringParser $ V.head arr
-                  "json" -> withText "AccountDataJSON" (return . AccountDataJSON . T.unpack) $ V.head arr
-                  "jsonParsed" -> withText "AccountDataJSON" (return . AccountDataJSON . T.unpack) $ V.head arr
-                  _ -> error "unsupported encoding"
+            ( \arr ->
+                if V.length arr /= 2
+                  then fail "AccountData: expected [data, encoding] pair"
+                  else case arr V.! 1 of
+                    "base58" -> base58StringParser $ arr V.! 0
+                    "base64" -> base64StringParser $ arr V.! 0
+                    "json" -> withText "AccountDataJSON" (return . AccountDataJSON . T.unpack) $ arr V.! 0
+                    "jsonParsed" -> withText "AccountDataJSON" (return . AccountDataJSON . T.unpack) $ arr V.! 0
+                    other -> fail ("AccountData: unsupported encoding: " <> show other)
             )
             v
      in base64StringParser v <|> encodedParser

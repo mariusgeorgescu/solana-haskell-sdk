@@ -8,6 +8,7 @@ module Network.Solana.SplPrograms.AssociatedTokenAccount where
 import Data.Binary (Binary (..), Get, Put)
 import Data.Binary.Get (getWord8)
 import Data.Binary.Put (putWord8)
+import Data.Maybe (fromMaybe)
 import Network.Solana.Core.Crypto (SolanaPublicKey, getSolanaPublicKeyRaw)
 import Network.Solana.Core.Instruction
 import Network.Solana.Core.Pda (findProgramAddress)
@@ -52,7 +53,7 @@ getAssociatedTokenAddress wallet mint =
 
 ataMetas :: SolanaPublicKey -> SolanaPublicKey -> SolanaPublicKey -> [AccountMeta]
 ataMetas funder wallet mint =
-  let ata = maybe (error "getAssociatedTokenAddress: derivation failed") id (getAssociatedTokenAddress wallet mint)
+  let ata = fromMaybe (error "getAssociatedTokenAddress: derivation failed") (getAssociatedTokenAddress wallet mint)
    in [ AccountMeta {accountPubKey = funder, isSigner = True, isWritable = True},
         AccountMeta {accountPubKey = ata, isSigner = False, isWritable = True},
         AccountMeta {accountPubKey = wallet, isSigner = False, isWritable = False},

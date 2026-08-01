@@ -1,6 +1,9 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- |
+-- Module      : Network.Solana.Core.Block
+-- Description : Block hashes and block heights.
 module Network.Solana.Core.Block where
 
 import Network.Solana.Core.Crypto (fromBase58String, toBase58String)
@@ -18,6 +21,9 @@ import GHC.Generics (Generic)
 
 ------------------------------------------------------------------------------------------------
 
+-- | A 32-byte hash identifying a ledger entry (block), rendered in Base58 by
+-- 'Show' and the JSON instances. Transactions embed a recent block hash as
+-- a proof of recency.
 newtype BlockHash = BlockHash S.ByteString
   deriving (Eq, Generic)
   deriving newtype (Semigroup)
@@ -39,9 +45,13 @@ instance ToJSON BlockHash where
 
 instance FromJSON BlockHash where
   parseJSON :: Value -> Parser BlockHash
-  parseJSON = withText "BlockHash" $ return . unsafeBlockHash . Text.unpack
+  parseJSON = withText "BlockHash" $ \t ->
+    maybe (fail "BlockHash: invalid base58") (pure . BlockHash) (fromBase58String (Text.unpack t))
 
+-- | Build a 'BlockHash' from Base58 text. Calls 'error' if the text is not
+-- valid Base58; the decoded length is not checked.
 unsafeBlockHash :: String -> BlockHash
 unsafeBlockHash = BlockHash . fromJust . fromBase58String
 
+-- | The number of blocks beneath a block (its height in the chain).
 type BlockHeight = Word64

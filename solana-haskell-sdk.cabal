@@ -135,6 +135,8 @@ test-suite solana-haskell-sdk-test
   hs-source-dirs:   test
   main-is:          Main.hs
   other-modules:
+    Test.Core.Account
+    Test.Core.Block
     Test.Core.Compact
     Test.Core.Crypto
     Test.Core.Instruction

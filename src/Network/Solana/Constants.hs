@@ -9,10 +9,11 @@ module Network.Solana.Constants where
 -- | Number of lamports in one SOL.
 --
 -- One SOL (the native token of the Solana blockchain) is equal to 1,000,000,000 lamports.
--- Lamports are the smallest indivisible unit of SOL, similar to "satoshis" in Bitcoin , "wei" in Ethereum or 'lovelaces' in Cardano.
+-- Lamports are the smallest indivisible unit of SOL, similar to satoshis in Bitcoin, wei in Ethereum, or lovelaces in Cardano.
 lamportsPerSol :: Integer
 lamportsPerSol = 1_000_000_000
 
--- maximum length of derived `Pubkey` seed
+-- | Maximum length in bytes of a single seed used when deriving addresses
+-- (program-derived-address seeds and @createAccountWithSeed@ seeds).
 maxSeedLen :: Integer
 maxSeedLen = 32
