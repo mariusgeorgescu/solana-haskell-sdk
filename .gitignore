@@ -30,3 +30,6 @@ cabal.project.freeze
 # Other
 *.DS_STORE
 *.link
+
+# internal planning/spec documents
+docs/superpowers/
