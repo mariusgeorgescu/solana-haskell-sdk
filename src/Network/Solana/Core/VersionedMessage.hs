@@ -126,6 +126,9 @@ compileV0Message bh instructions tables = do
 -- | Sign a v0-compiled message with each signer's private key, and return
 -- the Base64-encoded signed versioned transaction (compact signature array
 -- followed by the message bytes). Mirrors 'Network.Solana.Core.Message.newTransactionIntent'.
+-- The private keys passed here must be ordered to match the resulting account
+-- order (fee payer first), otherwise the produced signatures will not correspond
+-- to the right account keys.
 newV0TransactionIntent :: [SolanaPrivateKey] -> [Instruction] -> [AddressLookupTableAccount] -> BlockHash -> Either CompileException String
 newV0TransactionIntent signers instructions tables bh = do
   msg <- compileV0Message bh instructions tables
