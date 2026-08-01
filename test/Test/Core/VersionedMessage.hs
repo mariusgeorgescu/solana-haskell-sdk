@@ -5,7 +5,7 @@ module Test.Core.VersionedMessage (tests) where
 import Data.ByteString qualified as BS
 import Network.Solana.Core.Block (BlockHash (..))
 import Network.Solana.Core.Crypto
-import Network.Solana.Core.Instruction (CompileException)
+import Network.Solana.Core.Instruction (AccountMeta (..), CompileException, mkInstruction)
 import Network.Solana.Core.VersionedMessage
 import Network.Solana.NativePrograms.SystemProgram qualified as SP
 import Test.Fixtures
@@ -36,13 +36,25 @@ tableKey = unsafeSolanaPublicKeyRaw (replicate 32 31)
 unrelatedKey :: SolanaPublicKey
 unrelatedKey = unsafeSolanaPublicKeyRaw (replicate 32 99)
 
+otherTableKey :: SolanaPublicKey
+otherTableKey = unsafeSolanaPublicKeyRaw (replicate 32 33)
+
+dummyProgramId :: SolanaPublicKey
+dummyProgramId = unsafeSolanaPublicKeyRaw (replicate 32 40)
+
+keyK :: SolanaPublicKey
+keyK = unsafeSolanaPublicKeyRaw (replicate 32 41)
+
+fillerKey :: SolanaPublicKey
+fillerKey = unsafeSolanaPublicKeyRaw (replicate 32 50)
+
 lookupTable :: AddressLookupTableAccount
 lookupTable = AddressLookupTableAccount tableKey [recipientPk, addr29, addr30]
 
 tests :: TestTree
 tests =
   testGroup
-    "v0 message and transaction (golden)"
+    "v0 message compilation (golden + behavior)"
     [ testCase "v0 message bytes match Rust" $ do
         fs <- loadFixtures "test/fixtures/transactions.json"
         let ixs =
@@ -78,7 +90,38 @@ tests =
             table = AddressLookupTableAccount tableKey [unrelatedKey]
         assertSameCompile
           (compileV0Message fixedBlockhash [ix] [table])
-          (compileV0Message fixedBlockhash [ix] [])
+          (compileV0Message fixedBlockhash [ix] []),
+      testCase "a key readonly in one instruction and writable in another drains as writable" $ do
+        let payerPk = fst payerKeys
+            ixReadonly =
+              mkInstruction
+                dummyProgramId
+                [AccountMeta payerPk True True, AccountMeta keyK False False]
+                ()
+            ixWritable =
+              mkInstruction
+                dummyProgramId
+                [AccountMeta payerPk True True, AccountMeta keyK False True]
+                ()
+            table = AddressLookupTableAccount tableKey [keyK]
+        assertSameCompile
+          (compileV0Message fixedBlockhash [ixReadonly, ixWritable] [table])
+          (compileV0Message fixedBlockhash [ixWritable, ixWritable] [table]),
+      testCase "the first table containing a key wins over a later one" $ do
+        let ix = SP.transfer (fst payerKeys) recipientPk 1000000000
+            table1 = AddressLookupTableAccount tableKey [recipientPk]
+            table2 = AddressLookupTableAccount otherTableKey [recipientPk]
+        assertSameCompile
+          (compileV0Message fixedBlockhash [ix] [table1, table2])
+          (compileV0Message fixedBlockhash [ix] [table1]),
+      testCase "a lookup index beyond byte range fails to compile" $ do
+        let ix = SP.transfer (fst payerKeys) recipientPk 1000000000
+            -- 256 filler addresses (indexes 0..255) push recipientPk to
+            -- index 256, one past what a Word8 lookup index can hold.
+            oversizedTable = AddressLookupTableAccount tableKey (replicate 256 fillerKey <> [recipientPk])
+        case compileV0Message fixedBlockhash [ix] [oversizedTable] of
+          Left _ -> pure ()
+          Right _ -> assertFailure "expected an oversized lookup table to fail compilation"
     ]
 
 -- | Compare two compile results by their message bytes ('CompileException'

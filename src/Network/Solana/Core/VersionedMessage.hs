@@ -88,6 +88,15 @@ instance Binary MessageAddressTableLookup where
 -- the first table containing a key winning. Program ids and signers never
 -- move to a lookup. Tables that end up with no keys loaded are omitted from
 -- the serialized message.
+--
+-- Fails with a 'CompileException' if a table has more than 256 addresses
+-- and a key drained into it sits at position 256 or beyond — that position
+-- cannot be represented in the byte-sized lookup index the wire format
+-- requires, so it is rejected rather than silently truncated (wrapped) into
+-- the wrong index, mirroring Rust's @AddressLookupTableIndexOverflow@. Since
+-- 'CompileException'\'s constructor is private to
+-- "Network.Solana.Core.Instruction", the exception produced this way carries
+-- the offending table's own address as its message, not free-form text.
 compileV0Message :: BlockHash -> [Instruction] -> [AddressLookupTableAccount] -> Either CompileException BS.ByteString
 compileV0Message bh instructions tables = do
   let legacy = mkNewMessage bh instructions
@@ -102,10 +111,11 @@ compileV0Message bh instructions tables = do
         statics
           <> concatMap tlWritableKeys tableLoads
           <> concatMap tlReadonlyKeys tableLoads
-      lookups =
-        [ MessageAddressTableLookup (altKey (tlTable tl)) (tlWritableIdx tl) (tlReadonlyIdx tl)
-          | tl <- tableLoads,
-            not (null (tlWritableIdx tl) && null (tlReadonlyIdx tl))
+  byteIndexes <- mapM toByteIndexes tableLoads
+  let lookups =
+        [ MessageAddressTableLookup (altKey (tlTable tl)) writableIdx readonlyIdx
+          | (tl, (writableIdx, readonlyIdx)) <- zip tableLoads byteIndexes,
+            not (null writableIdx && null readonlyIdx)
         ]
   compiledInstructions <- mapM (compileInstruction resolutionKeys) (mInstructions legacy)
   return . BL.toStrict . runPut $ do
@@ -132,13 +142,15 @@ newV0TransactionIntent signers instructions tables bh = do
 ------------------------------------------------------------------------------------------------
 
 -- | The keys drained from the static writable-/readonly-unsigned sections
--- into one lookup table, alongside the resulting lookup indexes.
+-- into one lookup table, alongside the resulting lookup positions. Positions
+-- are kept as plain 'Int' (not yet 'Word8') since a table may have more than
+-- 256 addresses; 'toByteIndexes' validates and narrows them.
 data TableLoad = TableLoad
   { tlTable :: AddressLookupTableAccount,
     tlWritableKeys :: [SolanaPublicKey],
     tlReadonlyKeys :: [SolanaPublicKey],
-    tlWritableIdx :: [Word8],
-    tlReadonlyIdx :: [Word8]
+    tlWritableIdx :: [Int],
+    tlReadonlyIdx :: [Int]
   }
 
 -- | Drain eligible keys (present in a table's addresses, and not a program
@@ -158,7 +170,7 @@ drainTables programIds rwus rous (table : rest) =
       eligible k = k `notElem` programIds && k `elem` addrs
       (wDrain, rwus') = partition eligible rwus
       (rDrain, rous') = partition eligible rous
-      indexIn k = fromIntegral (fromJust (elemIndex k addrs))
+      indexIn k = fromJust (elemIndex k addrs)
       tableLoad =
         TableLoad
           { tlTable = table,
@@ -169,6 +181,31 @@ drainTables programIds rwus rous (table : rest) =
           }
       (rwusFinal, rousFinal, restLoads) = drainTables programIds rwus' rous' rest
    in (rwusFinal, rousFinal, tableLoad : restLoads)
+
+-- | Narrow one table's drained positions to the 'Word8' indexes the
+-- serialized lookup format requires, failing if any position doesn't fit in
+-- a byte.
+toByteIndexes :: TableLoad -> Either CompileException ([Word8], [Word8])
+toByteIndexes tl
+  | all fitsInByte (tlWritableIdx tl <> tlReadonlyIdx tl) =
+      Right (fromIntegral <$> tlWritableIdx tl, fromIntegral <$> tlReadonlyIdx tl)
+  | otherwise = Left (addressLookupTableIndexOverflow (altKey (tlTable tl)))
+  where
+    fitsInByte i = i <= fromIntegral (maxBound :: Word8)
+
+-- | Manufacture a 'CompileException' identifying an oversized lookup table.
+-- 'CompileException'\'s constructor ('Network.Solana.Core.Instruction.MissingIndex')
+-- is private to "Network.Solana.Core.Instruction", which this module must
+-- not modify, so this borrows that module's sole exported source of the
+-- exception, 'compileInstruction', by forcing it to fail to resolve the
+-- table's own address against an empty key list. Calls 'error' if that
+-- somehow succeeds, which is unreachable: 'compileInstruction' always fails
+-- its very first lookup against an empty key list.
+addressLookupTableIndexOverflow :: SolanaPublicKey -> CompileException
+addressLookupTableIndexOverflow tableKey =
+  case compileInstruction [] (mkInstruction tableKey [] ()) of
+    Left e -> e
+    Right _ -> error "unreachable: compileInstruction always fails against an empty key list"
 
 -- | Split a message's account keys into its four privilege sections
 -- (writable-signed, readonly-signed, writable-unsigned, readonly-unsigned)
