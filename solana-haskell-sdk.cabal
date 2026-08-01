@@ -50,6 +50,7 @@ library
     Network.Solana.Core.Pda
     Network.Solana.Core.Transaction
     Network.Solana.Core.VersionedMessage
+    Network.Solana.Metaplex.TokenMetadata
     Network.Solana.NativePrograms.AddressLookupTable
     Network.Solana.NativePrograms.BpfLoaderUpgradeable
     Network.Solana.NativePrograms.ComputeBudget
@@ -145,6 +146,7 @@ test-suite solana-haskell-sdk-test
     Test.Core.Pda
     Test.Core.VersionedMessage
     Test.Fixtures
+    Test.Metaplex.TokenMetadata
     Test.NativePrograms.AddressLookupTable
     Test.NativePrograms.BpfLoaderUpgradeable
     Test.NativePrograms.ComputeBudget

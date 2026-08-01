@@ -22,6 +22,12 @@ tests =
             let bs = BL.toStrict (runPut (putBorshString "ab"))
                 expected = BS.pack [0x02, 0x00, 0x00, 0x00, 0x61, 0x62]
              in bs @?= expected,
+          testCase "putBorshString counts UTF-8 bytes, not characters" $
+            -- "é" is 1 character but 2 UTF-8 bytes (0xC3 0xA9); the u32 prefix
+            -- must be the byte length (2), not the char count (1).
+            let bs = BL.toStrict (runPut (putBorshString "é"))
+                expected = BS.pack [0x02, 0x00, 0x00, 0x00, 0xC3, 0xA9]
+             in bs @?= expected,
           testCase "getBorshString decodes u32-prefixed UTF-8" $
             let bs = BS.pack [0x02, 0x00, 0x00, 0x00, 0x61, 0x62]
              in case runGetOrFail getBorshString (BL.fromStrict bs) of
