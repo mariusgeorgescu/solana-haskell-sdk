@@ -46,6 +46,7 @@ library
     Network.Solana.Core.Pda
     Network.Solana.Core.Transaction
     Network.Solana.NativePrograms.ComputeBudget
+    Network.Solana.NativePrograms.Stake
     Network.Solana.NativePrograms.SystemProgram
     Network.Solana.SplPrograms.AssociatedTokenAccount
     Network.Solana.SplPrograms.Memo
@@ -135,6 +136,7 @@ test-suite solana-haskell-sdk-test
     Test.Core.Pda
     Test.Fixtures
     Test.NativePrograms.ComputeBudget
+    Test.NativePrograms.Stake
     Test.NativePrograms.SystemProgram
     Test.SplPrograms.AssociatedTokenAccount
     Test.SplPrograms.Memo
