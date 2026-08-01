@@ -11,7 +11,7 @@
     <a href="https://github.com/mariusgeorgescu/solana-haskell-sdk/actions/workflows/ci.yml">
       <img src="https://github.com/mariusgeorgescu/solana-haskell-sdk/actions/workflows/ci.yml/badge.svg?branch=main" />
     </a>
-    <a href="./CONTRIBUTING.md">
+    <a href="https://github.com/mariusgeorgescu/solana-haskell-sdk/blob/main/CONTRIBUTING.md">
       <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square" />
     </a>
   </p>
@@ -28,7 +28,7 @@
 
 ## Documentation
 
-API documentation is generated with Haddock (`cabal haddock`). Serialization correctness methodology: every instruction, message, and transaction encoder is asserted byte-identical to vectors generated from the official Rust crates (solana-sdk, spl-token, mpl-token-metadata) — see `tools/README.md`.
+API documentation is generated with Haddock (`cabal haddock`). Serialization correctness methodology: every instruction, message, and transaction encoder is asserted byte-identical to vectors generated from the official Rust crates (solana-sdk, spl-token, mpl-token-metadata) — see [tools/README.md](https://github.com/mariusgeorgescu/solana-haskell-sdk/blob/main/tools/README.md).
 
 ## Features
 
@@ -55,7 +55,7 @@ API documentation is generated with Haddock (`cabal haddock`). Serialization cor
 
 ### Release status
 
-The current stable release is **v1.1.0.0**. Serialization is verified byte-for-byte against the official Rust SDK by golden-vector tests (see test/fixtures/ and tools/README.md).
+The current stable release is **v1.1.0.0**. Serialization is verified byte-for-byte against the official Rust SDK by golden-vector tests (see test/fixtures/ and [tools/README.md](https://github.com/mariusgeorgescu/solana-haskell-sdk/blob/main/tools/README.md)).
 
 ## Usage Examples
 
@@ -215,7 +215,7 @@ main = do
 
 ## Contributing
 
-We welcome all contributors! See [contributing guide](./CONTRIBUTING.md) for how to get started.
+We welcome all contributors! See [contributing guide](https://github.com/mariusgeorgescu/solana-haskell-sdk/blob/main/CONTRIBUTING.md) for how to get started.
 
 ## Credits
 
@@ -223,4 +223,4 @@ Created and maintained by Marius Georgescu.
 
 ## License
 
-[Apache-2.0](./LICENSE)
+[Apache-2.0](https://github.com/mariusgeorgescu/solana-haskell-sdk/blob/main/LICENSE)

@@ -4,6 +4,7 @@
 
 * Added Metaplex Token Metadata client (CreateMetadataAccountV3, UpdateMetadataAccountV2, CreateMasterEditionV3) with metadata/master-edition PDA derivation, built on a new minimal Borsh serialization layer.
 * Added Address Lookup Table program client and versioned (v0) transaction support: compile messages against lookup tables and sign VersionedTransactions (encode-only; account-state parsing out of scope). The `CompileException` constructor (`MissingIndex`) is now exported for error inspection.
+* Hackage-ready packaging: PVP upper bounds on all dependencies; homepage and bug-reports metadata.
 
 ## 1.0.0.0 -- 2026-08-01
 

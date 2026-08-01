@@ -2,6 +2,8 @@ cabal-version:   3.0
 name:            solana-haskell-sdk
 version:         1.1.0.0
 synopsis:        Solana SDK: transaction building, signing, program clients, and JSON-RPC.
+homepage:        https://github.com/mariusgeorgescu/solana-haskell-sdk
+bug-reports:     https://github.com/mariusgeorgescu/solana-haskell-sdk/issues
 
 -- A longer description of the package.
 description:
@@ -80,23 +82,23 @@ library
 
   -- Other library packages from which modules are imported.
   build-depends:
-    , aeson
+    , aeson               ^>=2.2
     , base                ^>=4.18.0.0
-    , base58-bytestring
-    , base64
-    , binary
-    , bytestring
-    , containers
-    , crypton
-    , ed25519
-    , either
-    , extra
-    , jsonrpc-tinyclient
-    , memory
-    , mtl
-    , text
-    , vector
-    , web3
+    , base58-bytestring   ^>=0.1
+    , base64              ^>=1.0
+    , binary              ^>=0.8
+    , bytestring          ^>=0.11
+    , containers          ^>=0.6
+    , crypton             ^>=1.0
+    , ed25519             ^>=0.0.5
+    , either              ^>=5.0
+    , extra               ^>=1.8
+    , jsonrpc-tinyclient  ^>=1.1
+    , memory              ^>=0.18
+    , mtl                 ^>=2.3
+    , text                ^>=2.0
+    , vector              ^>=0.13
+    , web3                ^>=1.1
 
   -- Directories containing source files.
   hs-source-dirs:   src
@@ -121,7 +123,7 @@ executable solana-haskell-sdk
   build-depends:
     , base                ^>=4.18.0.0
     , solana-haskell-sdk
-    , web3-provider
+    , web3-provider       ^>=1.1
 
   -- Directories containing source files.
   hs-source-dirs:   app
@@ -158,17 +160,17 @@ test-suite solana-haskell-sdk-test
     Test.SplPrograms.Memo
     Test.SplPrograms.Token
   build-depends:
-    , aeson
+    , aeson               ^>=2.2
     , base                ^>=4.18.0.0
-    , base16-bytestring
-    , binary
-    , bytestring
-    , containers
+    , base16-bytestring   ^>=1.0
+    , binary              ^>=0.8
+    , bytestring          ^>=0.11
+    , containers          ^>=0.6
     , solana-haskell-sdk
-    , tasty
-    , tasty-hunit
-    , tasty-quickcheck
-    , text
+    , tasty               ^>=1.5
+    , tasty-hunit         ^>=0.10
+    , tasty-quickcheck    ^>=0.11
+    , text                ^>=2.0
 
 source-repository head
   type:     git
