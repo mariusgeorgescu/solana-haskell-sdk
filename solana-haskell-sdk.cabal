@@ -42,6 +42,7 @@ library
     Network.Solana.Constants
     Network.Solana.Core.Account
     Network.Solana.Core.Block
+    Network.Solana.Core.Borsh
     Network.Solana.Core.Compact
     Network.Solana.Core.Crypto
     Network.Solana.Core.Instruction
@@ -136,6 +137,7 @@ test-suite solana-haskell-sdk-test
   other-modules:
     Test.Core.Account
     Test.Core.Block
+    Test.Core.Borsh
     Test.Core.Compact
     Test.Core.Crypto
     Test.Core.Instruction

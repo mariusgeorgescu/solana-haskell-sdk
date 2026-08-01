@@ -2,6 +2,7 @@ module Main (main) where
 
 import Test.Core.Account qualified
 import Test.Core.Block qualified
+import Test.Core.Borsh qualified
 import Test.Core.Compact qualified
 import Test.Core.Crypto qualified
 import Test.Core.Instruction qualified
@@ -27,6 +28,7 @@ main =
         "solana-haskell-sdk"
         [ Test.Core.Account.tests,
           Test.Core.Block.tests,
+          Test.Core.Borsh.tests,
           Test.Core.Compact.tests,
           Test.Core.Crypto.tests,
           Test.Core.Instruction.tests,
