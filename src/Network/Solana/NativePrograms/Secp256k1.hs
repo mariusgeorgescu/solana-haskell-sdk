@@ -22,10 +22,10 @@ secp256k1ProgramId = "KeccakSecp256k11111111111111111111111111111"
 
 -- | Offsets (within the transaction's instructions) of the signature,
 -- Ethereum address, and message data used to verify a single secp256k1
--- signature. An instruction index of @0@ refers to this instruction itself
--- (the value the Rust builder uses; unlike the ed25519 precompile, there is
--- no dedicated "current instruction" sentinel for secp256k1). Serialized as
--- an 11-byte little-endian packed struct, matching the Rust SDK layout.
+-- signature. The u8 instruction indexes are absolute indexes into the
+-- transaction's instruction list; index @0@ means the transaction's FIRST
+-- instruction. Serialized as an 11-byte little-endian packed struct,
+-- matching the Rust SDK layout.
 data SecpSignatureOffsets = SecpSignatureOffsets
   { -- | Offset to the [signature, recovery_id] bytes (64 + 1 bytes).
     ssoSignatureOffset :: Word16,
@@ -84,13 +84,24 @@ instance Binary Secp256k1InstructionData where
 -- single, precomputed ECDSA signature: this SDK's counterpart of the Rust
 -- SDK's @new_secp256k1_instruction_with_signature@. Receives the 20-byte
 -- Ethereum address the signature is expected to recover to, the 64-byte
--- compact ECDSA signature, the recovery id, and the (Keccak-256 hashed, per
--- the precompile's expectations) message. The signature, address, and
--- message are all embedded in this single instruction's data (instruction
--- index @0@), so the precompile takes no accounts.
+-- compact ECDSA signature, the recovery id, and the RAW message bytes: the
+-- precompile applies Keccak-256 to the message itself during verification,
+-- so the supplied signature must have been produced over
+-- @keccak256(message)@. The signature, address, and message are all
+-- embedded in this single instruction's data (instruction index @0@), so
+-- the precompile takes no accounts.
+--
+-- The recovery id selects which public key the signature recovers to; only
+-- values 0-3 verify on-chain, but that range is not validated here,
+-- matching the Rust builder.
 --
 -- Throws via 'error' if @ethAddress@ is not exactly 20 bytes or @signature@
 -- is not exactly 64 bytes, mirroring the assertions in the Rust builder.
+--
+-- The built instruction hardcodes all instruction indexes to 0, so it must
+-- be placed as the FIRST instruction of the transaction for verification to
+-- read its own embedded data (matching the Rust SDK's
+-- @new_secp256k1_instruction@).
 newSecp256k1Instruction :: BS.ByteString -> BS.ByteString -> Word8 -> BS.ByteString -> Instruction
 newSecp256k1Instruction ethAddress signature recoveryId message
   | BS.length ethAddress /= 20 =

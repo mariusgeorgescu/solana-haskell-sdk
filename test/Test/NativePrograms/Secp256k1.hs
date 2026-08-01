@@ -1,5 +1,3 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.NativePrograms.Secp256k1 (tests) where
 
 import Control.Exception (ErrorCall, evaluate, try)

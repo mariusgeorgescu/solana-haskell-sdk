@@ -29,14 +29,14 @@
 - [x] [Full JSON RPC API](#usage-examples-for-json-rpc-api)
 - [x] Wallet, account and keys management
 - [x] Transaction Building
-  - [ ] Clients for native programs
+  - [x] Clients for native programs
     - [x] System Program (all 13 instructions)
     - [x] Compute Budget
     - [x] Stake (delegation lifecycle; seed-authority variants post-1.0)
     - [x] Vote (account management)
     - [x] BPF Loader (upgradeable)
     - [x] Secp256k1 (instruction construction; signing out of scope)
-  - [ ] Clients for Solana Program Library (SPL)
+  - [x] Clients for Solana Program Library (SPL)
     - [x] Memo
     - [x] SPL Token
     - [x] Associated Token Account
