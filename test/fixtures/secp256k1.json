@@ -1,0 +1,22 @@
+[
+  {
+    "hex": "012000000c000061000a0000b0e5863d0ddf7e105e409fee0ecc0123a362e14b6f4018a4be9555bc3f9879434192f73257b55acabc2d792c99651a9c010b734c01cf890b938bfc154b456453dcdd3115e0b83cc8b08145712a1fbf0b4464233a0068656c6c6f2d73656370",
+    "name": "secp-full-instruction-data"
+  },
+  {
+    "hex": "b0e5863d0ddf7e105e409fee0ecc0123a362e14b",
+    "name": "secp-eth-address"
+  },
+  {
+    "hex": "6f4018a4be9555bc3f9879434192f73257b55acabc2d792c99651a9c010b734c01cf890b938bfc154b456453dcdd3115e0b83cc8b08145712a1fbf0b4464233a",
+    "name": "secp-signature"
+  },
+  {
+    "hex": "00",
+    "name": "secp-recovery-id"
+  },
+  {
+    "hex": "68656c6c6f2d73656370",
+    "name": "secp-message"
+  }
+]

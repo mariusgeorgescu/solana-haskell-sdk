@@ -18,5 +18,9 @@
   {
     "hex": "6efe5d2accdbecfa532915bef37b76201a30d63af47e53dd1879b0d9acbdd5c9",
     "name": "dest-ata-address"
+  },
+  {
+    "hex": "aca38e9d399501ebcc6c1e29c009874293d8d7f05250ef64a4cf62f9ac282b21",
+    "name": "programdata-address"
   }
 ]

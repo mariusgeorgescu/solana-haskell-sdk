@@ -17,6 +17,8 @@ use solana_sdk::vote::instruction::VoteInstruction;
 use solana_sdk::vote::state::{VoteAuthorize, VoteInit};
 use solana_sdk::stake::{self};
 use solana_sdk::vote::{self};
+use solana_sdk::loader_upgradeable_instruction::UpgradeableLoaderInstruction;
+use solana_sdk::secp256k1_instruction::new_secp256k1_instruction;
 use spl_token::instruction::{AuthorityType, TokenInstruction};
 use std::fs;
 use std::str::FromStr;
@@ -225,12 +227,18 @@ fn main() {
     );
     assert!(ata_bump < 255, "ATA bump must be < 255 to prove the search runs");
     let dest_ata = spl_associated_token_account::get_associated_token_address(&wallet, &mint);
+    let program_id_fixed = Pubkey::new_from_array([23u8; 32]);
+    let (programdata, _pd_bump) = Pubkey::find_program_address(
+        &[program_id_fixed.as_ref()],
+        &solana_sdk::bpf_loader_upgradeable::id(),
+    );
     let pda_fixtures = vec![
         json!({ "name": "generic-pda-address", "hex": hex(&generic_pda.to_bytes()) }),
         json!({ "name": "generic-pda-bump", "hex": hex(&[generic_bump]) }),
         json!({ "name": "ata-address", "hex": hex(&ata.to_bytes()) }),
         json!({ "name": "ata-bump", "hex": hex(&[ata_bump]) }),
         json!({ "name": "dest-ata-address", "hex": hex(&dest_ata.to_bytes()) }),
+        json!({ "name": "programdata-address", "hex": hex(&programdata.to_bytes()) }),
     ];
     fs::write(
         "../../test/fixtures/pda.json",
@@ -349,6 +357,43 @@ fn main() {
     fs::write(
         "../../test/fixtures/transactions.json",
         serde_json::to_string_pretty(&tx_fixtures).unwrap(),
+    )
+    .unwrap();
+
+    let loader_variants: Vec<(&str, UpgradeableLoaderInstruction)> = vec![
+        ("InitializeBuffer", UpgradeableLoaderInstruction::InitializeBuffer),
+        ("Write", UpgradeableLoaderInstruction::Write { offset: 128, bytes: vec![0xAB; 64] }),
+        ("DeployWithMaxDataLen", UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len: 1_048_576 }),
+        ("Upgrade", UpgradeableLoaderInstruction::Upgrade),
+        ("SetAuthority", UpgradeableLoaderInstruction::SetAuthority),
+        ("Close", UpgradeableLoaderInstruction::Close),
+        ("ExtendProgram", UpgradeableLoaderInstruction::ExtendProgram { additional_bytes: 4096 }),
+        ("SetAuthorityChecked", UpgradeableLoaderInstruction::SetAuthorityChecked),
+    ];
+    let loader_fixtures: Vec<_> = loader_variants
+        .iter()
+        .map(|(name, v)| json!({ "name": name, "hex": hex(&bincode::serialize(v).unwrap()) }))
+        .collect();
+    fs::write(
+        "../../test/fixtures/loader_instruction_data.json",
+        serde_json::to_string_pretty(&loader_fixtures).unwrap(),
+    )
+    .unwrap();
+
+    let secp_secret = libsecp256k1::SecretKey::parse(&[42u8; 32]).unwrap();
+    let secp_ix = new_secp256k1_instruction(&secp_secret, b"hello-secp");
+    let data = &secp_ix.data;
+    // layout: [0]=count, [1..12]=offsets, [12..32]=eth, [32..96]=sig, [96]=recovery, [97..]=msg
+    let secp_fixtures = vec![
+        json!({ "name": "secp-full-instruction-data", "hex": hex(data) }),
+        json!({ "name": "secp-eth-address", "hex": hex(&data[12..32]) }),
+        json!({ "name": "secp-signature", "hex": hex(&data[32..96]) }),
+        json!({ "name": "secp-recovery-id", "hex": hex(&data[96..97]) }),
+        json!({ "name": "secp-message", "hex": hex(&data[97..]) }),
+    ];
+    fs::write(
+        "../../test/fixtures/secp256k1.json",
+        serde_json::to_string_pretty(&secp_fixtures).unwrap(),
     )
     .unwrap();
 

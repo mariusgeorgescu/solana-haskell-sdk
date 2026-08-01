@@ -828,6 +828,7 @@ name = "fixture-gen"
 version = "0.1.0"
 dependencies = [
  "bincode",
+ "libsecp256k1",
  "serde_json",
  "solana-sdk",
  "spl-associated-token-account",
