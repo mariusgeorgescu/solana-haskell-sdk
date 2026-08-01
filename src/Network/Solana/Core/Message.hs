@@ -9,6 +9,7 @@
 module Network.Solana.Core.Message
   ( newTransactionIntent,
     newTransactionIntentWithPayer,
+    newDurableNonceTransactionIntent,
     SignedTransactionIntent,
     Message (..),
     MessageHeader (..),
@@ -30,6 +31,7 @@ import Network.Solana.Core.Block (BlockHash)
 import Network.Solana.Core.Compact
 import Network.Solana.Core.Crypto (SolanaPrivateKey, SolanaPublicKey, dsign, getSolanaPublicKeyRaw, toBase64String, toSolanaPublicKey)
 import Network.Solana.Core.Instruction
+import Network.Solana.NativePrograms.SystemProgram qualified as SystemProgram
 
 
 ------------------------------------------------------------------------------------------------
@@ -87,6 +89,18 @@ newTransactionIntentWithPayer payer signingKeys instructions blockhash = do
       if pk `elem` requiredSigners
         then Right ()
         else Left (MissingIndex ("unused signing key " <> show pk))
+
+-- | Builds and signs a durable-nonce transaction: prepends
+-- @SystemProgram.advanceNonceAccount nonceAccount nonceAuthority@ ahead of
+-- the given instructions and delegates to 'newTransactionIntent'. The
+-- durable nonce — read from the nonce account's on-chain 'NonceState' via
+-- @nsDurableNonce@ — is passed in place of a recent block hash, since a
+-- durable-nonce transaction never expires and does not depend on a recent
+-- ledger entry. The nonce authority must be among the given signers, or the
+-- resulting transaction will be rejected on submission.
+newDurableNonceTransactionIntent :: [SolanaPrivateKey] -> SolanaPublicKey -> SolanaPublicKey -> [Instruction] -> BlockHash -> Either CompileException String
+newDurableNonceTransactionIntent signers nonceAccount nonceAuthority instructions =
+  newTransactionIntent signers (SystemProgram.advanceNonceAccount nonceAccount nonceAuthority : instructions)
 
 ------------------------------------------------------------------------------------------------
 

@@ -15,6 +15,7 @@ module Network.Solana.RPC.HTTP.Chain where
 
 import Data.Aeson
 import Data.Aeson.Types
+import Data.List (sort)
 import Data.Word
 import GHC.Generics (Generic)
 import Network.JsonRpc.TinyClient (JsonRpc (..))
@@ -176,6 +177,21 @@ instance FromJSON PrioritizationFee where
     PrioritizationFee
       <$> v .: "slot"
       <*> v .: "prioritizationFee"
+
+-- | Nearest-rank percentile over the sorted, nonzero fee samples (e.g. from
+-- 'getRecentPrioritizationFees'). Zero samples (slots with no priority fee)
+-- are dropped before ranking, so the result reflects only slots that
+-- actually paid a priority fee. @p@ is clamped into @[0, 1]@. An empty
+-- sample list, or one containing only zeros, returns @0@.
+percentilePriorityFee :: Double -> [Word64] -> Word64
+percentilePriorityFee p samples =
+  case sort (filter (/= 0) samples) of
+    [] -> 0
+    nonzero ->
+      let n = length nonzero
+          clampedP = max 0 (min 1 p)
+          idx = max 0 (ceiling (clampedP * fromIntegral n) - 1)
+       in nonzero !! idx
 
 ------------------------------------------------------------------------------------------------
 

@@ -204,5 +204,14 @@ tests =
         case newTransactionIntentWithPayer (fst newAccountKeys) [snd payerKeys, snd newAccountKeys, snd extraKeys] [ix] fixedBlockhash of
           Right _ -> assertFailure "expected Left for unused signing key"
           Left (MissingIndex msg) -> assertBool ("expected \"unused signing key\" in: " <> msg) ("unused signing key" `isInfixOf` msg),
+      testCase "durable-nonce transfer transaction matches Rust" $ do
+        txFs <- loadFixtures "test/fixtures/transactions.json"
+        stateFs <- loadFixtures "test/fixtures/state_fixtures.json"
+        let noncePk = unsafeSolanaPublicKeyRaw (replicate 32 37)
+            durableNonceBh = BlockHash (requireFixture "nonce-durable-hash" stateFs)
+            ix = SP.transfer (fst payerKeys) recipientPk 1000000000
+        case newDurableNonceTransactionIntent [snd payerKeys] noncePk (fst payerKeys) [ix] durableNonceBh of
+          Left err -> assertFailure (show err)
+          Right b64 -> b64 @?= toBase64String (requireFixture "nonce-transfer-transaction" txFs),
       testProperty "message header/key-ordering invariants" prop_messageInvariants
     ]

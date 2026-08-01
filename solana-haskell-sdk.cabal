@@ -156,6 +156,7 @@ test-suite solana-haskell-sdk-test
     Test.NativePrograms.Stake
     Test.NativePrograms.SystemProgram
     Test.NativePrograms.Vote
+    Test.RPC.Chain
     Test.SplPrograms.AssociatedTokenAccount
     Test.SplPrograms.Memo
     Test.SplPrograms.Token
