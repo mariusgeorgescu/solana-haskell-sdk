@@ -173,6 +173,22 @@ test-suite solana-haskell-sdk-test
     , tasty-quickcheck    ^>=0.11
     , text                ^>=2.0
 
+test-suite integration-tests
+  import:           warnings
+  default-language: GHC2021
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   test-integration
+  main-is:          Main.hs
+  other-modules:
+    Test.Integration.Setup
+    Test.Integration.Transfer
+  build-depends:
+    , base                ^>=4.18.0.0
+    , solana-haskell-sdk
+    , tasty               ^>=1.5
+    , tasty-hunit         ^>=0.10
+    , web3-provider       ^>=1.1
+
 source-repository head
   type:     git
   location: https://github.com/mariusgeorgescu/solana-haskell-sdk
