@@ -5,8 +5,11 @@
   </a>
   <h1 align="center">Solana SDK library for Haskellers</h1>
   <p align="center">
-    <a href="https://hackage.haskell.org/">
-      <img src="https://img.shields.io/badge/-Haddock-5E5184?style=flat-square&logo=haskell&logoColor=white" />
+    <a href="https://hackage.haskell.org/package/solana-haskell-sdk">
+      <img src="https://img.shields.io/hackage/v/solana-haskell-sdk.svg?style=flat-square&logo=haskell&logoColor=white&label=Hackage" />
+    </a>
+    <a href="https://github.com/mariusgeorgescu/solana-haskell-sdk/actions/workflows/ci.yml">
+      <img src="https://github.com/mariusgeorgescu/solana-haskell-sdk/actions/workflows/ci.yml/badge.svg?branch=main" />
     </a>
     <a href="./CONTRIBUTING.md">
       <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square" />
@@ -18,6 +21,7 @@
 
 - 📋 [Documentation](#documentation)
 - 🚀 [Features](#features)
+- 🧑‍💻 [Usage Examples](#usage-examples)
 - 📝 [Contributing](#contributing)
 - ✨ [Credits](#credits)
 - ⚖️ [License](#license)
@@ -28,9 +32,11 @@ API documentation is generated with Haddock (`cabal haddock`). Serialization cor
 
 ## Features
 
-- [x] [Full JSON RPC API](#usage-examples)
-- [x] Wallet, account and keys management
-- [x] Transaction Building
+- [x] Full JSON-RPC API client (accounts, blocks, chain, ledger, tokens, tokenomics, transactions)
+- [x] Wallet, account and keys management (ed25519 keypairs, base58 addresses)
+- [x] Program Derived Addresses (`findProgramAddress` / `createProgramAddress`)
+- [x] Transaction building, signing and submission
+  - [x] Priority fees via Compute Budget (`setComputeUnitLimit`, `setComputeUnitPrice`)
   - [x] Clients for native programs
     - [x] System Program (all 13 instructions)
     - [x] Compute Budget
@@ -40,8 +46,9 @@ API documentation is generated with Haddock (`cabal haddock`). Serialization cor
     - [x] Secp256k1 (instruction construction; signing out of scope)
   - [x] Clients for Solana Program Library (SPL)
     - [x] Memo
-    - [x] SPL Token
-    - [x] Associated Token Account
+    - [x] SPL Token (instructions 0-20, incl. `transferChecked`)
+    - [x] Associated Token Account (derive + create, idempotent variant)
+- [x] Serialization verified byte-for-byte against the official Rust SDK (golden-vector tests)
 
 ### Post-1.0
 
@@ -54,11 +61,8 @@ API documentation is generated with Haddock (`cabal haddock`). Serialization cor
 
 The current stable release is **v1.0.0.0**. Serialization is verified byte-for-byte against the official Rust SDK by golden-vector tests (see test/fixtures/ and tools/README.md).
 
+## Usage Examples
 
-
-
-
-### Usage Examples 
 ### Simple transfer
 
 This example demonstrates how to use the Haskell Solana SDK to interact with a Solana validator and perform basic blockchain operations such as keypair generation, account funding via airdrop, balance checking, and transferring SOL tokens.
@@ -79,12 +83,15 @@ Before and after performing the transfer of 1 SOL to the recipient, we check and
 
 This straightforward example highlights the convenience and expressiveness of Haskell when building decentralized applications on Solana.
 
+> The examples use `GHC2021` (this package's `default-language`). If you compile them under `Haskell2010`, additionally enable `NumericUnderscores` and `ImportQualifiedPost`.
+
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
 import Control.Monad (void)
+import Control.Monad.IO.Class (liftIO)
 import Network.Solana.Core.Crypto
 import Network.Solana.NativePrograms.SystemProgram qualified as SystemProgram
 import Network.Solana.RPC.HTTP.Transaction
@@ -97,19 +104,19 @@ main = do
   (myPublicKey, myPrivateKey) <- createSolanaKeyPair
 
   -- Create Connection, local validator in this example
-  void $ runWeb3' (HttpProvider "http://127.0.0.1:8899") $ do
+  result <- runWeb3' (HttpProvider "http://127.0.0.1:8899") $ do
     -- Fund fee payer
     void $ requestAirdrop myPublicKey 10_000_000_000
     wait 15 -- Wait 15 seconds be sure the tx was confirmed
 
-    -- Define recipient's address from base58-encoded string
+    -- Define recipient's address from a base58-encoded string
     let recipient = "A988FuUtUVk8jMUuVc1ccaoTA3VS9CB4dkEf9XUAUqV4"
 
     -- Check balance
     printBalances [myPublicKey, recipient]
 
     -- Create a new transaction.
-    _txId <-
+    txId <-
       newTransaction
         [myPrivateKey] -- Signing keys (with all required signers)
         -- List of instructions
@@ -118,10 +125,96 @@ main = do
             recipient -- recipient address
             1_000_000_000 -- amount to transfer 1 SOL
         ]
+    liftIO $ putStrLn ("Transaction sent: " <> show txId)
 
-    wait 15 -- Wait 15 seconds be sure the tx was confirmed
+    void $ confirmTransaction txId
     -- Check balance
     printBalances [myPublicKey, recipient]
+
+  either (\e -> putStrLn ("RPC error: " <> show e)) pure result
+```
+
+### SPL token transfer (Associated Token Accounts)
+
+Tokens live in *associated token accounts* (ATAs) — program-derived addresses computed from the wallet and the mint. This example derives both ATAs with `getAssociatedTokenAddress`, creates the recipient's ATA if missing (idempotent, safe to include unconditionally), and moves tokens with the decimals-checked `transferChecked`.
+
+```haskell
+{-# LANGUAGE OverloadedStrings #-}
+
+module Main where
+
+import Control.Monad (void)
+import Data.Maybe (fromJust)
+import Network.Solana.Core.Crypto
+import Network.Solana.SolanaWeb3
+import Network.Solana.SplPrograms.AssociatedTokenAccount qualified as Ata
+import Network.Solana.SplPrograms.Token qualified as Token
+import Network.Web3.Provider
+
+main :: IO ()
+main = do
+  (myPublicKey, myPrivateKey) <- createSolanaKeyPair
+
+  void $ runWeb3' (HttpProvider "http://127.0.0.1:8899") $ do
+    let mint = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU" -- the token's mint address
+        recipient = "A988FuUtUVk8jMUuVc1ccaoTA3VS9CB4dkEf9XUAUqV4" -- recipient wallet
+
+        -- ATAs are PDAs of (wallet, token program, mint): derived, not generated.
+        sourceAta = fromJust (Ata.getAssociatedTokenAddress myPublicKey mint)
+        destinationAta = fromJust (Ata.getAssociatedTokenAddress recipient mint)
+
+    void $
+      newTransaction
+        [myPrivateKey]
+        [ -- Create the recipient's token account if it does not exist yet (no-op otherwise).
+          Ata.createAssociatedTokenAccountIdempotent
+            myPublicKey -- funder (pays rent)
+            recipient -- wallet that will own the ATA
+            mint,
+          -- Transfer 1 token (here: 6 decimals); mint and decimals are verified on-chain.
+          Token.transferChecked
+            sourceAta -- source token account
+            mint -- token mint
+            destinationAta -- destination token account
+            myPublicKey -- owner of the source account
+            [] -- extra multisig signers (none)
+            1_000_000 -- amount in base units
+            6 -- decimals of the mint
+        ]
+```
+
+### Priority fees and memo
+
+Compute Budget instructions raise a transaction's scheduling priority by paying a fee per compute unit; a memo attaches a signed, human-readable note recorded on-chain. Both are ordinary `Instruction`s added to the same instruction list.
+
+```haskell
+{-# LANGUAGE OverloadedStrings #-}
+
+module Main where
+
+import Control.Monad (void)
+import Network.Solana.Core.Crypto
+import Network.Solana.NativePrograms.ComputeBudget qualified as ComputeBudget
+import Network.Solana.NativePrograms.SystemProgram qualified as SystemProgram
+import Network.Solana.SolanaWeb3
+import Network.Solana.SplPrograms.Memo qualified as Memo
+import Network.Web3.Provider
+
+main :: IO ()
+main = do
+  (myPublicKey, myPrivateKey) <- createSolanaKeyPair
+
+  void $ runWeb3' (HttpProvider "http://127.0.0.1:8899") $ do
+    let recipient = "A988FuUtUVk8jMUuVc1ccaoTA3VS9CB4dkEf9XUAUqV4"
+
+    void $
+      newTransaction
+        [myPrivateKey]
+        [ ComputeBudget.setComputeUnitLimit 200_000, -- cap the compute units this tx may use
+          ComputeBudget.setComputeUnitPrice 10_000, -- priority fee: micro-lamports per compute unit
+          SystemProgram.transfer myPublicKey recipient 1_000_000_000, -- 1 SOL
+          Memo.buildMemo "thanks for the coffee" [myPublicKey] -- signed on-chain note
+        ]
 ```
 
 ## Contributing

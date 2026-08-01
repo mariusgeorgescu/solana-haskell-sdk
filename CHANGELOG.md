@@ -4,6 +4,23 @@
 
 First stable release: byte-verified clients for System, Compute Budget, Stake, Vote, BPF Loader (upgradeable), Secp256k1, SPL Memo, SPL Token, and Associated Token Account programs; PDA derivation; canonical Rust-identical message compilation.
 
+* Hardened all RPC-facing JSON parsers to be total: malformed or unexpected
+  node responses (failed transactions, v0 transactions, pruned/unknown slots)
+  no longer crash the client.
+* Fixed: `mkPrivateKeyFromString` rejected valid 64-byte private keys; now
+  parses them correctly.
+* Fixed: `BlockHash` and `CompactArray` `Binary` decoding were asymmetric
+  with their `put` (falling back to an incompatible/length-prefixed
+  decoder); both now round-trip correctly.
+* Renamed RPC fields for consistency (`Ammount*` -> `Amount*`, `RpcResponse`
+  -> `RPCResponse`) and changed transaction/account error fields to
+  structured `Maybe Value` instead of partial `Maybe String`.
+* Added `confirmTransaction` to `SolanaWeb3`: polls for `confirmed`/
+  `finalized` status instead of a fixed `wait`.
+* Haddock coverage completed for the Core, RPC/HTTP, and SolanaWeb3 modules
+  touched by the quality pass (module headers and per-export documentation);
+  `cabal haddock` exits 0 with a handful of internal native/SPL-program
+  helpers still undocumented.
 * Added upgradeable BPF loader client (buffer/write/deploy/upgrade/authority/
   close/extend) with program-data address derivation.
 * Added secp256k1 precompile client: signature-verification instruction
