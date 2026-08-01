@@ -508,6 +508,44 @@ fn main() {
     let versioned = VersionedMessage::V0(v0_msg);
     let v0_tx = VersionedTransaction::try_new(versioned.clone(), &[&payer]).unwrap();
 
+    let nonce_account_pk = Pubkey::new_from_array([37u8; 32]);
+    // Computed here (rather than down by the nonce-account state fixture) so the
+    // same `DurableNonce` value is reused for both: the durable-nonce transaction
+    // below signs with it as the "recent blockhash", and the nonce-account state
+    // fixture further down stores it as the account's current nonce.
+    let nonce_blockhash = Hash::new_from_array([35u8; 32]);
+    let durable_nonce = DurableNonce::from_blockhash(&nonce_blockhash);
+
+    // Sponsored-fee transfer: `stake_acct` is the fee payer (signs first) even
+    // though it is not referenced by the transfer instruction itself; `payer` is
+    // the second signer, as the transfer's `from` account. Message::new_with_blockhash
+    // pins the fee payer as account 0 regardless of whether it appears in any
+    // instruction, so this yields a 2-signature transaction.
+    let sponsored_msg = Message::new_with_blockhash(
+        &[system_instruction::transfer(&payer.pubkey(), &recipient, 1_000_000_000)],
+        Some(&stake_acct.pubkey()),
+        &blockhash,
+    );
+    let sponsored_tx = Transaction::new(&[&stake_acct, &payer], sponsored_msg, blockhash);
+
+    // Durable-nonce transfer: `Message::new_with_nonce` prepends a system
+    // `AdvanceNonceAccount(nonce_account_pk, payer)` instruction ahead of the
+    // transfer, but does not set `recent_blockhash` (it stays the default Hash).
+    // Durable-nonce transactions instead sign with the nonce account's current
+    // durable-nonce value in place of a recent blockhash, so we build an
+    // unsigned transaction and `try_sign` it with `*durable_nonce.as_hash()` --
+    // matching how Rust nonce-aware clients construct these offline.
+    let nonce_msg = Message::new_with_nonce(
+        vec![system_instruction::transfer(&payer.pubkey(), &recipient, 1_000_000_000)],
+        Some(&payer.pubkey()),
+        &nonce_account_pk,
+        &payer.pubkey(),
+    );
+    let mut nonce_tx = Transaction::new_unsigned(nonce_msg);
+    nonce_tx
+        .try_sign(&[&payer], *durable_nonce.as_hash())
+        .unwrap();
+
     let tx_fixtures = vec![
         json!({ "name": "transfer-transaction", "hex": hex(&bincode::serialize(&tx).unwrap()) }),
         json!({ "name": "payer-pubkey", "hex": hex(&payer.pubkey().to_bytes()) }),
@@ -518,6 +556,8 @@ fn main() {
         json!({ "name": "stake-setup-transaction", "hex": hex(&bincode::serialize(&stake_tx).unwrap()) }),
         json!({ "name": "v0-message", "hex": hex(&versioned.serialize()) }),
         json!({ "name": "v0-transfer-transaction", "hex": hex(&bincode::serialize(&v0_tx).unwrap()) }),
+        json!({ "name": "sponsored-transfer-transaction", "hex": hex(&bincode::serialize(&sponsored_tx).unwrap()) }),
+        json!({ "name": "nonce-transfer-transaction", "hex": hex(&bincode::serialize(&nonce_tx).unwrap()) }),
     ];
     fs::write(
         "../../test/fixtures/transactions.json",
@@ -629,8 +669,8 @@ fn main() {
     // "DURABLE_NONCE" domain prefix), so the durable-nonce bytes stored on-chain are
     // NOT the raw 32x35 blockhash. Emit the actual hashed bytes separately so the
     // Haskell test asserts against ground truth rather than the seed blockhash.
-    let nonce_blockhash = Hash::new_from_array([35u8; 32]);
-    let durable_nonce = DurableNonce::from_blockhash(&nonce_blockhash);
+    // (`nonce_blockhash`/`durable_nonce` were computed earlier, alongside the
+    // durable-nonce transaction fixture, and are reused here.)
     let nonce_data = NonceData::new(payer.pubkey(), durable_nonce, 5000);
     let nonce_versions = NonceVersions::new(NonceState::Initialized(nonce_data));
     let nonce_bytes = bincode::serialize(&nonce_versions).unwrap();
