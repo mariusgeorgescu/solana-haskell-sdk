@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+* Added Stake program client (initialize, authorize, delegate, split, withdraw,
+  deactivate, lockup, merge, checked variants) — golden-tested against the Rust SDK.
+* Added Vote program client (account management: initialize, authorize, withdraw,
+  identity/commission updates); consensus voting instructions are out of scope.
 * Added SPL Token program client (instructions 0-20: mint/account initialization,
   transfers, approvals, minting, burning, freezing, multisig support) —
   golden-tested against the `spl-token` Rust crate.

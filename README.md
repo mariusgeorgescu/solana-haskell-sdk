@@ -32,8 +32,8 @@
   - [ ] Clients for native programs
     - [x] System Program (all 13 instructions)
     - [x] Compute Budget
-    - [ ] Stake
-    - [ ] Vote
+    - [x] Stake
+    - [x] Vote
     - [ ] BPF Loader
     - [ ] Secp256k1
   - [ ] Clients for Solana Program Library (SPL)

@@ -11,6 +11,7 @@ import Network.Solana.Core.Crypto
 import Network.Solana.Core.Instruction
 import Network.Solana.Core.Message
 import Network.Solana.NativePrograms.ComputeBudget qualified as CB
+import Network.Solana.NativePrograms.Stake qualified as Stake
 import Network.Solana.NativePrograms.SystemProgram qualified as SP
 import Network.Solana.SplPrograms.AssociatedTokenAccount qualified as Ata
 import Network.Solana.SplPrograms.Memo qualified as Memo
@@ -28,6 +29,12 @@ recipientPk = unsafeSolanaPublicKeyRaw (replicate 32 2)
 
 ownerPk :: SolanaPublicKey
 ownerPk = unsafeSolanaPublicKeyRaw (replicate 32 5)
+
+votePk' :: SolanaPublicKey
+votePk' = unsafeSolanaPublicKeyRaw (replicate 32 17)
+
+custodianPk' :: SolanaPublicKey
+custodianPk' = unsafeSolanaPublicKeyRaw (replicate 32 18)
 
 payerKeys :: (SolanaPublicKey, SolanaPrivateKey)
 payerKeys =
@@ -149,5 +156,18 @@ tests =
         case newTransactionIntent [snd payerKeys] ixs fixedBlockhash of
           Left err -> assertFailure (show err)
           Right b64 -> b64 @?= toBase64String (requireFixture "ata-transfer-transaction" fs),
+      testCase "stake setup transaction matches Rust" $ do
+        fs <- loadFixtures "test/fixtures/transactions.json"
+        let stakePk = fst newAccountKeys
+            authorized = Stake.Authorized {Stake.aStaker = fst payerKeys, Stake.aWithdrawer = fst payerKeys}
+            lockup = Stake.Lockup {Stake.lUnixTimestamp = 1700000000, Stake.lEpoch = 300, Stake.lCustodian = custodianPk'}
+            ixs =
+              [ SP.createAccount (fst payerKeys) stakePk 1000000 200 Stake.stakeProgramId,
+                Stake.initialize stakePk authorized lockup,
+                Stake.delegateStake stakePk (fst payerKeys) votePk'
+              ]
+        case newTransactionIntent [snd payerKeys, snd newAccountKeys] ixs fixedBlockhash of
+          Left err -> assertFailure (show err)
+          Right b64 -> b64 @?= toBase64String (requireFixture "stake-setup-transaction" fs),
       testProperty "message header/key-ordering invariants" prop_messageInvariants
     ]
