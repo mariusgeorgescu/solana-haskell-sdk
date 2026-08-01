@@ -8,6 +8,7 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    # GHC matrix deferred: base ^>=4.18 pins 9.6; widen bounds + verify before adding 9.8
     steps:
       - uses: actions/checkout@v4
       - uses: haskell-actions/setup@v2
