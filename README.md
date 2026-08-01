@@ -1,9 +1,9 @@
 
 <p align="center">
   <a href="https://solana.com/docs">
-    <img src="solana-haskell-logo.jpeg" alt="Solana Haskell SDK Logo" width="425" />
+    <img src="https://raw.githubusercontent.com/mariusgeorgescu/solana-haskell-sdk/main/solana-haskell-logo.jpeg" alt="Solana Haskell SDK Logo" width="425" />
   </a>
-  <h1 align="center">Solana SDK library for Haskellers</h2>
+  <h1 align="center">Solana SDK library for Haskellers</h1>
   <p align="center">
     <a href="https://hackage.haskell.org/">
       <img src="https://img.shields.io/badge/-Haddock-5E5184?style=flat-square&logo=haskell&logoColor=white" />
@@ -28,7 +28,7 @@ API documentation is generated with Haddock (`cabal haddock`). Serialization cor
 
 ## Features
 
-- [x] [Full JSON RPC API](#usage-examples-for-json-rpc-api)
+- [x] [Full JSON RPC API](#usage-examples)
 - [x] Wallet, account and keys management
 - [x] Transaction Building
   - [x] Clients for native programs
@@ -50,7 +50,7 @@ API documentation is generated with Haddock (`cabal haddock`). Serialization cor
 
 
 
-### Current development status
+### Release status
 
 The current stable release is **v1.0.0.0**. Serialization is verified byte-for-byte against the official Rust SDK by golden-vector tests (see test/fixtures/ and tools/README.md).
 
@@ -102,7 +102,7 @@ main = do
     void $ requestAirdrop myPublicKey 10_000_000_000
     wait 15 -- Wait 15 seconds be sure the tx was confirmed
 
-    -- Define recipient's address from base58 hex ecoded string
+    -- Define recipient's address from base58-encoded string
     let recipient = "A988FuUtUVk8jMUuVc1ccaoTA3VS9CB4dkEf9XUAUqV4"
 
     -- Check balance
@@ -130,4 +130,8 @@ We welcome all contributors! See [contributing guide](./CONTRIBUTING.md) for how
 
 ## Credits
 
+Created and maintained by Marius Georgescu.
+
 ## License
+
+[Apache-2.0](./LICENSE)

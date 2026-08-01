@@ -22,6 +22,10 @@ import Network.Solana.NativePrograms.SystemProgram qualified as SP
 import Network.Solana.Sysvar qualified as Sysvar
 
 -- | Upgradeable BPF loader program address.
+--
+-- Named after the Rust SDK's @bpf_loader_upgradeable@ module rather than the
+-- @...ProgramId@ convention used elsewhere in this SDK; kept intentionally
+-- for symmetry with upstream.
 bpfLoaderUpgradeableId :: SolanaPublicKey
 bpfLoaderUpgradeableId = "BPFLoaderUpgradeab1e11111111111111111111111"
 

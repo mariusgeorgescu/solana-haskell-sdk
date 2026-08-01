@@ -50,6 +50,6 @@ First stable release: byte-verified clients for System, Compute Budget, Stake, V
   allocate/assign/transfer with seed.
 * Added CI (GitHub Actions).
 
-## 0.1.0.0 -- YYYY-mm-dd
+## 0.1.0.0 -- 2024 (unreleased alpha)
 
-* First version. Released on an unsuspecting world.
+* Initial alpha: JSON-RPC API client, key management, System Program transfers.
