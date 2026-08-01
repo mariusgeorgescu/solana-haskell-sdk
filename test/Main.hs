@@ -8,6 +8,7 @@ import Test.Core.Pda qualified
 import Test.NativePrograms.ComputeBudget qualified
 import Test.NativePrograms.Stake qualified
 import Test.NativePrograms.SystemProgram qualified
+import Test.NativePrograms.Vote qualified
 import Test.SplPrograms.AssociatedTokenAccount qualified
 import Test.SplPrograms.Memo qualified
 import Test.SplPrograms.Token qualified
@@ -26,6 +27,7 @@ main =
           Test.NativePrograms.ComputeBudget.tests,
           Test.NativePrograms.Stake.tests,
           Test.NativePrograms.SystemProgram.tests,
+          Test.NativePrograms.Vote.tests,
           Test.SplPrograms.AssociatedTokenAccount.tests,
           Test.SplPrograms.Memo.tests,
           Test.SplPrograms.Token.tests

@@ -48,6 +48,7 @@ library
     Network.Solana.NativePrograms.ComputeBudget
     Network.Solana.NativePrograms.Stake
     Network.Solana.NativePrograms.SystemProgram
+    Network.Solana.NativePrograms.Vote
     Network.Solana.SplPrograms.AssociatedTokenAccount
     Network.Solana.SplPrograms.Memo
     Network.Solana.SplPrograms.Token
@@ -138,6 +139,7 @@ test-suite solana-haskell-sdk-test
     Test.NativePrograms.ComputeBudget
     Test.NativePrograms.Stake
     Test.NativePrograms.SystemProgram
+    Test.NativePrograms.Vote
     Test.SplPrograms.AssociatedTokenAccount
     Test.SplPrograms.Memo
     Test.SplPrograms.Token
