@@ -37,13 +37,15 @@ API documentation is generated with Haddock (`cabal haddock`). Serialization cor
 - [x] Program Derived Addresses (`findProgramAddress` / `createProgramAddress`)
 - [x] Transaction building, signing and submission
   - [x] Priority fees via Compute Budget (`setComputeUnitLimit`, `setComputeUnitPrice`)
+  - [x] Versioned (v0) transactions and Address Lookup Tables
   - [x] Clients for native programs
-    - [x] System Program (all 13 instructions)
-    - [x] Compute Budget
-    - [x] Stake (delegation lifecycle; seed-authority variants post-1.0)
-    - [x] Vote (account management)
+    - [x] Address Lookup Table
     - [x] BPF Loader (upgradeable)
+    - [x] Compute Budget
     - [x] Secp256k1 (instruction construction; signing out of scope)
+    - [x] Stake (delegation lifecycle; seed-authority variants post-1.0)
+    - [x] System Program (all 13 instructions)
+    - [x] Vote (account management)
   - [x] Clients for Solana Program Library (SPL)
     - [x] Memo
     - [x] SPL Token (instructions 0-20, incl. `transferChecked`)
@@ -53,7 +55,6 @@ API documentation is generated with Haddock (`cabal haddock`). Serialization cor
 ### Post-1.0
 
 - Metaplex (Token Metadata; requires Borsh serialization)
-- Versioned (v0) transactions and Address Lookup Tables
 
 
 

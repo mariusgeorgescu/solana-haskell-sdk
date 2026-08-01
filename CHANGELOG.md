@@ -1,5 +1,9 @@
 # Revision history for solana-haskell-sdk
 
+## Unreleased
+
+* Added Address Lookup Table program client and versioned (v0) transaction support: compile messages against lookup tables and sign VersionedTransactions (encode-only; account-state parsing out of scope).
+
 ## 1.0.0.0 -- 2026-08-01
 
 First stable release: byte-verified clients for System, Compute Budget, Stake, Vote, BPF Loader (upgradeable), Secp256k1, SPL Memo, SPL Token, and Associated Token Account programs; PDA derivation; canonical Rust-identical message compilation.
