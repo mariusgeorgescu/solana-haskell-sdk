@@ -7,7 +7,9 @@ import Data.Binary.Get (ByteOffset)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BL
 import Network.Solana.Core.Crypto (SolanaPublicKey, createSolanaKeypairFromSeed, unsafeSolanaPublicKeyRaw)
+import Network.Solana.Core.Instruction (AccountMeta (..), iAccounts)
 import Network.Solana.NativePrograms.Stake qualified as Stake
+import Network.Solana.Sysvar qualified as Sysvar
 import Test.Fixtures
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -16,6 +18,11 @@ import Test.Tasty.QuickCheck
 custodianPk, newAuthPk :: SolanaPublicKey
 custodianPk = unsafeSolanaPublicKeyRaw (replicate 32 18)
 newAuthPk = unsafeSolanaPublicKeyRaw (replicate 32 20)
+
+stakeAcctPk, votePk, recipientPk' :: SolanaPublicKey
+stakeAcctPk = unsafeSolanaPublicKeyRaw (replicate 32 21)
+votePk = unsafeSolanaPublicKeyRaw (replicate 32 17)
+recipientPk' = unsafeSolanaPublicKeyRaw (replicate 32 22)
 
 payerPk :: SolanaPublicKey
 payerPk =
@@ -81,7 +88,81 @@ tests =
         testCase "decode fails on unknown discriminant" $
           case decodeOrFail (BL.pack [16, 0, 0, 0]) :: Either (BL.ByteString, ByteOffset, String) (BL.ByteString, ByteOffset, Stake.StakeInstruction) of
             Left _ -> pure ()
-            Right _ -> assertFailure "expected decode failure for discriminant 16"
+            Right _ -> assertFailure "expected decode failure for discriminant 16",
+        testCase "initialize metas" $
+          iAccounts (Stake.initialize stakeAcctPk fixedAuthorized fixedLockup)
+            @?= [ AccountMeta stakeAcctPk False True,
+                  AccountMeta Sysvar.rent False False
+                ],
+        testCase "authorize metas (no custodian)" $
+          iAccounts (Stake.authorize stakeAcctPk payerPk newAuthPk Stake.AuthorizeStaker Nothing)
+            @?= [ AccountMeta stakeAcctPk False True,
+                  AccountMeta Sysvar.clock False False,
+                  AccountMeta payerPk True False
+                ],
+        testCase "authorize metas (custodian)" $
+          iAccounts (Stake.authorize stakeAcctPk payerPk newAuthPk Stake.AuthorizeWithdrawer (Just custodianPk))
+            @?= [ AccountMeta stakeAcctPk False True,
+                  AccountMeta Sysvar.clock False False,
+                  AccountMeta payerPk True False,
+                  AccountMeta custodianPk True False
+                ],
+        testCase "delegateStake metas" $
+          iAccounts (Stake.delegateStake stakeAcctPk payerPk votePk)
+            @?= [ AccountMeta stakeAcctPk False True,
+                  AccountMeta votePk False False,
+                  AccountMeta Sysvar.clock False False,
+                  AccountMeta Sysvar.stakeHistory False False,
+                  AccountMeta Stake.stakeConfigId False False,
+                  AccountMeta payerPk True False
+                ],
+        testCase "split metas" $
+          iAccounts (Stake.split stakeAcctPk recipientPk' payerPk 250000)
+            @?= [ AccountMeta stakeAcctPk False True,
+                  AccountMeta recipientPk' False True,
+                  AccountMeta payerPk True False
+                ],
+        testCase "withdraw metas (no custodian)" $
+          iAccounts (Stake.withdraw stakeAcctPk recipientPk' payerPk 500000 Nothing)
+            @?= [ AccountMeta stakeAcctPk False True,
+                  AccountMeta recipientPk' False True,
+                  AccountMeta Sysvar.clock False False,
+                  AccountMeta Sysvar.stakeHistory False False,
+                  AccountMeta payerPk True False
+                ],
+        testCase "deactivate metas" $
+          iAccounts (Stake.deactivate stakeAcctPk payerPk)
+            @?= [ AccountMeta stakeAcctPk False True,
+                  AccountMeta Sysvar.clock False False,
+                  AccountMeta payerPk True False
+                ],
+        testCase "setLockup metas" $
+          iAccounts (Stake.setLockup stakeAcctPk (Stake.LockupArgs Nothing Nothing Nothing) custodianPk)
+            @?= [ AccountMeta stakeAcctPk False True,
+                  AccountMeta custodianPk True False
+                ],
+        testCase "merge metas" $
+          iAccounts (Stake.merge stakeAcctPk recipientPk' payerPk)
+            @?= [ AccountMeta stakeAcctPk False True,
+                  AccountMeta recipientPk' False True,
+                  AccountMeta Sysvar.clock False False,
+                  AccountMeta Sysvar.stakeHistory False False,
+                  AccountMeta payerPk True False
+                ],
+        testCase "initializeChecked metas" $
+          iAccounts (Stake.initializeChecked stakeAcctPk fixedAuthorized)
+            @?= [ AccountMeta stakeAcctPk False True,
+                  AccountMeta Sysvar.rent False False,
+                  AccountMeta payerPk False False,
+                  AccountMeta payerPk True False
+                ],
+        testCase "authorizeChecked metas" $
+          iAccounts (Stake.authorizeChecked stakeAcctPk payerPk newAuthPk Stake.AuthorizeStaker Nothing)
+            @?= [ AccountMeta stakeAcctPk False True,
+                  AccountMeta Sysvar.clock False False,
+                  AccountMeta payerPk True False,
+                  AccountMeta newAuthPk True False
+                ]
       ]
   where
     goldenCase getFixtures name si =
