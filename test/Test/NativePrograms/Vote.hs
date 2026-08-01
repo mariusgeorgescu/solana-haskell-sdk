@@ -6,7 +6,7 @@ import Data.Binary (decode, decodeOrFail, encode)
 import Data.Binary.Get (ByteOffset)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BL
-import Network.Solana.Core.Crypto (SolanaPublicKey, createSolanaKeypairFromSeed, unsafeSolanaPublicKeyRaw)
+import Network.Solana.Core.Crypto (SolanaPublicKey, createSolanaKeypairFromSeed, getSolanaPublicKeyRaw, toBase58String, unsafeSolanaPublicKeyRaw)
 import Network.Solana.Core.Instruction (AccountMeta (..), iAccounts)
 import Network.Solana.NativePrograms.Vote qualified as Vote
 import Network.Solana.Sysvar qualified as Sysvar
@@ -43,15 +43,15 @@ genVoteInstruction :: Gen Vote.VoteInstruction
 genVoteInstruction =
   oneof
     [ Vote.InitializeAccount <$> genVoteInit,
-      Vote.VoteAuthorizeIx <$> genPk <*> genAuth,
-      Vote.VoteWithdraw <$> arbitrary,
+      Vote.Authorize <$> genPk <*> genAuth,
+      Vote.Withdraw <$> arbitrary,
       pure Vote.UpdateValidatorIdentity,
       Vote.UpdateCommission <$> arbitrary,
-      Vote.VoteAuthorizeChecked <$> genAuth
+      Vote.AuthorizeChecked <$> genAuth
     ]
   where
     genPk = unsafeSolanaPublicKeyRaw <$> vectorOf 32 arbitrary
-    genAuth = elements [Vote.AuthorizeVoter, Vote.AuthorizeVoteWithdrawer]
+    genAuth = elements [Vote.AuthorizeVoter, Vote.AuthorizeWithdrawer]
     genVoteInit = Vote.VoteInit <$> genPk <*> genPk <*> genPk <*> arbitrary
 
 tests :: TestTree
@@ -60,12 +60,12 @@ tests =
     testGroup
       "Vote instruction data (golden + properties)"
       [ goldenCase getFixtures "InitializeAccount" (Vote.InitializeAccount fixedVoteInit),
-        goldenCase getFixtures "Authorize-voter" (Vote.VoteAuthorizeIx newAuthPk Vote.AuthorizeVoter),
-        goldenCase getFixtures "Authorize-withdrawer" (Vote.VoteAuthorizeIx newAuthPk Vote.AuthorizeVoteWithdrawer),
-        goldenCase getFixtures "Withdraw" (Vote.VoteWithdraw 500000),
+        goldenCase getFixtures "Authorize-voter" (Vote.Authorize newAuthPk Vote.AuthorizeVoter),
+        goldenCase getFixtures "Authorize-withdrawer" (Vote.Authorize newAuthPk Vote.AuthorizeWithdrawer),
+        goldenCase getFixtures "Withdraw" (Vote.Withdraw 500000),
         goldenCase getFixtures "UpdateValidatorIdentity" Vote.UpdateValidatorIdentity,
         goldenCase getFixtures "UpdateCommission" (Vote.UpdateCommission 5),
-        goldenCase getFixtures "AuthorizeChecked" (Vote.VoteAuthorizeChecked Vote.AuthorizeVoteWithdrawer),
+        goldenCase getFixtures "AuthorizeChecked" (Vote.AuthorizeChecked Vote.AuthorizeWithdrawer),
         testProperty "Binary round-trip" $
           forAll genVoteInstruction $ \vi -> decode (encode vi) === vi,
         testCase "decode fails on unknown discriminant" $
@@ -103,12 +103,15 @@ tests =
                   AccountMeta payerPk True False
                 ],
         testCase "authorizeVoteChecked metas" $
-          iAccounts (Vote.authorizeVoteChecked votePk payerPk newAuthPk Vote.AuthorizeVoteWithdrawer)
+          iAccounts (Vote.authorizeVoteChecked votePk payerPk newAuthPk Vote.AuthorizeWithdrawer)
             @?= [ AccountMeta votePk False True,
                   AccountMeta Sysvar.clock False False,
                   AccountMeta payerPk True False,
                   AccountMeta newAuthPk True False
-                ]
+                ],
+        testCase "voteProgramId decodes to canonical bytes" $ do
+          toBase58String (getSolanaPublicKeyRaw Vote.voteProgramId) @?= "Vote111111111111111111111111111111111111111"
+          BS.length (getSolanaPublicKeyRaw Vote.voteProgramId) @?= 32
       ]
   where
     goldenCase getFixtures name vi =

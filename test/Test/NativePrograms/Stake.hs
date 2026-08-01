@@ -15,9 +15,10 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
-custodianPk, newAuthPk :: SolanaPublicKey
+custodianPk, newAuthPk, withdrawerPk :: SolanaPublicKey
 custodianPk = unsafeSolanaPublicKeyRaw (replicate 32 18)
 newAuthPk = unsafeSolanaPublicKeyRaw (replicate 32 20)
+withdrawerPk = unsafeSolanaPublicKeyRaw (replicate 32 28)
 
 stakeAcctPk, votePk, recipientPk' :: SolanaPublicKey
 stakeAcctPk = unsafeSolanaPublicKeyRaw (replicate 32 21)
@@ -130,6 +131,15 @@ tests =
                   AccountMeta Sysvar.stakeHistory False False,
                   AccountMeta payerPk True False
                 ],
+        testCase "withdraw metas (custodian)" $
+          iAccounts (Stake.withdraw stakeAcctPk recipientPk' payerPk 500000 (Just custodianPk))
+            @?= [ AccountMeta stakeAcctPk False True,
+                  AccountMeta recipientPk' False True,
+                  AccountMeta Sysvar.clock False False,
+                  AccountMeta Sysvar.stakeHistory False False,
+                  AccountMeta payerPk True False,
+                  AccountMeta custodianPk True False
+                ],
         testCase "deactivate metas" $
           iAccounts (Stake.deactivate stakeAcctPk payerPk)
             @?= [ AccountMeta stakeAcctPk False True,
@@ -150,11 +160,11 @@ tests =
                   AccountMeta payerPk True False
                 ],
         testCase "initializeChecked metas" $
-          iAccounts (Stake.initializeChecked stakeAcctPk fixedAuthorized)
+          iAccounts (Stake.initializeChecked stakeAcctPk (Stake.Authorized {Stake.aStaker = payerPk, Stake.aWithdrawer = withdrawerPk}))
             @?= [ AccountMeta stakeAcctPk False True,
                   AccountMeta Sysvar.rent False False,
                   AccountMeta payerPk False False,
-                  AccountMeta payerPk True False
+                  AccountMeta withdrawerPk True False
                 ],
         testCase "authorizeChecked metas" $
           iAccounts (Stake.authorizeChecked stakeAcctPk payerPk newAuthPk Stake.AuthorizeStaker Nothing)
@@ -162,6 +172,14 @@ tests =
                   AccountMeta Sysvar.clock False False,
                   AccountMeta payerPk True False,
                   AccountMeta newAuthPk True False
+                ],
+        testCase "authorizeChecked metas (custodian)" $
+          iAccounts (Stake.authorizeChecked stakeAcctPk payerPk newAuthPk Stake.AuthorizeWithdrawer (Just custodianPk))
+            @?= [ AccountMeta stakeAcctPk False True,
+                  AccountMeta Sysvar.clock False False,
+                  AccountMeta payerPk True False,
+                  AccountMeta newAuthPk True False,
+                  AccountMeta custodianPk True False
                 ]
       ]
   where

@@ -224,6 +224,9 @@ delegateStake stakeAccount stakeAuthority voteAccount =
 -- | Creates instruction to "Split u64 tokens and stake off a stake account into another stake account"
 -- Receives the stake account to split from, the uninitialized stake account that will take the
 -- split-off amount, the stake authority and the number of lamports to split.
+-- The destination account must already be allocated with 200 bytes and assigned to the stake
+-- program (compose with the System Program client's createAccount/allocate+assign); the Rust
+-- SDK's composite @split@ helper emits those instructions automatically, this builder does not.
 -- # Account references
 -- 0. `[WRITE]` Stake account to be split; must be in the Initialized or Stake state
 -- 1. `[WRITE]` Uninitialized stake account that will take the split-off amount

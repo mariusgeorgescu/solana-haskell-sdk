@@ -16,7 +16,6 @@ use solana_sdk::stake::state::{Authorized, Lockup, StakeAuthorize};
 use solana_sdk::vote::instruction::VoteInstruction;
 use solana_sdk::vote::state::{VoteAuthorize, VoteInit};
 use solana_sdk::stake::{self};
-use solana_sdk::vote::{self};
 use solana_sdk::loader_upgradeable_instruction::UpgradeableLoaderInstruction;
 use solana_sdk::secp256k1_instruction::new_secp256k1_instruction;
 use spl_token::instruction::{AuthorityType, TokenInstruction};

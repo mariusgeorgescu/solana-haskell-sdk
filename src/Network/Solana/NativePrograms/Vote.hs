@@ -39,7 +39,7 @@ instance Binary VoteInit where
   get = VoteInit <$> get <*> get <*> get <*> getWord8
 
 -- | Which vote authority an operation concerns (bincode u32: 0 voter, 1 withdrawer).
-data VoteAuthorize = AuthorizeVoter | AuthorizeVoteWithdrawer
+data VoteAuthorize = AuthorizeVoter | AuthorizeWithdrawer
   deriving (Eq, Show, Enum, Bounded, Generic)
 
 putVoteAuthorize :: VoteAuthorize -> Put
@@ -55,11 +55,11 @@ getVoteAuthorize = do
 -- | Vote program instructions (covered subset).
 data VoteInstruction
   = InitializeAccount VoteInit
-  | VoteAuthorizeIx SolanaPublicKey VoteAuthorize
-  | VoteWithdraw Word64
+  | Authorize SolanaPublicKey VoteAuthorize
+  | Withdraw Word64
   | UpdateValidatorIdentity
   | UpdateCommission Word8
-  | VoteAuthorizeChecked VoteAuthorize
+  | AuthorizeChecked VoteAuthorize
   deriving (Eq, Show, Generic)
 
 instance Binary VoteInstruction where
@@ -67,18 +67,18 @@ instance Binary VoteInstruction where
   put (InitializeAccount voteInit) = do
     putWord32le 0
     put voteInit
-  put (VoteAuthorizeIx newAuthority voteAuthorize) = do
+  put (Authorize newAuthority voteAuthorize) = do
     putWord32le 1
     putByteString (getSolanaPublicKeyRaw newAuthority)
     putVoteAuthorize voteAuthorize
-  put (VoteWithdraw amount) = do
+  put (Withdraw amount) = do
     putWord32le 3
     putWord64le amount
   put UpdateValidatorIdentity = putWord32le 4
   put (UpdateCommission commission) = do
     putWord32le 5
     putWord8 commission
-  put (VoteAuthorizeChecked voteAuthorize) = do
+  put (AuthorizeChecked voteAuthorize) = do
     putWord32le 7
     putVoteAuthorize voteAuthorize
 
@@ -87,11 +87,11 @@ instance Binary VoteInstruction where
     disc <- getWord32le
     case disc of
       0 -> InitializeAccount <$> get
-      1 -> VoteAuthorizeIx <$> get <*> getVoteAuthorize
-      3 -> VoteWithdraw <$> getWord64le
+      1 -> Authorize <$> get <*> getVoteAuthorize
+      3 -> Withdraw <$> getWord64le
       4 -> pure UpdateValidatorIdentity
       5 -> UpdateCommission <$> getWord8
-      7 -> VoteAuthorizeChecked <$> getVoteAuthorize
+      7 -> AuthorizeChecked <$> getVoteAuthorize
       _ -> fail ("VoteInstruction: unknown discriminant " <> show disc)
 
 -- | Creates instruction to "Initialize a vote account"
@@ -128,7 +128,7 @@ authorizeVote voteAccount currentAuthority newAuthority voteAuthorize =
       AccountMeta {accountPubKey = Sysvar.clock, isSigner = False, isWritable = False},
       AccountMeta {accountPubKey = currentAuthority, isSigner = True, isWritable = False}
     ]
-    (VoteAuthorizeIx newAuthority voteAuthorize)
+    (Authorize newAuthority voteAuthorize)
 
 -- | Creates instruction to "Withdraw lamports from a vote account"
 -- Receives the vote account, the recipient account, the withdraw authority
@@ -145,7 +145,7 @@ withdrawVote voteAccount recipient withdrawAuthority amount =
       AccountMeta {accountPubKey = recipient, isSigner = False, isWritable = True},
       AccountMeta {accountPubKey = withdrawAuthority, isSigner = True, isWritable = False}
     ]
-    (VoteWithdraw amount)
+    (Withdraw amount)
 
 -- | Creates instruction to "Update the vote account's validator identity (node pubkey)"
 -- Receives the vote account, the new validator identity (which must sign) and
@@ -196,4 +196,4 @@ authorizeVoteChecked voteAccount currentAuthority newAuthority voteAuthorize =
       AccountMeta {accountPubKey = currentAuthority, isSigner = True, isWritable = False},
       AccountMeta {accountPubKey = newAuthority, isSigner = True, isWritable = False}
     ]
-    (VoteAuthorizeChecked voteAuthorize)
+    (AuthorizeChecked voteAuthorize)
