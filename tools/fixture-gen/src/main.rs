@@ -11,6 +11,12 @@ use solana_sdk::{
     system_instruction::{self, SystemInstruction},
     transaction::Transaction,
 };
+use solana_sdk::stake::instruction::{LockupArgs, StakeInstruction};
+use solana_sdk::stake::state::{Authorized, Lockup, StakeAuthorize};
+use solana_sdk::vote::instruction::VoteInstruction;
+use solana_sdk::vote::state::{VoteAuthorize, VoteInit};
+use solana_sdk::stake::{self};
+use solana_sdk::vote::{self};
 use spl_token::instruction::{AuthorityType, TokenInstruction};
 use std::fs;
 use std::str::FromStr;
@@ -257,6 +263,80 @@ fn main() {
     );
     let ata_tx = Transaction::new(&[&payer], ata_msg, blockhash);
 
+    let stake_acct = keypair_from_seed(&[10u8; 32]).unwrap();
+    let vote_acct = Pubkey::new_from_array([17u8; 32]);
+    let custodian = Pubkey::new_from_array([18u8; 32]);
+    let node = Pubkey::new_from_array([19u8; 32]);
+    let new_auth = Pubkey::new_from_array([20u8; 32]);
+    let authorized = Authorized { staker: payer.pubkey(), withdrawer: payer.pubkey() };
+    let lockup = Lockup { unix_timestamp: 1_700_000_000, epoch: 300, custodian };
+
+    let stake_variants: Vec<(&str, StakeInstruction)> = vec![
+        ("Initialize", StakeInstruction::Initialize(authorized, lockup)),
+        ("Authorize-staker", StakeInstruction::Authorize(new_auth, StakeAuthorize::Staker)),
+        ("Authorize-withdrawer", StakeInstruction::Authorize(new_auth, StakeAuthorize::Withdrawer)),
+        ("DelegateStake", StakeInstruction::DelegateStake),
+        ("Split", StakeInstruction::Split(250_000)),
+        ("Withdraw", StakeInstruction::Withdraw(500_000)),
+        ("Deactivate", StakeInstruction::Deactivate),
+        ("SetLockup-some", StakeInstruction::SetLockup(LockupArgs { unix_timestamp: Some(1_700_000_000), epoch: Some(300), custodian: Some(custodian) })),
+        ("SetLockup-none", StakeInstruction::SetLockup(LockupArgs { unix_timestamp: None, epoch: None, custodian: None })),
+        ("Merge", StakeInstruction::Merge),
+        ("InitializeChecked", StakeInstruction::InitializeChecked),
+        ("AuthorizeChecked", StakeInstruction::AuthorizeChecked(StakeAuthorize::Withdrawer)),
+        ("GetMinimumDelegation", StakeInstruction::GetMinimumDelegation),
+    ];
+    let stake_fixtures: Vec<_> = stake_variants
+        .iter()
+        .map(|(name, v)| json!({ "name": name, "hex": hex(&bincode::serialize(v).unwrap()) }))
+        .collect();
+    fs::write(
+        "../../test/fixtures/stake_instruction_data.json",
+        serde_json::to_string_pretty(&stake_fixtures).unwrap(),
+    )
+    .unwrap();
+
+    let vote_init = VoteInit {
+        node_pubkey: node,
+        authorized_voter: payer.pubkey(),
+        authorized_withdrawer: payer.pubkey(),
+        commission: 5,
+    };
+    let vote_variants: Vec<(&str, VoteInstruction)> = vec![
+        ("InitializeAccount", VoteInstruction::InitializeAccount(vote_init.clone())),
+        ("Authorize-voter", VoteInstruction::Authorize(new_auth, VoteAuthorize::Voter)),
+        ("Authorize-withdrawer", VoteInstruction::Authorize(new_auth, VoteAuthorize::Withdrawer)),
+        ("Withdraw", VoteInstruction::Withdraw(500_000)),
+        ("UpdateValidatorIdentity", VoteInstruction::UpdateValidatorIdentity),
+        ("UpdateCommission", VoteInstruction::UpdateCommission(5)),
+        ("AuthorizeChecked", VoteInstruction::AuthorizeChecked(VoteAuthorize::Withdrawer)),
+    ];
+    let vote_fixtures: Vec<_> = vote_variants
+        .iter()
+        .map(|(name, v)| json!({ "name": name, "hex": hex(&bincode::serialize(v).unwrap()) }))
+        .collect();
+    fs::write(
+        "../../test/fixtures/vote_instruction_data.json",
+        serde_json::to_string_pretty(&vote_fixtures).unwrap(),
+    )
+    .unwrap();
+
+    let create_stake_ix = system_instruction::create_account(
+        &payer.pubkey(),
+        &stake_acct.pubkey(),
+        1_000_000,
+        200,
+        &stake::program::id(),
+    );
+    let init_stake_ix = stake::instruction::initialize(&stake_acct.pubkey(), &authorized, &lockup);
+    let delegate_ix = stake::instruction::delegate_stake(&stake_acct.pubkey(), &payer.pubkey(), &vote_acct);
+    let stake_msg = Message::new_with_blockhash(
+        &[create_stake_ix, init_stake_ix, delegate_ix],
+        Some(&payer.pubkey()),
+        &blockhash,
+    );
+    let stake_tx = Transaction::new(&[&payer, &stake_acct], stake_msg, blockhash);
+
     let tx_fixtures = vec![
         json!({ "name": "transfer-transaction", "hex": hex(&bincode::serialize(&tx).unwrap()) }),
         json!({ "name": "payer-pubkey", "hex": hex(&payer.pubkey().to_bytes()) }),
@@ -264,6 +344,7 @@ fn main() {
         json!({ "name": "two-signer-create-transaction", "hex": hex(&bincode::serialize(&two_signer_tx).unwrap()) }),
         json!({ "name": "new-account-pubkey", "hex": hex(&new_account.pubkey().to_bytes()) }),
         json!({ "name": "ata-transfer-transaction", "hex": hex(&bincode::serialize(&ata_tx).unwrap()) }),
+        json!({ "name": "stake-setup-transaction", "hex": hex(&bincode::serialize(&stake_tx).unwrap()) }),
     ];
     fs::write(
         "../../test/fixtures/transactions.json",
