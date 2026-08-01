@@ -22,5 +22,13 @@
   {
     "hex": "aca38e9d399501ebcc6c1e29c009874293d8d7f05250ef64a4cf62f9ac282b21",
     "name": "programdata-address"
+  },
+  {
+    "hex": "59379caaad88710221975f8e4519c1f6f471825269818cd96ee5c14ea20adeba",
+    "name": "lookup-table-address"
+  },
+  {
+    "hex": "fe",
+    "name": "lookup-table-bump"
   }
 ]

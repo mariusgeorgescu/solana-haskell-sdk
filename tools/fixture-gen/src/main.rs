@@ -18,6 +18,9 @@ use solana_sdk::vote::state::{VoteAuthorize, VoteInit};
 use solana_sdk::stake::{self};
 use solana_sdk::loader_upgradeable_instruction::UpgradeableLoaderInstruction;
 use solana_sdk::secp256k1_instruction::new_secp256k1_instruction;
+use solana_sdk::address_lookup_table::{self, instruction::ProgramInstruction, AddressLookupTableAccount};
+use solana_sdk::message::{v0, VersionedMessage};
+use solana_sdk::transaction::VersionedTransaction;
 use spl_token::instruction::{AuthorityType, TokenInstruction};
 use std::fs;
 use std::str::FromStr;
@@ -231,6 +234,30 @@ fn main() {
         &[program_id_fixed.as_ref()],
         &solana_sdk::bpf_loader_upgradeable::id(),
     );
+
+    let (lut_addr, lut_bump) = Pubkey::find_program_address(
+        &[payer.pubkey().as_ref(), &12345u64.to_le_bytes()],
+        &address_lookup_table::program::id(),
+    );
+    let alt_addr_a = Pubkey::new_from_array([29u8; 32]);
+    let alt_addr_b = Pubkey::new_from_array([30u8; 32]);
+    let alt_variants: Vec<(&str, ProgramInstruction)> = vec![
+        ("CreateLookupTable", ProgramInstruction::CreateLookupTable { recent_slot: 12345, bump_seed: lut_bump }),
+        ("FreezeLookupTable", ProgramInstruction::FreezeLookupTable),
+        ("ExtendLookupTable", ProgramInstruction::ExtendLookupTable { new_addresses: vec![alt_addr_a, alt_addr_b] }),
+        ("DeactivateLookupTable", ProgramInstruction::DeactivateLookupTable),
+        ("CloseLookupTable", ProgramInstruction::CloseLookupTable),
+    ];
+    let alt_fixtures: Vec<_> = alt_variants
+        .iter()
+        .map(|(name, v)| json!({ "name": name, "hex": hex(&bincode::serialize(v).unwrap()) }))
+        .collect();
+    fs::write(
+        "../../test/fixtures/alt_instruction_data.json",
+        serde_json::to_string_pretty(&alt_fixtures).unwrap(),
+    )
+    .unwrap();
+
     let pda_fixtures = vec![
         json!({ "name": "generic-pda-address", "hex": hex(&generic_pda.to_bytes()) }),
         json!({ "name": "generic-pda-bump", "hex": hex(&[generic_bump]) }),
@@ -238,6 +265,8 @@ fn main() {
         json!({ "name": "ata-bump", "hex": hex(&[ata_bump]) }),
         json!({ "name": "dest-ata-address", "hex": hex(&dest_ata.to_bytes()) }),
         json!({ "name": "programdata-address", "hex": hex(&programdata.to_bytes()) }),
+        json!({ "name": "lookup-table-address", "hex": hex(&lut_addr.to_bytes()) }),
+        json!({ "name": "lookup-table-bump", "hex": hex(&[lut_bump]) }),
     ];
     fs::write(
         "../../test/fixtures/pda.json",
@@ -344,6 +373,23 @@ fn main() {
     );
     let stake_tx = Transaction::new(&[&payer, &stake_acct], stake_msg, blockhash);
 
+    let lut_account = AddressLookupTableAccount {
+        key: Pubkey::new_from_array([31u8; 32]),
+        addresses: vec![recipient, alt_addr_a, alt_addr_b],
+    };
+    let v0_msg = v0::Message::try_compile(
+        &payer.pubkey(),
+        &[
+            system_instruction::transfer(&payer.pubkey(), &recipient, 1_000_000_000),
+            system_instruction::transfer(&payer.pubkey(), &alt_addr_a, 500_000),
+        ],
+        &[lut_account],
+        blockhash,
+    )
+    .unwrap();
+    let versioned = VersionedMessage::V0(v0_msg);
+    let v0_tx = VersionedTransaction::try_new(versioned.clone(), &[&payer]).unwrap();
+
     let tx_fixtures = vec![
         json!({ "name": "transfer-transaction", "hex": hex(&bincode::serialize(&tx).unwrap()) }),
         json!({ "name": "payer-pubkey", "hex": hex(&payer.pubkey().to_bytes()) }),
@@ -352,6 +398,8 @@ fn main() {
         json!({ "name": "new-account-pubkey", "hex": hex(&new_account.pubkey().to_bytes()) }),
         json!({ "name": "ata-transfer-transaction", "hex": hex(&bincode::serialize(&ata_tx).unwrap()) }),
         json!({ "name": "stake-setup-transaction", "hex": hex(&bincode::serialize(&stake_tx).unwrap()) }),
+        json!({ "name": "v0-message", "hex": hex(&versioned.serialize()) }),
+        json!({ "name": "v0-transfer-transaction", "hex": hex(&bincode::serialize(&v0_tx).unwrap()) }),
     ];
     fs::write(
         "../../test/fixtures/transactions.json",

@@ -1,0 +1,22 @@
+[
+  {
+    "hex": "000000003930000000000000fe",
+    "name": "CreateLookupTable"
+  },
+  {
+    "hex": "01000000",
+    "name": "FreezeLookupTable"
+  },
+  {
+    "hex": "0200000002000000000000001d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e",
+    "name": "ExtendLookupTable"
+  },
+  {
+    "hex": "03000000",
+    "name": "DeactivateLookupTable"
+  },
+  {
+    "hex": "04000000",
+    "name": "CloseLookupTable"
+  }
+]
