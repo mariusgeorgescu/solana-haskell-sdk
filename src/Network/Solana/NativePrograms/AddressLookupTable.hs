@@ -105,7 +105,7 @@ decodeLookupTable bs
     getMeta = do
       disc <- getWord32le
       case disc of
-        0 -> fail "uninitialized lookup table"
+        0 -> fail "LookupTableState: uninitialized lookup table"
         1 ->
           (,,,)
             <$> getWord64le

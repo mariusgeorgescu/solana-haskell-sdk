@@ -9,7 +9,7 @@ import Data.Binary.Get (ByteOffset)
 import Data.ByteString qualified as BS
 import Data.ByteString.Base16 qualified as B16
 import Data.ByteString.Lazy qualified as BL
-import Data.List (find)
+import Data.List (find, isInfixOf)
 import Data.Maybe (mapMaybe)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
@@ -222,7 +222,15 @@ tests =
                   testCase "decodeMetadata: rejects truncated mid-pubkey (40 bytes)" $
                     case TM.decodeMetadata (BS.replicate 40 0) of
                       Left _ -> pure ()
-                      Right _ -> assertFailure "expected decode failure for 40 bytes"
+                      Right _ -> assertFailure "expected decode failure for 40 bytes",
+                  testCase "decodeMetadata: rejects bad discriminator (key byte != 4)" $ do
+                    fs <- getStateFixtures
+                    let bs = requireFixture "metadata-account" fs
+                    let corrupted = BS.cons 5 (BS.drop 1 bs)
+                    case TM.decodeMetadata corrupted of
+                      Left err -> assertBool "error message includes 'unexpected account key'" $
+                        "unexpected account key" `isInfixOf` err
+                      Right _ -> assertFailure "expected decode failure for bad discriminator"
                 ],
               testGroup
                 "PDA derivation"

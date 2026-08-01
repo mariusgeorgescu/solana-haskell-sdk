@@ -34,6 +34,7 @@ import Data.Binary.Get
 import Data.Binary.Put
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BL
+import Data.List (isPrefixOf)
 import Data.Maybe (fromMaybe)
 import GHC.Generics (Generic)
 import Network.Solana.Core.Borsh
@@ -219,28 +220,32 @@ trimNuls = reverse . dropWhile (== '\0') . reverse
 -- and the @primarySaleHappened@\/@isMutable@ flags, followed by a tolerant
 -- tail of @editionNonce@, @tokenStandard@, @collection@ and @uses@: each is
 -- read only if bytes remain, and any bytes left over after @uses@ (account
--- padding) are ignored.
+-- padding) are ignored. Fails if the key byte is not 4 (MetadataV1).
 decodeMetadata :: BS.ByteString -> Either String Metadata
 decodeMetadata bs = case runGetOrFail getMetadata (BL.fromStrict bs) of
-  Left (_, _, err) -> Left err
+  Left (_, _, err) -> Left (prefixError err)
   Right (_, _, m) -> Right m
   where
-    getMetadata =
-      Metadata
-        <$> getWord8
-        <*> get
-        <*> get
-        <*> (trimNuls <$> getBorshString)
-        <*> (trimNuls <$> getBorshString)
-        <*> (trimNuls <$> getBorshString)
-        <*> getWord16le
-        <*> getBorshOption (getBorshVec get)
-        <*> getBorshBool
-        <*> getBorshBool
-        <*> getTolerantOption getWord8
-        <*> getTolerantOption getWord8
-        <*> getTolerantOption get
-        <*> getTolerantOption get
+    prefixError err =
+      if "Metadata:" `isPrefixOf` err then err else "Metadata: " <> err
+    getMetadata = do
+      k <- getWord8
+      if k /= 4
+        then fail ("Metadata: unexpected account key " <> show k <> " (expected 4)")
+        else Metadata k
+          <$> get
+          <*> get
+          <*> (trimNuls <$> getBorshString)
+          <*> (trimNuls <$> getBorshString)
+          <*> (trimNuls <$> getBorshString)
+          <*> getWord16le
+          <*> getBorshOption (getBorshVec get)
+          <*> getBorshBool
+          <*> getBorshBool
+          <*> getTolerantOption getWord8
+          <*> getTolerantOption getWord8
+          <*> getTolerantOption get
+          <*> getTolerantOption get
     getTolerantOption getVal = do
       e <- isEmpty
       if e then pure Nothing else getBorshOption getVal
