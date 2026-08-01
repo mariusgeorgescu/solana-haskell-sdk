@@ -170,70 +170,122 @@ tests =
   withResource (loadDataFixtures "test/fixtures/metadata_instruction_data.json") (const (pure ())) $ \getFixtures ->
     withResource (loadFixtures "test/fixtures/pda.json") (const (pure ())) $ \getPdaFixtures ->
       withResource (loadCreateV3FullAccounts "test/fixtures/metadata_instruction_data.json") (const (pure ())) $ \getCreateV3Accounts ->
-        testGroup
-          "Metaplex Token Metadata"
-          [ testGroup
-              "PDA derivation"
-              [ testCase "deriveMetadataAddress matches fixture" $ do
-                  fs <- getPdaFixtures
-                  case TM.deriveMetadataAddress mintPk of
-                    Nothing -> assertFailure "no metadata PDA found"
-                    Just addr -> getSolanaPublicKeyRaw addr @?= requireFixture "metadata-address" fs,
-                testCase "deriveMasterEditionAddress matches fixture" $ do
-                  fs <- getPdaFixtures
-                  case TM.deriveMasterEditionAddress mintPk of
-                    Nothing -> assertFailure "no master edition PDA found"
-                    Just addr -> getSolanaPublicKeyRaw addr @?= requireFixture "master-edition-address" fs
-              ],
-            testGroup
-              "instruction data (golden)"
-              [ goldenCase getFixtures "CreateMetadataAccountV3-full" (TM.CreateMetadataAccountV3 dataV2Full True (Just (TM.CollectionDetailsV1 0))),
-                goldenCase getFixtures "CreateMetadataAccountV3-minimal" (TM.CreateMetadataAccountV3 dataV2Minimal True Nothing),
-                goldenCase getFixtures "UpdateMetadataAccountV2-some" (TM.UpdateMetadataAccountV2 (Just dataV2Full) (Just payerPk) (Just True) (Just True)),
-                goldenCase getFixtures "UpdateMetadataAccountV2-none" (TM.UpdateMetadataAccountV2 Nothing Nothing Nothing Nothing),
-                goldenCase getFixtures "CreateMasterEditionV3-some" (TM.CreateMasterEditionV3 (Just 100)),
-                goldenCase getFixtures "CreateMasterEditionV3-none" (TM.CreateMasterEditionV3 Nothing)
-              ],
-            testGroup
-              "properties"
-              [ testProperty "Binary round-trip" $
-                  forAll genTokenMetadataInstruction $ \i -> decode (encode i) === i,
-                testCase "decode fails on unknown discriminant" $
-                  case decodeOrFail (BL.pack [200]) :: Either (BL.ByteString, ByteOffset, String) (BL.ByteString, ByteOffset, TM.TokenMetadataInstruction) of
-                    Left _ -> pure ()
-                    Right _ -> assertFailure "expected decode failure for discriminant 200"
-              ],
-            testGroup
-              "builder metas"
-              [ testCase "createMetadataAccountV3 matches create-v3-full-accounts fixture" $ do
-                  expected <- getCreateV3Accounts
-                  iAccounts (TM.createMetadataAccountV3 mintPk payerPk payerPk payerPk True dataV2Full True (Just (TM.CollectionDetailsV1 0)))
-                    @?= expected,
-                testCase "updateMetadataAccountV2 metas" $
-                  case TM.deriveMetadataAddress mintPk of
-                    Nothing -> assertFailure "no metadata PDA found"
-                    Just metadataAddr ->
-                      iAccounts (TM.updateMetadataAccountV2 mintPk payerPk Nothing Nothing Nothing Nothing)
-                        @?= [ AccountMeta {accountPubKey = metadataAddr, isSigner = False, isWritable = True},
-                              AccountMeta {accountPubKey = payerPk, isSigner = True, isWritable = False}
-                            ],
-                testCase "createMasterEditionV3 metas" $
-                  case (TM.deriveMasterEditionAddress mintPk, TM.deriveMetadataAddress mintPk) of
-                    (Just editionAddr, Just metadataAddr) ->
-                      iAccounts (TM.createMasterEditionV3 mintPk payerPk payerPk payerPk (Just 100))
-                        @?= [ AccountMeta {accountPubKey = editionAddr, isSigner = False, isWritable = True},
-                              AccountMeta {accountPubKey = mintPk, isSigner = False, isWritable = True},
-                              AccountMeta {accountPubKey = payerPk, isSigner = True, isWritable = False},
-                              AccountMeta {accountPubKey = payerPk, isSigner = True, isWritable = False},
-                              AccountMeta {accountPubKey = payerPk, isSigner = True, isWritable = True},
-                              AccountMeta {accountPubKey = metadataAddr, isSigner = False, isWritable = False},
-                              AccountMeta {accountPubKey = Token.tokenProgramId, isSigner = False, isWritable = False},
-                              AccountMeta {accountPubKey = SystemProgram.systemProgramId, isSigner = False, isWritable = False},
-                              AccountMeta {accountPubKey = Sysvar.rent, isSigner = False, isWritable = False}
-                            ]
-                    _ -> assertFailure "PDA derivation failed"
-              ]
-          ]
+        withResource (loadFixtures "test/fixtures/state_fixtures.json") (const (pure ())) $ \getStateFixtures ->
+          testGroup
+            "Metaplex Token Metadata"
+            [ testGroup
+                "Metadata account state (golden + rejection)"
+                [ testCase "decodeMetadata: metadata-account golden (full tail)" $ do
+                    fs <- getStateFixtures
+                    let bs = requireFixture "metadata-account" fs
+                    case TM.decodeMetadata bs of
+                      Left err -> assertFailure $ "decode failed: " <> err
+                      Right md -> do
+                        TM.mdKey md @?= 4
+                        TM.mdUpdateAuthority md @?= payerPk
+                        TM.mdMint md @?= mintPk
+                        TM.mdName md @?= "Solana Haskell NFT"
+                        TM.mdSymbol md @?= "SHSDK"
+                        TM.mdUri md @?= "https://example.com/nft.json"
+                        TM.mdSellerFeeBasisPoints md @?= 550
+                        TM.mdCreators md @?= Just [TM.Creator payerPk True 60, TM.Creator secondCreatorPk False 40]
+                        TM.mdPrimarySaleHappened md @?= False
+                        TM.mdIsMutable md @?= True
+                        TM.mdEditionNonce md @?= Just 253
+                        TM.mdTokenStandard md @?= Just 0
+                        TM.mdCollection md @?= Just (TM.Collection False collectionKeyPk)
+                        TM.mdUses md @?= Just (TM.Uses TM.Multiple 10 10),
+                  testCase "decodeMetadata: metadata-account-legacy golden (empty tail)" $ do
+                    fs <- getStateFixtures
+                    let bs = requireFixture "metadata-account-legacy" fs
+                    case TM.decodeMetadata bs of
+                      Left err -> assertFailure $ "decode failed: " <> err
+                      Right md -> do
+                        TM.mdKey md @?= 4
+                        TM.mdUpdateAuthority md @?= payerPk
+                        TM.mdMint md @?= mintPk
+                        TM.mdName md @?= "Solana Haskell NFT"
+                        TM.mdSymbol md @?= "SHSDK"
+                        TM.mdUri md @?= "https://example.com/nft.json"
+                        TM.mdSellerFeeBasisPoints md @?= 550
+                        TM.mdCreators md @?= Just [TM.Creator payerPk True 60, TM.Creator secondCreatorPk False 40]
+                        TM.mdPrimarySaleHappened md @?= False
+                        TM.mdIsMutable md @?= True
+                        TM.mdEditionNonce md @?= Nothing
+                        TM.mdTokenStandard md @?= Nothing
+                        TM.mdCollection md @?= Nothing
+                        TM.mdUses md @?= Nothing,
+                  testCase "decodeMetadata: rejects empty bytes" $
+                    case TM.decodeMetadata BS.empty of
+                      Left _ -> pure ()
+                      Right _ -> assertFailure "expected decode failure for empty bytes",
+                  testCase "decodeMetadata: rejects truncated mid-pubkey (40 bytes)" $
+                    case TM.decodeMetadata (BS.replicate 40 0) of
+                      Left _ -> pure ()
+                      Right _ -> assertFailure "expected decode failure for 40 bytes"
+                ],
+              testGroup
+                "PDA derivation"
+                [ testCase "deriveMetadataAddress matches fixture" $ do
+                    fs <- getPdaFixtures
+                    case TM.deriveMetadataAddress mintPk of
+                      Nothing -> assertFailure "no metadata PDA found"
+                      Just addr -> getSolanaPublicKeyRaw addr @?= requireFixture "metadata-address" fs,
+                  testCase "deriveMasterEditionAddress matches fixture" $ do
+                    fs <- getPdaFixtures
+                    case TM.deriveMasterEditionAddress mintPk of
+                      Nothing -> assertFailure "no master edition PDA found"
+                      Just addr -> getSolanaPublicKeyRaw addr @?= requireFixture "master-edition-address" fs
+                ],
+              testGroup
+                "instruction data (golden)"
+                [ goldenCase getFixtures "CreateMetadataAccountV3-full" (TM.CreateMetadataAccountV3 dataV2Full True (Just (TM.CollectionDetailsV1 0))),
+                  goldenCase getFixtures "CreateMetadataAccountV3-minimal" (TM.CreateMetadataAccountV3 dataV2Minimal True Nothing),
+                  goldenCase getFixtures "UpdateMetadataAccountV2-some" (TM.UpdateMetadataAccountV2 (Just dataV2Full) (Just payerPk) (Just True) (Just True)),
+                  goldenCase getFixtures "UpdateMetadataAccountV2-none" (TM.UpdateMetadataAccountV2 Nothing Nothing Nothing Nothing),
+                  goldenCase getFixtures "CreateMasterEditionV3-some" (TM.CreateMasterEditionV3 (Just 100)),
+                  goldenCase getFixtures "CreateMasterEditionV3-none" (TM.CreateMasterEditionV3 Nothing)
+                ],
+              testGroup
+                "properties"
+                [ testProperty "Binary round-trip" $
+                    forAll genTokenMetadataInstruction $ \i -> decode (encode i) === i,
+                  testCase "decode fails on unknown discriminant" $
+                    case decodeOrFail (BL.pack [200]) :: Either (BL.ByteString, ByteOffset, String) (BL.ByteString, ByteOffset, TM.TokenMetadataInstruction) of
+                      Left _ -> pure ()
+                      Right _ -> assertFailure "expected decode failure for discriminant 200"
+                ],
+              testGroup
+                "builder metas"
+                [ testCase "createMetadataAccountV3 matches create-v3-full-accounts fixture" $ do
+                    expected <- getCreateV3Accounts
+                    iAccounts (TM.createMetadataAccountV3 mintPk payerPk payerPk payerPk True dataV2Full True (Just (TM.CollectionDetailsV1 0)))
+                      @?= expected,
+                  testCase "updateMetadataAccountV2 metas" $
+                    case TM.deriveMetadataAddress mintPk of
+                      Nothing -> assertFailure "no metadata PDA found"
+                      Just metadataAddr ->
+                        iAccounts (TM.updateMetadataAccountV2 mintPk payerPk Nothing Nothing Nothing Nothing)
+                          @?= [ AccountMeta {accountPubKey = metadataAddr, isSigner = False, isWritable = True},
+                                AccountMeta {accountPubKey = payerPk, isSigner = True, isWritable = False}
+                              ],
+                  testCase "createMasterEditionV3 metas" $
+                    case (TM.deriveMasterEditionAddress mintPk, TM.deriveMetadataAddress mintPk) of
+                      (Just editionAddr, Just metadataAddr) ->
+                        iAccounts (TM.createMasterEditionV3 mintPk payerPk payerPk payerPk (Just 100))
+                          @?= [ AccountMeta {accountPubKey = editionAddr, isSigner = False, isWritable = True},
+                                AccountMeta {accountPubKey = mintPk, isSigner = False, isWritable = True},
+                                AccountMeta {accountPubKey = payerPk, isSigner = True, isWritable = False},
+                                AccountMeta {accountPubKey = payerPk, isSigner = True, isWritable = False},
+                                AccountMeta {accountPubKey = payerPk, isSigner = True, isWritable = True},
+                                AccountMeta {accountPubKey = metadataAddr, isSigner = False, isWritable = False},
+                                AccountMeta {accountPubKey = Token.tokenProgramId, isSigner = False, isWritable = False},
+                                AccountMeta {accountPubKey = SystemProgram.systemProgramId, isSigner = False, isWritable = False},
+                                AccountMeta {accountPubKey = Sysvar.rent, isSigner = False, isWritable = False}
+                              ]
+                      _ -> assertFailure "PDA derivation failed"
+                ]
+            ]
   where
     goldenCase getFixtures name i =
       testCase name $ do

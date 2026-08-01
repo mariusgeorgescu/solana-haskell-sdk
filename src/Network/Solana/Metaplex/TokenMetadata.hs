@@ -24,12 +24,16 @@ module Network.Solana.Metaplex.TokenMetadata
     createMetadataAccountV3,
     updateMetadataAccountV2,
     createMasterEditionV3,
+    Metadata (..),
+    decodeMetadata,
   )
 where
 
 import Data.Binary
 import Data.Binary.Get
 import Data.Binary.Put
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as BL
 import Data.Maybe (fromMaybe)
 import GHC.Generics (Generic)
 import Network.Solana.Core.Borsh
@@ -182,6 +186,64 @@ instance Binary DataV2 where
       <*> getBorshOption (getBorshVec get)
       <*> getBorshOption get
       <*> getBorshOption get
+
+-- | On-chain state of a Metadata account (the @Metadata@ struct from
+-- @mpl-token-metadata@). The head fields are always present; the tail
+-- (edition nonce, token standard, collection, uses) was added across
+-- several program upgrades, so older accounts simply end early.
+data Metadata = Metadata
+  { mdKey :: Word8,
+    mdUpdateAuthority :: SolanaPublicKey,
+    mdMint :: SolanaPublicKey,
+    mdName :: String,
+    mdSymbol :: String,
+    mdUri :: String,
+    mdSellerFeeBasisPoints :: Word16,
+    mdCreators :: Maybe [Creator],
+    mdPrimarySaleHappened :: Bool,
+    mdIsMutable :: Bool,
+    mdEditionNonce :: Maybe Word8,
+    mdTokenStandard :: Maybe Word8,
+    mdCollection :: Maybe Collection,
+    mdUses :: Maybe Uses
+  }
+  deriving (Eq, Show)
+
+-- | Strips trailing NUL padding from a Borsh string field. @name@, @symbol@
+-- and @uri@ are stored in fixed-size, NUL-padded buffers on-chain.
+trimNuls :: String -> String
+trimNuls = reverse . dropWhile (== '\0') . reverse
+
+-- | Decodes a Metadata account's data: a Borsh-encoded @key@, two pubkeys,
+-- the three NUL-padded name\/symbol\/uri strings, royalty fee, creators,
+-- and the @primarySaleHappened@\/@isMutable@ flags, followed by a tolerant
+-- tail of @editionNonce@, @tokenStandard@, @collection@ and @uses@: each is
+-- read only if bytes remain, and any bytes left over after @uses@ (account
+-- padding) are ignored.
+decodeMetadata :: BS.ByteString -> Either String Metadata
+decodeMetadata bs = case runGetOrFail getMetadata (BL.fromStrict bs) of
+  Left (_, _, err) -> Left err
+  Right (_, _, m) -> Right m
+  where
+    getMetadata =
+      Metadata
+        <$> getWord8
+        <*> get
+        <*> get
+        <*> (trimNuls <$> getBorshString)
+        <*> (trimNuls <$> getBorshString)
+        <*> (trimNuls <$> getBorshString)
+        <*> getWord16le
+        <*> getBorshOption (getBorshVec get)
+        <*> getBorshBool
+        <*> getBorshBool
+        <*> getTolerantOption getWord8
+        <*> getTolerantOption getWord8
+        <*> getTolerantOption get
+        <*> getTolerantOption get
+    getTolerantOption getVal = do
+      e <- isEmpty
+      if e then pure Nothing else getBorshOption getVal
 
 -- | Token Metadata instructions covered by this client (Borsh u8
 -- discriminants, arbitrated by the @mpl-token-metadata@ crate's fixtures).

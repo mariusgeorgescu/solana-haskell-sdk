@@ -105,7 +105,12 @@ stakeStateTests =
           let bs = BS.pack ([4, 0, 0, 0] <> replicate 196 0)
           case Stake.decodeStakeAccount bs of
             Left _ -> pure ()
-            Right _ -> assertFailure "expected decode failure for discriminant 4"
+            Right _ -> assertFailure "expected decode failure for discriminant 4",
+        testCase "decodeStakeAccount: decode tolerates trailing padding" $ do
+          fs <- getStateFixtures
+          let bs = requireFixture "stake-account" fs
+              padded = bs <> BS.replicate 3 0
+          Stake.decodeStakeAccount padded @?= Stake.decodeStakeAccount bs
       ]
 
 instructionDataTests :: TestTree

@@ -106,6 +106,37 @@ tests =
               case ALT.decodeLookupTable bs of
                 Left err -> assertBool "error message mentions uninitialized" ("uninitialized" `elem` words err)
                 Right _ -> assertFailure "expected decode failure for discriminant 0",
+            testCase "decodeLookupTable: decodes None authority" $ do
+              let addr7 = unsafeSolanaPublicKeyRaw (replicate 32 7)
+                  meta =
+                    BS.pack
+                      ( [1, 0, 0, 0] -- discriminant = 1 (initialized)
+                          <> replicate 8 0xff -- deactivationSlot = maxBound (u64 LE)
+                          <> replicate 8 0 -- lastExtendedSlot = 0 (u64 LE)
+                          <> [0] -- lastExtendedSlotStartIndex = 0
+                          <> [0] -- authority option tag = None
+                          <> replicate 34 0 -- padding to the 56-byte meta boundary
+                      )
+                  bs = meta <> getSolanaPublicKeyRaw addr7
+              case ALT.decodeLookupTable bs of
+                Left err -> assertFailure $ "decode failed: " <> err
+                Right lts -> do
+                  ALT.ltAuthority lts @?= Nothing
+                  ALT.ltAddresses lts @?= [addr7],
+            testCase "decodeLookupTable: rejects invalid authority tag" $ do
+              let meta =
+                    BS.pack
+                      ( [1, 0, 0, 0]
+                          <> replicate 8 0xff
+                          <> replicate 8 0
+                          <> [0]
+                          <> [2] -- invalid authority option tag
+                          <> replicate 34 0
+                      )
+                  bs = meta <> getSolanaPublicKeyRaw (unsafeSolanaPublicKeyRaw (replicate 32 7))
+              case ALT.decodeLookupTable bs of
+                Left _ -> pure ()
+                Right _ -> assertFailure "expected decode failure for invalid authority tag",
             testCase "deriveLookupTableAddress matches Rust (address and bump)" $ do
               fs <- getPdaFixtures
               case ALT.deriveLookupTableAddress payerPk 12345 of
