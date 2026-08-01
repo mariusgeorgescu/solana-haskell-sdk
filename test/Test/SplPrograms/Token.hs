@@ -15,9 +15,6 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
-payerPk :: SolanaPublicKey
-payerPk = unsafeSolanaPublicKeyRaw (replicate 32 11)
-
 ownerKey :: SolanaPublicKey
 ownerKey = unsafeSolanaPublicKeyRaw (map fromIntegral [0x8a :: Int, 0x88, 0xe3, 0xdd, 0x74, 0x09, 0xf1, 0x95, 0xfd, 0x52, 0xdb, 0x2d, 0x3c, 0xba, 0x5d, 0x72, 0xca, 0x67, 0x09, 0xbf, 0x1d, 0x94, 0x12, 0x1b, 0xf3, 0x74, 0x88, 0x01, 0xb4, 0x0f, 0x6f, 0x5c])
 
@@ -306,7 +303,14 @@ tests =
               let bs = BS.replicate 83 0
               case Tok.decodeMint bs of
                 Left err -> assertBool "error message contains length" ("83" `elem` words err)
-                Right _ -> assertFailure "expected decode failure for 83 bytes"
+                Right _ -> assertFailure "expected decode failure for 83 bytes",
+            testCase "decodeMint: reject invalid is_initialized byte" $ do
+              fs <- getFixtures
+              let validBS = requireFixture "mint" fs
+                  modifiedBS = BS.concat [BS.take 45 validBS, BS.singleton 0x02, BS.drop 46 validBS]
+              case Tok.decodeMint modifiedBS of
+                Left err -> assertBool "error message contains is_initialized" ("is_initialized" `isInfixOf` err)
+                Right _ -> assertFailure "expected decode failure for invalid is_initialized byte"
           ]
     ]
   where

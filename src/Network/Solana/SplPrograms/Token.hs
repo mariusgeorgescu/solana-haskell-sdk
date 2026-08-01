@@ -56,11 +56,10 @@ getStateCOption payloadLen inner = do
 decodeTokenAccount :: BS.ByteString -> Either String TokenAccount
 decodeTokenAccount bs
   | BS.length bs /= 165 = Left ("TokenAccount: expected 165 bytes, got " <> show (BS.length bs))
-  | otherwise = case runGetOrFail getTokenAccount (fromStrict bs) of
+  | otherwise = case runGetOrFail getTokenAccount (BL.fromStrict bs) of
       Left (_, _, err) -> Left err
       Right (_, _, ta) -> Right ta
   where
-    fromStrict = BL.fromChunks . (: [])
     getTokenAccount =
       TokenAccount
         <$> get
@@ -81,20 +80,23 @@ decodeTokenAccount bs
 decodeMint :: BS.ByteString -> Either String Mint
 decodeMint bs
   | BS.length bs /= 82 = Left ("Mint: expected 82 bytes, got " <> show (BS.length bs))
-  | otherwise = case runGetOrFail getMint (fromStrict bs) of
+  | otherwise = case runGetOrFail getMint (BL.fromStrict bs) of
       Left (_, _, err) -> Left err
       Right (_, _, m) -> Right m
   where
-    fromStrict = BL.fromChunks . (: [])
     getMint =
       Mint
         <$> getStateCOption 32 get
         <*> getWord64le
         <*> getWord8
-        <*> (strictBool <$> getWord8)
+        <*> getIsInitialized
         <*> getStateCOption 32 get
-    strictBool :: Word8 -> Bool
-    strictBool b = b /= 0
+    getIsInitialized = do
+      byte <- getWord8
+      case byte of
+        0 -> pure False
+        1 -> pure True
+        _ -> fail ("Mint: invalid is_initialized byte " <> show byte)
 
 -- | SPL Token program address.
 tokenProgramId :: SolanaPublicKey
