@@ -28,7 +28,7 @@
 
 ## Documentation
 
-API documentation is generated with Haddock (`cabal haddock`). Serialization correctness methodology: every instruction, message, and transaction encoder is asserted byte-identical to vectors generated from the official Rust `solana-sdk` — see `tools/README.md`.
+API documentation is generated with Haddock (`cabal haddock`). Serialization correctness methodology: every instruction, message, and transaction encoder is asserted byte-identical to vectors generated from the official Rust crates (solana-sdk, spl-token, mpl-token-metadata) — see `tools/README.md`.
 
 ## Features
 
@@ -43,7 +43,7 @@ API documentation is generated with Haddock (`cabal haddock`). Serialization cor
     - [x] BPF Loader (upgradeable)
     - [x] Compute Budget
     - [x] Secp256k1 (instruction construction; signing out of scope)
-    - [x] Stake (delegation lifecycle; seed-authority variants post-1.0)
+    - [x] Stake (delegation lifecycle; seed-authority variants out of scope)
     - [x] System Program (all 13 instructions)
     - [x] Vote (account management)
   - [x] Clients for Solana Program Library (SPL)
@@ -51,7 +51,7 @@ API documentation is generated with Haddock (`cabal haddock`). Serialization cor
     - [x] SPL Token (instructions 0-20, incl. `transferChecked`)
     - [x] Associated Token Account (derive + create, idempotent variant)
   - [x] Metaplex Token Metadata (create/update metadata, master edition)
-- [x] Serialization verified byte-for-byte against the official Rust SDK (golden-vector tests)
+- [x] Serialization verified byte-for-byte against the official Rust crates (solana-sdk, spl-token, mpl-token-metadata) (golden-vector tests)
 
 ### Release status
 

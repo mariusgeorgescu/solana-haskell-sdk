@@ -3,12 +3,12 @@
 -- Description : Borsh serialization helpers for common types.
 --
 -- This module provides helpers for Borsh serialization, which differs from Bincode
--- in specific length encodings:
+-- in specific length encodings and enum tag widths. Both enforce strict 0/1 validation
+-- for Option tags and Bool encoding:
 --
 -- * __String lengths__: Borsh uses 32-bit LE (u32), Bincode uses 64-bit LE (u64).
 -- * __Vec counts__: Borsh uses 32-bit LE (u32), Bincode uses 64-bit LE (u64).
--- * __Option tags__: Both use 8-bit (u8) tags; Borsh enforces strict 0/1 validation.
--- * __Bool encoding__: Both use 8-bit (u8); 0 = False, 1 = True; Borsh enforces strict validation.
+-- * __Enum tags__: Borsh uses 8-bit (u8), Bincode uses 32-bit LE (u32).
 module Network.Solana.Core.Borsh
   ( putBorshString,
     getBorshString,

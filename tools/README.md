@@ -1,7 +1,7 @@
 # tools/fixture-gen
 
 Generates the golden test vectors in `test/fixtures/` from the official Rust
-`solana-sdk`, so the Haskell SDK's serialization can be asserted byte-identical
+crates (solana-sdk, spl-token, spl-associated-token-account, mpl-token-metadata), so the Haskell SDK's serialization can be asserted byte-identical
 to the reference implementation.
 
 Fixtures are committed; regeneration is only needed when adding vectors:
