@@ -1,6 +1,8 @@
 # Revision history for solana-haskell-sdk
 
-## Unreleased
+## 1.0.0.0 -- 2026-08-01
+
+First stable release: byte-verified clients for System, Compute Budget, Stake, Vote, BPF Loader (upgradeable), Secp256k1, SPL Memo, SPL Token, and Associated Token Account programs; PDA derivation; canonical Rust-identical message compilation.
 
 * Added upgradeable BPF loader client (buffer/write/deploy/upgrade/authority/
   close/extend) with program-data address derivation.

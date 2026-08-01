@@ -1,14 +1,16 @@
 cabal-version:   3.0
 name:            solana-haskell-sdk
-version:         0.1.0.0
-synopsis:        Library for interacting with Solana blockchain.
+version:         1.0.0.0
+synopsis:        Solana SDK: transaction building, signing, program clients, and JSON-RPC.
 
 -- A longer description of the package.
 description:
   This library includes features like key generation and management,
-  transaction and instruction construction, and a JSON-RPC API client. 
+  transaction and instruction construction, and a JSON-RPC API client.
 
   This library is aimed at developers building Solana dApps, tools, or infrastructure in Haskell.
+
+  All serialization is verified byte-for-byte against the official Rust SDK by golden-vector tests.
 
 license:         Apache-2.0
 license-file:    LICENSE
@@ -17,7 +19,7 @@ maintainer:      georgescumarius@live.com
 copyright:       2024 Marius Georgescu
 category:        Blockchain, Web3, Solana
 build-type:      Simple
-tested-with:     GHC ==9.6.6
+tested-with:     GHC ==9.6.7
 
 -- Extra doc files to be distributed with the package, such as a CHANGELOG or a README.
 extra-doc-files:
@@ -25,7 +27,8 @@ extra-doc-files:
   README.md
 
 -- Extra source files to be distributed with the package, such as examples, or a tutorial module.
--- extra-source-files:
+extra-source-files:
+  test/fixtures/*.json
 
 common warnings
   ghc-options: -Wall

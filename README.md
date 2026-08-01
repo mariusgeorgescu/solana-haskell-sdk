@@ -24,6 +24,8 @@
 
 ## Documentation
 
+API documentation is generated with Haddock (`cabal haddock`). Serialization correctness methodology: every instruction, message, and transaction encoder is asserted byte-identical to vectors generated from the official Rust `solana-sdk` — see `tools/README.md`.
+
 ## Features
 
 - [x] [Full JSON RPC API](#usage-examples-for-json-rpc-api)
@@ -50,7 +52,7 @@
 
 ### Current development status
 
-There is currently **no stable release**. The SDK is actively developed and latest is `v1.0.0` which is an `alpha` release. Serialization is verified byte-for-byte against the official Rust SDK by golden-vector tests (see test/fixtures/).
+The current stable release is **v1.0.0.0**. Serialization is verified byte-for-byte against the official Rust SDK by golden-vector tests (see test/fixtures/ and tools/README.md).
 
 
 
