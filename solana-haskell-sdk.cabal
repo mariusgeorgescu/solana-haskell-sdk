@@ -180,6 +180,7 @@ test-suite integration-tests
   hs-source-dirs:   test-integration
   main-is:          Main.hs
   other-modules:
+    Test.Integration.Alt
     Test.Integration.Nonce
     Test.Integration.PriorityFee
     Test.Integration.Setup

@@ -20,6 +20,7 @@
 ## Table of contents
 
 - 📋 [Documentation](#documentation)
+- 🧪 [Integration tests](#integration-tests)
 - 🚀 [Features](#features)
 - 🧑‍💻 [Usage Examples](#usage-examples)
 - 📝 [Contributing](#contributing)
@@ -29,6 +30,15 @@
 ## Documentation
 
 API documentation is generated with Haddock (`cabal haddock`). Serialization correctness methodology: every instruction, message, and transaction encoder is asserted byte-identical to vectors generated from the official Rust crates (solana-sdk, spl-token, mpl-token-metadata) — see [tools/README.md](https://github.com/mariusgeorgescu/solana-haskell-sdk/blob/main/tools/README.md).
+
+## Integration tests
+
+An opt-in test suite runs the SDK against a local validator:
+
+    solana-test-validator --reset
+    cabal test integration-tests
+
+Without a validator listening on `127.0.0.1:8899` the suite skips itself, so plain `cabal test all` stays green. Set `SOLANA_INTEGRATION=1` to make an unreachable validator a failure, or `SOLANA_RPC_URL` to target a different endpoint.
 
 ## Features
 

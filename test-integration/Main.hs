@@ -7,6 +7,7 @@ import System.Environment (lookupEnv)
 import System.Exit (exitSuccess)
 import System.IO (BufferMode (LineBuffering), hSetBuffering, stdout)
 import System.Timeout (timeout)
+import Test.Integration.Alt qualified as Alt
 import Test.Integration.Nonce qualified as Nonce
 import Test.Integration.PriorityFee qualified as PriorityFee
 import Test.Integration.Setup (rpcUrl)
@@ -35,4 +36,4 @@ main = do
           exitSuccess
 
 integrationTests :: TestTree
-integrationTests = testGroup "integration" [Transfer.tests, Token.tests, Nonce.tests, PriorityFee.tests]
+integrationTests = testGroup "integration" [Transfer.tests, Token.tests, Nonce.tests, PriorityFee.tests, Alt.tests]
