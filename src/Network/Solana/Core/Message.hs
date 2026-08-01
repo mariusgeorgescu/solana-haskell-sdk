@@ -10,6 +10,7 @@ module Network.Solana.Core.Message
   ( newTransactionIntent,
     newTransactionIntentWithPayer,
     newDurableNonceTransactionIntent,
+    newDurableNonceTransactionIntentWithPayer,
     SignedTransactionIntent,
     Message (..),
     MessageHeader (..),
@@ -69,7 +70,8 @@ newTransactionIntent signers instructions blockhash = do
 -- signers and the resulting signatures are placed in message order
 -- automatically. 'Left' if a required signer has no corresponding private
 -- key, or if a given private key does not correspond to any required
--- signer.
+-- signer. Duplicate private keys for the same required signer are
+-- tolerated: the first match signs, mirroring the Rust SDK's @try_sign@.
 newTransactionIntentWithPayer :: SolanaPublicKey -> [SolanaPrivateKey] -> [Instruction] -> BlockHash -> Either CompileException String
 newTransactionIntentWithPayer payer signingKeys instructions blockhash = do
   let msg = mkNewMessageWithPayer payer blockhash instructions
@@ -98,9 +100,29 @@ newTransactionIntentWithPayer payer signingKeys instructions blockhash = do
 -- durable-nonce transaction never expires and does not depend on a recent
 -- ledger entry. The nonce authority must be among the given signers, or the
 -- resulting transaction will be rejected on submission.
+--
+-- ORDER-SENSITIVE: as with 'newTransactionIntent', the given private keys
+-- must be ordered to match the resulting canonical account order (fee payer
+-- first), or the produced signatures will not correspond to the right
+-- account keys. If you would rather name the fee payer explicitly and not
+-- worry about signer order, use 'newDurableNonceTransactionIntentWithPayer'
+-- instead.
 newDurableNonceTransactionIntent :: [SolanaPrivateKey] -> SolanaPublicKey -> SolanaPublicKey -> [Instruction] -> BlockHash -> Either CompileException String
 newDurableNonceTransactionIntent signers nonceAccount nonceAuthority instructions =
   newTransactionIntent signers (SystemProgram.advanceNonceAccount nonceAccount nonceAuthority : instructions)
+
+-- | Builds and signs a durable-nonce transaction with an explicitly named
+-- fee payer: prepends @SystemProgram.advanceNonceAccount nonceAccount
+-- nonceAuthority@ ahead of the given instructions and delegates to
+-- 'newTransactionIntentWithPayer', composing sponsored fees with durable
+-- nonces. As with 'newTransactionIntentWithPayer', the fee payer is forced
+-- into account 0 (even if it appears in no instruction), and the given
+-- private keys may be listed in any order — signatures are auto-ordered to
+-- match the compiled message. The nonce authority must be among the given
+-- signers, or the resulting transaction will be rejected on submission.
+newDurableNonceTransactionIntentWithPayer :: SolanaPublicKey -> [SolanaPrivateKey] -> SolanaPublicKey -> SolanaPublicKey -> [Instruction] -> BlockHash -> Either CompileException String
+newDurableNonceTransactionIntentWithPayer payer signers nonceAccount nonceAuthority instructions =
+  newTransactionIntentWithPayer payer signers (SystemProgram.advanceNonceAccount nonceAccount nonceAuthority : instructions)
 
 ------------------------------------------------------------------------------------------------
 

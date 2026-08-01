@@ -27,18 +27,19 @@ import Data.Word (Word64)
 import Network.Solana.Core.Account (AccountData (..), AccountInfo (dataField))
 import Network.Solana.Core.Crypto
 import Network.Solana.Core.Instruction
-import Network.Solana.Core.Message (newDurableNonceTransactionIntent, newTransactionIntent)
+import Network.Solana.Core.Message (newDurableNonceTransactionIntentWithPayer, newTransactionIntent)
 import Network.Solana.Core.VersionedMessage qualified as VM
 import Network.Solana.Metaplex.TokenMetadata qualified as TM
 import Network.Solana.NativePrograms.AddressLookupTable qualified as ALT
 import Network.Solana.NativePrograms.Stake qualified as Stake
 import Network.Solana.NativePrograms.SystemProgram qualified as SP
-import Network.Solana.RPC.HTTP.Account (confirmationStatusTxStatus, errTxStatus, getAccountInfo, getBalance, getSignatureStatuses)
+import Network.Solana.RPC.HTTP.Account (confirmationStatusTxStatus, errTxStatus, getAccountInfo, getAccountInfo', getBalance, getSignatureStatuses)
 import Network.Solana.RPC.HTTP.Block (getTheLatestBlockhash)
 import Network.Solana.RPC.HTTP.Chain (PrioritizationFee (prioritizationFee), getRecentPrioritizationFees, percentilePriorityFee)
 import Network.Solana.RPC.HTTP.Transaction
+import Network.Solana.RPC.HTTP.Types (ConfigurationObject, cfgJustEncodingBase64, commitment, value)
 import Network.Solana.SplPrograms.Token qualified as Tok
-import Network.Web3 hiding (AccountData)
+import Network.Web3 hiding (AccountData, value)
 
 -- | Builds, signs, and submits a transaction that executes the given
 -- instructions, returning its signature.
@@ -56,17 +57,31 @@ newTransaction signers instructions = do
   signedTx <- either (liftIO . throwIO) pure (newTxInt bh)
   sendTransaction signedTx
 
--- | Builds, signs, and submits a durable-nonce transaction that executes the
--- given instructions, returning its signature.
+-- | Configuration used to fetch the nonce account in 'newNonceTransaction':
+-- base64 encoding (needed to decode the account's data, same as
+-- 'Network.Solana.RPC.HTTP.Account.getAccountInfo') plus an explicit
+-- @confirmed@ commitment, so a recently created or recently advanced nonce
+-- account is not missed by the node's default @finalized@ commitment.
+cfgNonceAccountConfirmed :: ConfigurationObject
+cfgNonceAccountConfirmed = cfgJustEncodingBase64 {commitment = Just "confirmed"}
+
+-- | Builds, signs, and submits a durable-nonce transaction with an
+-- explicitly named fee payer that executes the given instructions,
+-- returning its signature.
 --
--- Fetches the given nonce account with 'getNonceAccount' and builds the
--- transaction with 'newDurableNonceTransactionIntent', which prepends the
+-- Reads the given nonce account at @confirmed@ commitment to avoid
+-- stale-nonce races (a nonce account fetched at the node's default
+-- @finalized@ commitment may appear not-found or stale immediately after
+-- creation or after being advanced), then builds the transaction with
+-- 'newDurableNonceTransactionIntentWithPayer', which prepends the
 -- nonce-advance instruction ahead of the given instructions and uses the
 -- nonce account's durable nonce in place of a recent block hash (so the
--- transaction never expires, unlike 'newTransaction'). The given signers
--- must include the nonce authority (@nsAuthority@), or the resulting
--- transaction will be rejected on submission. Requires a reachable RPC
--- node.
+-- transaction never expires, unlike 'newTransaction'). The fee payer is
+-- always account 0 (sponsored fees are supported), and the given signers
+-- may be listed in any order — they must include private keys
+-- corresponding to both the payer and the nonce account's authority
+-- (@nsAuthority@), or the resulting transaction will be rejected on
+-- submission. Requires a reachable RPC node.
 --
 -- Throws @'userError' "newNonceTransaction: nonce account not found"@ if
 -- the account does not exist, and @'userError' "newNonceTransaction: nonce
@@ -74,16 +89,23 @@ newTransaction signers instructions = do
 -- nonce account -- distinct from each other and from the 'CompileException'
 -- thrown if an instruction references an account key that cannot be
 -- resolved in the compiled message.
-newNonceTransaction :: [SolanaPrivateKey] -> SolanaPublicKey -> [Instruction] -> Web3 SolanaSignature
-newNonceTransaction signers nonceAccount instructions = do
-  mNonceState <- getNonceAccount nonceAccount
-  case mNonceState of
+newNonceTransaction :: SolanaPublicKey -> [SolanaPrivateKey] -> SolanaPublicKey -> [Instruction] -> Web3 SolanaSignature
+newNonceTransaction payer signers nonceAccount instructions = do
+  mAccInfo <- value <$> getAccountInfo' nonceAccount cfgNonceAccountConfirmed
+  case mAccInfo of
     Nothing -> liftIO . throwIO . userError $ "newNonceTransaction: nonce account not found"
-    Just SP.NonceUninitialized -> liftIO . throwIO . userError $ "newNonceTransaction: nonce account not initialized"
-    Just (SP.NonceInitialized authority durableNonce _) -> do
-      let newTxInt = newDurableNonceTransactionIntent signers nonceAccount authority instructions
-      signedTx <- either (liftIO . throwIO) pure (newTxInt durableNonce)
-      sendTransaction signedTx
+    Just acc -> do
+      nonceState <-
+        either
+          (liftIO . throwIO . userError . ("newNonceTransaction: state decode failed: " <>))
+          pure
+          (accountDataBytes (dataField acc) >>= SP.decodeNonceAccount)
+      case nonceState of
+        SP.NonceUninitialized -> liftIO . throwIO . userError $ "newNonceTransaction: nonce account not initialized"
+        SP.NonceInitialized authority durableNonce _ -> do
+          let newTxInt = newDurableNonceTransactionIntentWithPayer payer signers nonceAccount authority instructions
+          signedTx <- either (liftIO . throwIO) pure (newTxInt durableNonce)
+          sendTransaction signedTx
 
 -- | Estimates a priority fee (in micro-lamports per compute unit) for
 -- landing a transaction that writes to the given accounts, as the @p@-th

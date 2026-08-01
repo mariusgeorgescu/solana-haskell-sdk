@@ -213,5 +213,25 @@ tests =
         case newDurableNonceTransactionIntent [snd payerKeys] noncePk (fst payerKeys) [ix] durableNonceBh of
           Left err -> assertFailure (show err)
           Right b64 -> b64 @?= toBase64String (requireFixture "nonce-transfer-transaction" txFs),
+      testCase "durable-nonce transfer via explicit fee payer matches Rust (payer == authority)" $ do
+        txFs <- loadFixtures "test/fixtures/transactions.json"
+        stateFs <- loadFixtures "test/fixtures/state_fixtures.json"
+        let noncePk = unsafeSolanaPublicKeyRaw (replicate 32 37)
+            durableNonceBh = BlockHash (requireFixture "nonce-durable-hash" stateFs)
+            ix = SP.transfer (fst payerKeys) recipientPk 1000000000
+        case newDurableNonceTransactionIntentWithPayer (fst payerKeys) [snd payerKeys] noncePk (fst payerKeys) [ix] durableNonceBh of
+          Left err -> assertFailure (show err)
+          Right b64 -> b64 @?= toBase64String (requireFixture "nonce-transfer-transaction" txFs),
+      testCase "durable-nonce-only message via explicit fee payer seeds payer as writable signer" $ do
+        stateFs <- loadFixtures "test/fixtures/state_fixtures.json"
+        let noncePk = unsafeSolanaPublicKeyRaw (replicate 32 37)
+            durableNonceBh = BlockHash (requireFixture "nonce-durable-hash" stateFs)
+            sponsorPk = fst newAccountKeys
+            sponsorPriv = snd newAccountKeys
+            authorityPk = fst payerKeys
+            authorityPriv = snd payerKeys
+        case newDurableNonceTransactionIntentWithPayer sponsorPk [sponsorPriv, authorityPriv] noncePk authorityPk [] durableNonceBh of
+          Left err -> assertFailure (show err)
+          Right b64 -> BS.head (fromBase64String b64) @?= 2,
       testProperty "message header/key-ordering invariants" prop_messageInvariants
     ]
