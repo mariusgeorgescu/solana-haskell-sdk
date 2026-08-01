@@ -6,6 +6,7 @@ import Data.Binary (decode, decodeOrFail, encode)
 import Data.Binary.Get (ByteOffset)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BL
+import Data.List (isInfixOf)
 import Network.Solana.Core.Crypto (SolanaPublicKey, unsafeSolanaPublicKeyRaw)
 import Network.Solana.Core.Instruction (AccountMeta (..), iAccounts)
 import Network.Solana.SplPrograms.Token qualified as Tok
@@ -13,6 +14,12 @@ import Test.Fixtures
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
+
+payerPk :: SolanaPublicKey
+payerPk = unsafeSolanaPublicKeyRaw (replicate 32 11)
+
+ownerKey :: SolanaPublicKey
+ownerKey = unsafeSolanaPublicKeyRaw (map fromIntegral [0x8a :: Int, 0x88, 0xe3, 0xdd, 0x74, 0x09, 0xf1, 0x95, 0xfd, 0x52, 0xdb, 0x2d, 0x3c, 0xba, 0x5d, 0x72, 0xca, 0x67, 0x09, 0xbf, 0x1d, 0x94, 0x12, 0x1b, 0xf3, 0x74, 0x88, 0x01, 0xb4, 0x0f, 0x6f, 0x5c])
 
 walletPk, delegatePk, mintPk, sig1Pk, sig2Pk, accountPk :: SolanaPublicKey
 walletPk = unsafeSolanaPublicKeyRaw (replicate 32 11)
@@ -57,10 +64,12 @@ genTokenInstruction =
 
 tests :: TestTree
 tests =
-  withResource (loadFixtures "test/fixtures/token_instruction_data.json") (const (pure ())) $ \getFixtures ->
-    testGroup
-      "SPL Token instruction data (golden + properties)"
-      [ goldenCase getFixtures "InitializeMint-some" (Tok.InitializeMint 6 walletPk (Just delegatePk)),
+  testGroup
+    "SPL Token"
+    [ withResource (loadFixtures "test/fixtures/token_instruction_data.json") (const (pure ())) $ \getFixtures ->
+        testGroup
+          "SPL Token instruction data (golden + properties)"
+          [ goldenCase getFixtures "InitializeMint-some" (Tok.InitializeMint 6 walletPk (Just delegatePk)),
         goldenCase getFixtures "InitializeMint-none" (Tok.InitializeMint 6 walletPk Nothing),
         goldenCase getFixtures "InitializeAccount" Tok.InitializeAccount,
         goldenCase getFixtures "InitializeMultisig" (Tok.InitializeMultisig 2),
@@ -219,7 +228,87 @@ tests =
           case decodeOrFail (BL.pack [21]) :: Either (BL.ByteString, ByteOffset, String) (BL.ByteString, ByteOffset, Tok.TokenInstruction) of
             Left _ -> pure ()
             Right _ -> assertFailure "expected decode failure for discriminant 21"
-      ]
+          ],
+      withResource (loadFixtures "test/fixtures/state_fixtures.json") (const (pure ())) $ \getFixtures ->
+        testGroup
+          "SPL Token state decoders (golden + rejection)"
+          [ testCase "decodeTokenAccount: token-account golden" $ do
+              fs <- getFixtures
+              let bs = requireFixture "token-account" fs
+              case Tok.decodeTokenAccount bs of
+                Left err -> assertFailure $ "decode failed: " <> err
+                Right ta -> do
+                  Tok.taMint ta @?= unsafeSolanaPublicKeyRaw (replicate 32 12)
+                  Tok.taOwner ta @?= ownerKey
+                  Tok.taAmount ta @?= 5000000
+                  Tok.taDelegate ta @?= Just (unsafeSolanaPublicKeyRaw (replicate 32 13))
+                  Tok.taState ta @?= Tok.TokenAccountFrozen
+                  Tok.taIsNative ta @?= Just 2039280
+                  Tok.taDelegatedAmount ta @?= 1000
+                  Tok.taCloseAuthority ta @?= Just (unsafeSolanaPublicKeyRaw (replicate 32 20)),
+            testCase "decodeTokenAccount: token-account-minimal golden" $ do
+              fs <- getFixtures
+              let bs = requireFixture "token-account-minimal" fs
+              case Tok.decodeTokenAccount bs of
+                Left err -> assertFailure $ "decode failed: " <> err
+                Right ta -> do
+                  Tok.taMint ta @?= unsafeSolanaPublicKeyRaw (replicate 32 12)
+                  Tok.taOwner ta @?= ownerKey
+                  Tok.taAmount ta @?= 5000000
+                  Tok.taDelegate ta @?= Nothing
+                  Tok.taState ta @?= Tok.TokenAccountInitialized
+                  Tok.taIsNative ta @?= Nothing
+                  Tok.taDelegatedAmount ta @?= 0
+                  Tok.taCloseAuthority ta @?= Nothing,
+            testCase "decodeMint: mint golden" $ do
+              fs <- getFixtures
+              let bs = requireFixture "mint" fs
+              case Tok.decodeMint bs of
+                Left err -> assertFailure $ "decode failed: " <> err
+                Right m -> do
+                  Tok.mMintAuthority m @?= Just ownerKey
+                  Tok.mSupply m @?= 1000000000
+                  Tok.mDecimals m @?= 6
+                  Tok.mIsInitialized m @?= True
+                  Tok.mFreezeAuthority m @?= Just (unsafeSolanaPublicKeyRaw (replicate 32 20)),
+            testCase "decodeMint: mint-minimal golden" $ do
+              fs <- getFixtures
+              let bs = requireFixture "mint-minimal" fs
+              case Tok.decodeMint bs of
+                Left err -> assertFailure $ "decode failed: " <> err
+                Right m -> do
+                  Tok.mMintAuthority m @?= Nothing
+                  Tok.mSupply m @?= 1000000000
+                  Tok.mDecimals m @?= 6
+                  Tok.mIsInitialized m @?= True
+                  Tok.mFreezeAuthority m @?= Nothing,
+            testCase "decodeTokenAccount: reject 164 bytes" $ do
+              let bs = BS.replicate 164 0
+              case Tok.decodeTokenAccount bs of
+                Left err -> assertBool "error message contains length" ("164" `elem` words err)
+                Right _ -> assertFailure "expected decode failure for 164 bytes",
+            testCase "decodeTokenAccount: reject 166 bytes" $ do
+              let bs = BS.replicate 166 0
+              case Tok.decodeTokenAccount bs of
+                Left err -> assertBool "error message contains length" ("166" `elem` words err)
+                Right _ -> assertFailure "expected decode failure for 166 bytes",
+            testCase "decodeTokenAccount: reject invalid COption tag" $ do
+              let bs = BS.replicate 165 0xFF
+              case Tok.decodeTokenAccount bs of
+                Left err -> assertBool "error message contains COption tag" ("COption" `isInfixOf` err || "tag" `isInfixOf` err)
+                Right _ -> assertFailure "expected decode failure for 0xFF bytes",
+            testCase "decodeMint: reject 81 bytes" $ do
+              let bs = BS.replicate 81 0
+              case Tok.decodeMint bs of
+                Left err -> assertBool "error message contains length" ("81" `elem` words err)
+                Right _ -> assertFailure "expected decode failure for 81 bytes",
+            testCase "decodeMint: reject 83 bytes" $ do
+              let bs = BS.replicate 83 0
+              case Tok.decodeMint bs of
+                Left err -> assertBool "error message contains length" ("83" `elem` words err)
+                Right _ -> assertFailure "expected decode failure for 83 bytes"
+          ]
+    ]
   where
     goldenCase getFixtures name ti =
       testCase name $ do

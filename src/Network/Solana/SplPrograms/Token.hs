@@ -9,10 +9,92 @@ module Network.Solana.SplPrograms.Token where
 import Data.Binary
 import Data.Binary.Get
 import Data.Binary.Put
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as BL
 import GHC.Generics (Generic)
 import Network.Solana.Core.Crypto
 import Network.Solana.Core.Instruction
 import Network.Solana.Sysvar qualified as Sysvar
+
+-- | Token account state: Uninitialized (0), Initialized (1), or Frozen (2).
+data AccountState = TokenAccountUninitialized | TokenAccountInitialized | TokenAccountFrozen
+  deriving (Eq, Show, Enum)
+
+-- | SPL Token account state (165 bytes fixed).
+data TokenAccount = TokenAccount
+  { taMint :: SolanaPublicKey,
+    taOwner :: SolanaPublicKey,
+    taAmount :: Word64,
+    taDelegate :: Maybe SolanaPublicKey,
+    taState :: AccountState,
+    taIsNative :: Maybe Word64,
+    taDelegatedAmount :: Word64,
+    taCloseAuthority :: Maybe SolanaPublicKey
+  }
+  deriving (Eq, Show)
+
+-- | SPL Token mint state (82 bytes fixed).
+data Mint = Mint
+  { mMintAuthority :: Maybe SolanaPublicKey,
+    mSupply :: Word64,
+    mDecimals :: Word8,
+    mIsInitialized :: Bool,
+    mFreezeAuthority :: Maybe SolanaPublicKey
+  }
+  deriving (Eq, Show)
+
+-- | Helper for parsing fixed-width state COption (4-byte LE tag + payload).
+getStateCOption :: Int -> Get a -> Get (Maybe a)
+getStateCOption payloadLen inner = do
+  tag <- getWord32le
+  case tag of
+    0 -> skip payloadLen >> pure Nothing
+    1 -> Just <$> inner
+    _ -> fail ("state COption: invalid tag " <> show tag)
+
+-- | Decode a SPL Token account state from bytes (exactly 165 bytes).
+decodeTokenAccount :: BS.ByteString -> Either String TokenAccount
+decodeTokenAccount bs
+  | BS.length bs /= 165 = Left ("TokenAccount: expected 165 bytes, got " <> show (BS.length bs))
+  | otherwise = case runGetOrFail getTokenAccount (fromStrict bs) of
+      Left (_, _, err) -> Left err
+      Right (_, _, ta) -> Right ta
+  where
+    fromStrict = BL.fromChunks . (: [])
+    getTokenAccount =
+      TokenAccount
+        <$> get
+        <*> get
+        <*> getWord64le
+        <*> getStateCOption 32 get
+        <*> getAccountState
+        <*> getStateCOption 8 getWord64le
+        <*> getWord64le
+        <*> getStateCOption 32 get
+    getAccountState = do
+      byte <- getWord8
+      if byte <= 2
+        then pure (toEnum (fromIntegral byte))
+        else fail ("AccountState: invalid value " <> show byte)
+
+-- | Decode a SPL Token mint state from bytes (exactly 82 bytes).
+decodeMint :: BS.ByteString -> Either String Mint
+decodeMint bs
+  | BS.length bs /= 82 = Left ("Mint: expected 82 bytes, got " <> show (BS.length bs))
+  | otherwise = case runGetOrFail getMint (fromStrict bs) of
+      Left (_, _, err) -> Left err
+      Right (_, _, m) -> Right m
+  where
+    fromStrict = BL.fromChunks . (: [])
+    getMint =
+      Mint
+        <$> getStateCOption 32 get
+        <*> getWord64le
+        <*> getWord8
+        <*> (strictBool <$> getWord8)
+        <*> getStateCOption 32 get
+    strictBool :: Word8 -> Bool
+    strictBool b = b /= 0
 
 -- | SPL Token program address.
 tokenProgramId :: SolanaPublicKey
