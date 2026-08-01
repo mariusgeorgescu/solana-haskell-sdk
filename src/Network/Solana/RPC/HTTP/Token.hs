@@ -29,18 +29,18 @@ import Network.Solana.RPC.HTTP.Types
 ------------------------------------------------------------------------------------------------
 
 -- | Returns the token balance of an SPL Token account.
--- Returns 'RpcResponse AmmountObject' with detailed balance information.
-getTokenAccountBalance' :: (JsonRpc m) => SolanaPublicKey -> m (RPCResponse AmmountObject)
+-- Returns 'RPCResponse' 'AmountObject' with detailed balance information.
+getTokenAccountBalance' :: (JsonRpc m) => SolanaPublicKey -> m (RPCResponse AmountObject)
 getTokenAccountBalance' = do
   remote "getTokenAccountBalance"
 
 -- | Returns the token balance of an SPL Token account.
-getTokenAccountBalance :: (JsonRpc m) => SolanaPublicKey -> m AmmountObject
+getTokenAccountBalance :: (JsonRpc m) => SolanaPublicKey -> m AmountObject
 getTokenAccountBalance = fmap value . getTokenAccountBalance'
 
 -- | Contains SPL token balance details.
-data AmmountObject = AmmountObject
-  { -- | The raw balance without decimals, a string representation of .
+data AmountObject = AmountObject
+  { -- | The raw balance without decimals, a string representation of 'Word64'.
     amount :: String,
     -- | Number of base 10 digits to the right of the decimal place.
     decimals :: Word8,
@@ -58,10 +58,16 @@ data AmmountObject = AmmountObject
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns all SPL Token accounts delegated to the provided delegate address.
-getTokenAccountsByDelegate :: (JsonRpc m) => SolanaPublicKey -> SolanaPubKeyWithPurpose -> ConfigurationObject -> m (RPCResponse [Account])
-getTokenAccountsByDelegate = do
+-- | Returns all SPL Token accounts delegated to the provided delegate address, using the given configuration.
+getTokenAccountsByDelegate' :: (JsonRpc m) => SolanaPublicKey -> SolanaPubKeyWithPurpose -> ConfigurationObject -> m (RPCResponse [Account])
+getTokenAccountsByDelegate' = do
   remote "getTokenAccountsByDelegate"
+{-# INLINE getTokenAccountsByDelegate' #-}
+
+-- | Returns all SPL Token accounts delegated to the provided delegate
+-- address, requesting base64 encoding.
+getTokenAccountsByDelegate :: (JsonRpc m) => SolanaPublicKey -> SolanaPubKeyWithPurpose -> m [Account]
+getTokenAccountsByDelegate pk pkwv = value <$> getTokenAccountsByDelegate' pk pkwv cfgJustEncodingBase64
 {-# INLINE getTokenAccountsByDelegate #-}
 
 ------------------------------------------------------------------------------------------------
@@ -106,17 +112,17 @@ getTokenAccountsByOwnerAndProgram pk pkwv = value <$> getTokenAccountsByOwner' p
 ------------------------------------------------------------------------------------------------
 
 -- | Returns the largest accounts for a given SPL Token mint, sorted by balance.
--- Returns 'RpcResponse [AmmountObjectWithAddr]'.
-getTokenLargestAccounts' :: (JsonRpc m) => SolanaPublicKey -> m (RPCResponse [AmmountObjectWithAddr])
+-- Returns 'RPCResponse' @['AmountObjectWithAddr']@.
+getTokenLargestAccounts' :: (JsonRpc m) => SolanaPublicKey -> m (RPCResponse [AmountObjectWithAddr])
 getTokenLargestAccounts' = do
   remote "getTokenLargestAccounts"
 
 -- | Returns the largest accounts for a given SPL Token mint, sorted by balance.
-getTokenLargestAccounts :: (JsonRpc m) => SolanaPublicKey -> m [AmmountObjectWithAddr]
+getTokenLargestAccounts :: (JsonRpc m) => SolanaPublicKey -> m [AmountObjectWithAddr]
 getTokenLargestAccounts = fmap value . getTokenLargestAccounts'
 
 -- | Contains address and balance information for an SPL Token account.
-data AmmountObjectWithAddr = AmmountObjectWithAddr
+data AmountObjectWithAddr = AmountObjectWithAddr
   { -- | The account address.
     address' :: SolanaPublicKey,
     -- | The raw balance without decimals, a string representation of 'Word64'.
@@ -130,9 +136,9 @@ data AmmountObjectWithAddr = AmmountObjectWithAddr
   }
   deriving (Generic, Show)
 
-instance FromJSON AmmountObjectWithAddr where
-  parseJSON = withObject "AmmountObjectWithAddr" $ \v ->
-    AmmountObjectWithAddr
+instance FromJSON AmountObjectWithAddr where
+  parseJSON = withObject "AmountObjectWithAddr" $ \v ->
+    AmountObjectWithAddr
       <$> v .: "address"
       <*> v .: "amount"
       <*> v .: "decimals"
@@ -146,11 +152,11 @@ instance FromJSON AmmountObjectWithAddr where
 ------------------------------------------------------------------------------------------------
 
 -- | Returns the total supply of an SPL Token.
--- Returns 'RpcResponse AmmountObject' with the supply balance.
-getTokenSupply' :: (JsonRpc m) => SolanaPublicKey -> m (RPCResponse AmmountObject)
+-- Returns 'RPCResponse' 'AmountObject' with the supply balance.
+getTokenSupply' :: (JsonRpc m) => SolanaPublicKey -> m (RPCResponse AmountObject)
 getTokenSupply' = do
   remote "getTokenSupply"
 
 -- | Returns the total supply of an SPL Token.
-getTokenSupply :: (JsonRpc m) => SolanaPublicKey -> m AmmountObject
+getTokenSupply :: (JsonRpc m) => SolanaPublicKey -> m AmountObject
 getTokenSupply = fmap value . getTokenSupply'

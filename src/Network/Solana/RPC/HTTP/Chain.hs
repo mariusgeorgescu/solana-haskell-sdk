@@ -48,7 +48,7 @@ data ClusterNodes = ClusterNodes
     -- | Unique identifier of the node's feature set.
     featureSet :: Maybe Word32,
     -- | Shred version used by the node.
-    sharedVersion :: Maybe Word16
+    shredVersion :: Maybe Word16
   }
   deriving (Show, Generic, FromJSON)
 
@@ -60,7 +60,7 @@ data ClusterNodes = ClusterNodes
 
 -- | Checks if the node is healthy.
 --
--- A healthy node is within a certain number of slots (defined by 'HEALTH_CHECK_SLOT_DISTANCE')
+-- A healthy node is within a certain number of slots (defined by @HEALTH_CHECK_SLOT_DISTANCE@, a validator-side constant)
 -- of the latest confirmed cluster slot. Returns @"ok"@ if healthy; otherwise, an error is returned.
 getHealth :: (JsonRpc m) => m String
 getHealth = do

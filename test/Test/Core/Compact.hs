@@ -1,6 +1,8 @@
 module Test.Core.Compact (tests) where
 
+import Data.Binary (decode, encode)
 import Data.ByteString.Lazy qualified as BL
+import Data.Word (Word8)
 import Network.Solana.Core.Compact
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -31,7 +33,10 @@ tests =
       testCase "rejects overlong encoding" $
         assertLeft (decodeCompactU16 (BL.pack [0x80, 0x80, 0x80, 0x01])),
       testCase "rejects aliased encoding" $
-        assertLeft (decodeCompactU16 (BL.pack [0x80, 0x00]))
+        assertLeft (decodeCompactU16 (BL.pack [0x80, 0x00])),
+      testProperty "CompactArray Binary decode . encode == id" $
+        forAll (resize 500 (listOf arbitrary)) $ \(xs :: [Word8]) ->
+          let ca = mkCompact xs in decode (encode ca) === ca
     ]
 
 assertLeft :: (Show b) => Either a b -> Assertion

@@ -26,17 +26,18 @@ import Network.Solana.RPC.HTTP.Types
 
 ------------------------------------------------------------------------------------------------
 
--- | Fetches all available data for the given account address.
--- Returns 'RpcResponse (Maybe AccountInfo)', where 'Nothing' indicates the account does not exist.
-getAccountInfo' :: (JsonRpc m) => SolanaPublicKey -> m (RPCResponse (Maybe AccountInfo))
+-- | Fetches all available data for the given account address, using the given configuration.
+-- Returns 'RPCResponse' ('Maybe' 'AccountInfo'), where 'Nothing' indicates the account does not exist.
+getAccountInfo' :: (JsonRpc m) => SolanaPublicKey -> ConfigurationObject -> m (RPCResponse (Maybe AccountInfo))
 getAccountInfo' = do
   remote "getAccountInfo"
 {-# INLINE getAccountInfo' #-}
 
--- | Fetches all available data for the given account address.
--- Returns 'Nothing' if the account does not exist.
+-- | Fetches all available data for the given account address, requesting
+-- base64 encoding (the node's default base58 encoding rejects account data
+-- over 128 bytes). Returns 'Nothing' if the account does not exist.
 getAccountInfo :: (JsonRpc m) => SolanaPublicKey -> m (Maybe AccountInfo)
-getAccountInfo pubKey = value <$> getAccountInfo' pubKey
+getAccountInfo pubKey = value <$> getAccountInfo' pubKey cfgJustEncodingBase64
 {-# INLINE getAccountInfo #-}
 
 ------------------------------------------------------------------------------------------------
@@ -46,7 +47,7 @@ getAccountInfo pubKey = value <$> getAccountInfo' pubKey
 ------------------------------------------------------------------------------------------------
 
 -- | Returns the balance, in lamports, of the specified account.
--- Returns 'RpcResponse Lamport'.
+-- Returns 'RPCResponse' 'Lamport'.
 getBalance' :: (JsonRpc m) => SolanaPublicKey -> m (RPCResponse Lamport)
 getBalance' = do
   remote "getBalance"
@@ -63,17 +64,18 @@ getBalance pubKey = value <$> getBalance' pubKey
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns account information for a list of addresses.
+-- | Returns account information for a list of addresses, using the given configuration.
 -- For any missing account, the result contains 'Nothing' in its place.
-getMultipleAccounts' :: (JsonRpc m) => [SolanaPublicKey] -> m (RPCResponse [Maybe AccountInfo])
+getMultipleAccounts' :: (JsonRpc m) => [SolanaPublicKey] -> ConfigurationObject -> m (RPCResponse [Maybe AccountInfo])
 getMultipleAccounts' = do
   remote "getMultipleAccounts"
 {-# INLINE getMultipleAccounts' #-}
 
--- | Returns account information for a list of addresses.
--- For any missing account, the result contains 'Nothing' in its place.
+-- | Returns account information for a list of addresses, requesting base64
+-- encoding (the node's default base58 encoding rejects account data over
+-- 128 bytes). For any missing account, the result contains 'Nothing' in its place.
 getMultipleAccounts :: (JsonRpc m) => [SolanaPublicKey] -> m [Maybe AccountInfo]
-getMultipleAccounts = fmap value . getMultipleAccounts'
+getMultipleAccounts pubKeys = value <$> getMultipleAccounts' pubKeys cfgJustEncodingBase64
 {-# INLINE getMultipleAccounts #-}
 
 ------------------------------------------------------------------------------------------------
@@ -82,10 +84,17 @@ getMultipleAccounts = fmap value . getMultipleAccounts'
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns all accounts owned by the specified program address.
-getProgramAccounts :: (JsonRpc m) => SolanaPublicKey -> m [Account]
-getProgramAccounts = do
+-- | Returns all accounts owned by the specified program address, using the given configuration.
+getProgramAccounts' :: (JsonRpc m) => SolanaPublicKey -> ConfigurationObject -> m [Account]
+getProgramAccounts' = do
   remote "getProgramAccounts"
+{-# INLINE getProgramAccounts' #-}
+
+-- | Returns all accounts owned by the specified program address, requesting
+-- base64 encoding (the node's default base58 encoding rejects account data
+-- over 128 bytes).
+getProgramAccounts :: (JsonRpc m) => SolanaPublicKey -> m [Account]
+getProgramAccounts pk = getProgramAccounts' pk cfgJustEncodingBase64
 {-# INLINE getProgramAccounts #-}
 
 ------------------------------------------------------------------------------------------------
@@ -135,8 +144,9 @@ data TransactionSignatureInformation = TransactionSignatureInformation
     signature :: SolanaSignature,
     -- | The slot that contains the block with the transaction
     slotTxSig :: Slot,
-    -- | Error if transaction failed, 'Nothing' if transaction succeeded.
-    err :: Maybe String,
+    -- | Error details if the transaction failed ('Data.Aeson.Value' as
+    -- returned by the RPC), 'Nothing' if it succeeded.
+    err :: Maybe Value,
     -- | Memo associated with the transaction, 'Nothing' if no memo is present
     memo :: Maybe String,
     -- | Estimated production time, as Unix timestamp (seconds since the Unix epoch) of when transaction was processed. 'Nothing' if not available.
@@ -182,8 +192,9 @@ data TransactionSignatureStatus = TransactionSignatureStatus
     slotTxStatus :: Slot,
     -- | Number of blocks since signature confirmation, 'Nothing' if rooted, as well as finalized by a supermajority of the cluster.
     confirmationsTxStatus :: Maybe Int,
-    -- | Error if transaction failed, 'Nothing' if transaction succeeded.
-    errTxStatus :: Maybe String,
+    -- | Error details if the transaction failed ('Data.Aeson.Value' as
+    -- returned by the RPC), 'Nothing' if it succeeded.
+    errTxStatus :: Maybe Value,
     -- | The transaction's cluster confirmation status.
     confirmationStatusTxStatus :: Maybe String
   }

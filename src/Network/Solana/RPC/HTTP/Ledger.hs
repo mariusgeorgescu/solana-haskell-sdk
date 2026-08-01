@@ -192,7 +192,7 @@ getSlotLeaders = do
 ------------------------------------------------------------------------------------------------
 
 -- | Returns the total number of transactions recorded in the ledger.
-getTransactionCount :: (JsonRpc m) => m Slot
+getTransactionCount :: (JsonRpc m) => m Word64
 getTransactionCount = do
   remote "getTransactionCount"
 

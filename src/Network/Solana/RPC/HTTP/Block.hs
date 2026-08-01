@@ -22,7 +22,7 @@ import Network.JsonRpc.TinyClient (JsonRpc (..))
 import Network.Solana.Core.Block
 import Network.Solana.Core.Crypto (SolanaPublicKey)
 import Network.Solana.Core.Transaction (Transaction)
-import Network.Solana.RPC.HTTP.Types (RPCResponse (value), Slot)
+import Network.Solana.RPC.HTTP.Types
 
 ------------------------------------------------------------------------------------------------
 
@@ -30,10 +30,21 @@ import Network.Solana.RPC.HTTP.Types (RPCResponse (value), Slot)
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns identity and transaction information about a confirmed block in the ledger.
-getBlock :: (JsonRpc m) => Slot -> m BlockInfo
-getBlock = do
+-- | Returns identity and transaction information about a confirmed block in
+-- the ledger, using the given configuration.
+-- Returns 'Nothing' if the slot has been skipped or pruned from the ledger.
+getBlock' :: (JsonRpc m) => Slot -> ConfigurationObject -> m (Maybe BlockInfo)
+getBlock' = do
   remote "getBlock"
+{-# INLINE getBlock' #-}
+
+-- | Returns identity and transaction information about a confirmed block in
+-- the ledger. Sets @maxSupportedTransactionVersion@ so that blocks
+-- containing versioned (v0) transactions can be decoded (without it, such
+-- blocks make the node respond with error -32015).
+-- Returns 'Nothing' if the slot has been skipped or pruned from the ledger.
+getBlock :: (JsonRpc m) => Slot -> m (Maybe BlockInfo)
+getBlock slot = getBlock' slot (defaultConfigObject {encoding = Just "json", maxSupportedTransactionVersion = Just 0})
 {-# INLINE getBlock #-}
 
 -- | Contains identity and transaction information for a block.
@@ -120,7 +131,7 @@ getBlockHeight = do
 ------------------------------------------------------------------------------------------------
 
 -- | Returns recent block production information from the current or previous epoch.
--- Returns 'RpcResponse BlockProduction' with the production statistics.
+-- Returns 'RPCResponse' 'BlockProduction' with the production statistics.
 getBlockProduction' :: (JsonRpc m) => m (RPCResponse BlockProduction)
 getBlockProduction' = do
   remote "getBlockProduction"
@@ -131,10 +142,10 @@ getBlockProduction :: (JsonRpc m) => m BlockProduction
 getBlockProduction = value <$> getBlockProduction'
 {-# INLINE getBlockProduction #-}
 
--- | Range of slots considered.
+-- | Per-validator production counts: a two-element array of the number of leader slots and the number of blocks produced.
 type ValidatorData = [Word64]
 
--- | Mapping from validator identity to number of blocks produced.
+-- | Mapping from validator identity to its production counts ('ValidatorData').
 type ByIdentity = Map SolanaPublicKey ValidatorData
 
 -- | Range of slots considered for block production.
@@ -170,7 +181,7 @@ instance FromJSON BlockProduction where
 
 -- | Returns a list of confirmed blocks between two slots (inclusive).
 -- The maximum range allowed is 500,000 slots.
-getBlocks :: (JsonRpc m) => Slot -> Maybe Slot -> m [Int]
+getBlocks :: (JsonRpc m) => Slot -> Maybe Slot -> m [Slot]
 getBlocks = do
   remote "getBlocks"
 {-# INLINE getBlocks #-}
@@ -182,7 +193,7 @@ getBlocks = do
 ------------------------------------------------------------------------------------------------
 
 -- | Returns a list of confirmed blocks starting from the given slot, up to the specified limit.
-getBlocksWithLimit :: (JsonRpc m) => Slot -> Int -> m [Int]
+getBlocksWithLimit :: (JsonRpc m) => Slot -> Int -> m [Slot]
 getBlocksWithLimit = do
   remote "getBlocksWithLimit"
 {-# INLINE getBlocksWithLimit #-}
@@ -195,7 +206,8 @@ getBlocksWithLimit = do
 
 -- | Returns the estimated production time of a block (as Unix timestamp).
 -- This is based on stake-weighted votes and validator-reported timestamps.
-getBlockTime :: (JsonRpc m) => Slot -> m Int
+-- Returns 'Nothing' if the timestamp is not available for the given slot.
+getBlockTime :: (JsonRpc m) => Slot -> m (Maybe Int)
 getBlockTime = do
   remote "getBlockTime"
 {-# INLINE getBlockTime #-}
@@ -207,7 +219,7 @@ getBlockTime = do
 ------------------------------------------------------------------------------------------------
 
 -- | Get the hash and height of the latest block.
--- Returns 'RpcResponse LatestBlockHash' containing the block information.
+-- Returns 'RPCResponse' 'LatestBlockHash' containing the block information.
 getLatestBlockhash' :: (JsonRpc m) => m (RPCResponse LatestBlockHash)
 getLatestBlockhash' = do
   remote "getLatestBlockhash"

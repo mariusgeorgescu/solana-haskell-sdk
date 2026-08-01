@@ -51,6 +51,7 @@ import Data.Either.Extra (maybeToEither)
 import Data.String (IsString, fromString)
 import Data.Text qualified as Text
 import GHC.Generics (Generic)
+import Text.Read (readMaybe)
 
 -- | Encode a byte string as Base58 text (Bitcoin alphabet), the encoding
 -- Solana uses for addresses, signatures and hashes.
@@ -274,20 +275,11 @@ dverify (SolanaPublicKey pk) bs (SolanaSignature sig) = Ed25519.dverify pk bs si
 ----
 
 -- | Read a private key from a @solana-keygen@-style keypair file containing
--- a list of byte values (e.g. @[1,2,...]@). Throws if the file cannot be
--- read or its contents cannot be parsed.
+-- a list of byte values (e.g. @[1,2,...]@). Throws an 'IOError' if the file
+-- cannot be read, or if its contents cannot be parsed as a @[Word8]@ list.
 readSigningKeyFromFile :: FilePath -> IO SolanaPrivateKey
 readSigningKeyFromFile path = do
   contents <- BS8.readFile path
-  let word8List = read (BS8.unpack contents) :: [Word8]
-  return $ unsafeSolanaPrivateKeyRaw word8List
-
--- -- TODO
-
--- getKeyPairFromFile
--- writeKeys
--- Write priv key to file
--- writeKeyToFileBase68 privKey
-
--- Write priv key to file
--- writeKeyToFileRaw privKey
+  case readMaybe (BS8.unpack contents) of
+    Just word8List -> return $ unsafeSolanaPrivateKeyRaw (word8List :: [Word8])
+    Nothing -> fail ("readSigningKeyFromFile: could not parse " <> path <> " as a list of bytes (e.g. \"[1,2,...]\")")

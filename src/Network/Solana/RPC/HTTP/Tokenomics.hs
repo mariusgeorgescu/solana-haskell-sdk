@@ -147,7 +147,7 @@ getMinimumBalanceForRentExemption = do
 ------------------------------------------------------------------------------------------------
 
 -- | Returns the minimum delegation amount required to stake.
--- Returns @RpcResponse Lamport@ with value field set to @Lamport@.
+-- Returns @RPCResponse Lamport@ with value field set to @Lamport@.
 getStakeMinimumDelegation' :: (JsonRpc m) => m (RPCResponse Lamport)
 getStakeMinimumDelegation' = do
   remote "getStakeMinimumDelegation"
@@ -165,7 +165,7 @@ getStakeMinimumDelegation = value <$> getStakeMinimumDelegation'
 ------------------------------------------------------------------------------------------------
 
 -- | Returns the current token supply information.
--- Returns @RpcResponse SolanaSupply@ with value field set to @SolanaSupply@.
+-- Returns @RPCResponse SolanaSupply@ with value field set to @SolanaSupply@.
 getSupply' :: (JsonRpc m) => m (RPCResponse SolanaSupply)
 getSupply' = do
   remote "getSupply"

@@ -115,10 +115,7 @@ executable solana-haskell-sdk
 
   -- Other library packages from which modules are imported.
   build-depends:
-    , aeson
     , base                ^>=4.18.0.0
-    , base64
-    , mtl
     , solana-haskell-sdk
     , web3-provider
 

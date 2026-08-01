@@ -22,6 +22,7 @@ module Network.Solana.Core.Compact
   )
 where
 
+import Control.Monad (replicateM)
 import Data.Binary
 import Data.Binary.Get
 import Data.Binary.Put
@@ -58,6 +59,11 @@ instance (Binary a) => Binary (CompactArray a) where
   put (CompactArray i xs) = do
     putCompactU16 i
     mapM_ put xs -- not default putList
+  get :: (Binary a) => Get (CompactArray a)
+  get = do
+    n <- getCompactU16
+    xs <- replicateM (fromIntegral n) get
+    pure (CompactArray n xs)
 
 -- | Wrap a list into a 'CompactArray', recording its length. The length is
 -- truncated to 'Word16'.

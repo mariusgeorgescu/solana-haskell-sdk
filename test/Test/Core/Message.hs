@@ -5,6 +5,7 @@ module Test.Core.Message (tests) where
 import Data.ByteString qualified as BS
 import Data.List (nub)
 import Data.Map.Strict qualified as Map
+import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Network.Solana.Core.Block (BlockHash (..))
 import Network.Solana.Core.Crypto
@@ -91,9 +92,9 @@ prop_messageInvariants =
           [ counterexample "duplicate keys" (keys === nub keys),
             counterexample "key set mismatch" (Map.keysSet privs === Set.fromList keys),
             counterexample "non-signer in signed section" (property (all signerOf signed)),
-            counterexample "signer in unsigned section" (property (all (not . signerOf) unsigned)),
+            counterexample "signer in unsigned section" (property (not (any signerOf unsigned))),
             counterexample "readonly key in writable section" (property (all writableOf (sw <> uw))),
-            counterexample "writable key in readonly section" (property (all (not . writableOf) (sr <> ur)))
+            counterexample "writable key in readonly section" (property (not (any writableOf (sr <> ur))))
           ]
 
 tests :: TestTree
@@ -147,8 +148,8 @@ tests =
         let mintPk = unsafeSolanaPublicKeyRaw (replicate 32 12)
             walletPk = unsafeSolanaPublicKeyRaw (replicate 32 11)
             payerPk = fst payerKeys
-            srcAta = maybe (error "no src ata") id (Ata.getAssociatedTokenAddress payerPk mintPk)
-            dstAta = maybe (error "no dst ata") id (Ata.getAssociatedTokenAddress walletPk mintPk)
+            srcAta = fromMaybe (error "no src ata") (Ata.getAssociatedTokenAddress payerPk mintPk)
+            dstAta = fromMaybe (error "no dst ata") (Ata.getAssociatedTokenAddress walletPk mintPk)
             ixs =
               [ Ata.createAssociatedTokenAccountIdempotent payerPk walletPk mintPk,
                 Tok.transferChecked srcAta mintPk dstAta payerPk [] 1000000 6

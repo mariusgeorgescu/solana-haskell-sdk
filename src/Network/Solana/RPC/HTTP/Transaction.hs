@@ -28,7 +28,7 @@ import Network.Solana.RPC.HTTP.Types
 ------------------------------------------------------------------------------------------------
 
 -- | Returns the fee the network will charge for a particular message (base64-encoded).
--- Returns 'RpcResponse (Maybe Int)' where the value is the fee in lamports, or 'Nothing' if the fee couldn't be calculated.
+-- Returns 'RPCResponse' ('Maybe' 'Int') where the value is the fee in lamports, or 'Nothing' if the fee couldn't be calculated.
 getFeeForMessage' :: (JsonRpc m) => String -> m (RPCResponse (Maybe Int))
 getFeeForMessage' = do
   remote "getFeeForMessage"
@@ -46,10 +46,21 @@ getFeeForMessage = fmap value . getFeeForMessage'
 
 ------------------------------------------------------------------------------------------------
 
--- | Returns metadata and content for a confirmed transaction identified by its signature.
-getTransaction :: (JsonRpc m) => SolanaSignature -> m TransactionResult
-getTransaction = do
+-- | Returns metadata and content for a confirmed transaction identified by
+-- its signature, using the given configuration.
+-- Returns 'Nothing' if the signature is unknown or has expired.
+getTransaction' :: (JsonRpc m) => SolanaSignature -> ConfigurationObject -> m (Maybe TransactionResult)
+getTransaction' = do
   remote "getTransaction"
+{-# INLINE getTransaction' #-}
+
+-- | Returns metadata and content for a confirmed transaction identified by
+-- its signature. Sets @maxSupportedTransactionVersion@ so that versioned
+-- (v0) transactions can be decoded (without it, the node responds with
+-- error -32015).
+-- Returns 'Nothing' if the signature is unknown or has expired.
+getTransaction :: (JsonRpc m) => SolanaSignature -> m (Maybe TransactionResult)
+getTransaction sig = getTransaction' sig (defaultConfigObject {encoding = Just "json", maxSupportedTransactionVersion = Just 0})
 {-# INLINE getTransaction #-}
 
 -- | Contains metadata and transaction information returned by 'getTransaction'.
@@ -91,15 +102,14 @@ requestAirdrop = do
 
 ------------------------------------------------------------------------------------------------
 
--- | Default configuration used for sending transactions.
+-- | Default configuration used for sending transactions. Leaves preflight
+-- checks and retry behavior at the node's own defaults; callers who want
+-- fire-and-forget behavior (no preflight simulation, no rebroadcast) can use
+-- 'sendTransaction'' with an explicit configuration instead.
 defaultRpcSendTransactionConfig :: ConfigurationObject
 defaultRpcSendTransactionConfig =
   defaultConfigObject
-    { encoding = Just "base64",
-      skipPreflight = Just True,
-      preflightCommitment = Just "finalized",
-      maxRetries = Just 0,
-      minContextSlot = Just 0
+    { encoding = Just "base64"
     }
 
 -- | Sends a base64-encoded transaction to the cluster using the default configuration.

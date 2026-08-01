@@ -9,6 +9,7 @@ module Network.Solana.Core.Block where
 import Network.Solana.Core.Crypto (fromBase58String, toBase58String)
 import Data.Aeson.Types
 import Data.Binary
+import Data.Binary.Get (getByteString)
 import Data.Binary.Put (putByteString)
 import Data.ByteString qualified as S
 import Data.Maybe (fromJust)
@@ -37,7 +38,7 @@ instance Binary BlockHash where
   put :: BlockHash -> Put
   put (BlockHash bs) = putByteString bs -- not default Binary instance (wo length)
   get :: Get BlockHash
-  get = BlockHash <$> get
+  get = BlockHash <$> getByteString 32
 
 instance ToJSON BlockHash where
   toJSON :: BlockHash -> Value

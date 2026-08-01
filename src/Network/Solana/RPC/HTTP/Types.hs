@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- |
@@ -91,9 +90,17 @@ data ConfigurationObject = ConfigurationObject
     -- | Minimum slot that the RPC response must be based on.
     minContextSlot :: Maybe Int,
     -- | Whether to search older confirmed transaction history.
-    searchTransactionHistory :: Maybe Bool
+    searchTransactionHistory :: Maybe Bool,
+    -- | The maximum transaction version to return in responses. Required to
+    -- fetch blocks or transactions containing versioned (v0) transactions;
+    -- omitting it causes the RPC to reject them with error -32015.
+    maxSupportedTransactionVersion :: Maybe Int
   }
-  deriving (Generic, Show, ToJSON)
+  deriving (Generic, Show)
+
+instance ToJSON ConfigurationObject where
+  toJSON :: ConfigurationObject -> Value
+  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
 
 -- | A default configuration object with all fields set to 'Nothing'.
 --
@@ -108,7 +115,8 @@ defaultConfigObject =
       preflightCommitment = Nothing,
       maxRetries = Nothing,
       minContextSlot = Nothing,
-      searchTransactionHistory = Nothing
+      searchTransactionHistory = Nothing,
+      maxSupportedTransactionVersion = Nothing
     }
 
 -- | A basic configuration object that only sets the encoding to @"base64"@.
