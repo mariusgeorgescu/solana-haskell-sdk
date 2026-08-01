@@ -48,6 +48,7 @@ library
     Network.Solana.Core.Message
     Network.Solana.Core.Pda
     Network.Solana.Core.Transaction
+    Network.Solana.NativePrograms.AddressLookupTable
     Network.Solana.NativePrograms.BpfLoaderUpgradeable
     Network.Solana.NativePrograms.ComputeBudget
     Network.Solana.NativePrograms.Secp256k1
@@ -140,6 +141,7 @@ test-suite solana-haskell-sdk-test
     Test.Core.Message
     Test.Core.Pda
     Test.Fixtures
+    Test.NativePrograms.AddressLookupTable
     Test.NativePrograms.BpfLoaderUpgradeable
     Test.NativePrograms.ComputeBudget
     Test.NativePrograms.Secp256k1

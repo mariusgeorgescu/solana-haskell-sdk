@@ -7,6 +7,7 @@ import Test.Core.Crypto qualified
 import Test.Core.Instruction qualified
 import Test.Core.Message qualified
 import Test.Core.Pda qualified
+import Test.NativePrograms.AddressLookupTable qualified
 import Test.NativePrograms.BpfLoaderUpgradeable qualified
 import Test.NativePrograms.ComputeBudget qualified
 import Test.NativePrograms.Secp256k1 qualified
@@ -30,6 +31,7 @@ main =
           Test.Core.Instruction.tests,
           Test.Core.Message.tests,
           Test.Core.Pda.tests,
+          Test.NativePrograms.AddressLookupTable.tests,
           Test.NativePrograms.BpfLoaderUpgradeable.tests,
           Test.NativePrograms.ComputeBudget.tests,
           Test.NativePrograms.Secp256k1.tests,
