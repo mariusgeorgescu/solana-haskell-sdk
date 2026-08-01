@@ -47,6 +47,7 @@ library
     Network.Solana.Core.Transaction
     Network.Solana.NativePrograms.BpfLoaderUpgradeable
     Network.Solana.NativePrograms.ComputeBudget
+    Network.Solana.NativePrograms.Secp256k1
     Network.Solana.NativePrograms.Stake
     Network.Solana.NativePrograms.SystemProgram
     Network.Solana.NativePrograms.Vote
@@ -139,6 +140,7 @@ test-suite solana-haskell-sdk-test
     Test.Fixtures
     Test.NativePrograms.BpfLoaderUpgradeable
     Test.NativePrograms.ComputeBudget
+    Test.NativePrograms.Secp256k1
     Test.NativePrograms.Stake
     Test.NativePrograms.SystemProgram
     Test.NativePrograms.Vote

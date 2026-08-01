@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+* Added upgradeable BPF loader client (buffer/write/deploy/upgrade/authority/
+  close/extend) with program-data address derivation.
+* Added secp256k1 precompile client: signature-verification instruction
+  construction from a precomputed signature (signing is out of scope).
 * Added Stake program client (initialize, authorize, delegate, split, withdraw,
   deactivate, lockup, merge, checked variants) — golden-tested against the Rust SDK.
 * Added Vote program client (account management: initialize, authorize, withdraw,

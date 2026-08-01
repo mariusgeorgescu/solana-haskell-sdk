@@ -7,6 +7,7 @@ import Test.Core.Message qualified
 import Test.Core.Pda qualified
 import Test.NativePrograms.BpfLoaderUpgradeable qualified
 import Test.NativePrograms.ComputeBudget qualified
+import Test.NativePrograms.Secp256k1 qualified
 import Test.NativePrograms.Stake qualified
 import Test.NativePrograms.SystemProgram qualified
 import Test.NativePrograms.Vote qualified
@@ -27,6 +28,7 @@ main =
           Test.Core.Pda.tests,
           Test.NativePrograms.BpfLoaderUpgradeable.tests,
           Test.NativePrograms.ComputeBudget.tests,
+          Test.NativePrograms.Secp256k1.tests,
           Test.NativePrograms.Stake.tests,
           Test.NativePrograms.SystemProgram.tests,
           Test.NativePrograms.Vote.tests,

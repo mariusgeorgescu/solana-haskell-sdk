@@ -32,10 +32,10 @@
   - [ ] Clients for native programs
     - [x] System Program (all 13 instructions)
     - [x] Compute Budget
-    - [x] Stake
-    - [x] Vote
-    - [ ] BPF Loader
-    - [ ] Secp256k1
+    - [x] Stake (delegation lifecycle; seed-authority variants post-1.0)
+    - [x] Vote (account management)
+    - [x] BPF Loader (upgradeable)
+    - [x] Secp256k1 (instruction construction; signing out of scope)
   - [ ] Clients for Solana Program Library (SPL)
     - [x] Memo
     - [x] SPL Token
