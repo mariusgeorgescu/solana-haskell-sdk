@@ -3,6 +3,7 @@
 ## Unreleased
 
 * Added on-chain account-state decoders (SPL token accounts and mints, address lookup tables, stake and nonce accounts, Metaplex metadata) with typed SolanaWeb3 fetch helpers; decoded lookup tables feed compileV0Message directly.
+* Added developer-experience helpers: explicit fee-payer transactions with automatic signature ordering (sponsored fees supported), a durable-nonce transaction flow, and priority-fee estimation.
 
 ## 1.1.0.0 -- 2026-08-01
 

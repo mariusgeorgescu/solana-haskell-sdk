@@ -23,10 +23,11 @@ import Control.Exception (throwIO)
 import Control.Monad.IO.Class
 import Data.ByteString qualified as BS
 import Data.Maybe (fromMaybe, isNothing)
+import Data.Word (Word64)
 import Network.Solana.Core.Account (AccountData (..), AccountInfo (dataField))
 import Network.Solana.Core.Crypto
 import Network.Solana.Core.Instruction
-import Network.Solana.Core.Message (newTransactionIntent)
+import Network.Solana.Core.Message (newDurableNonceTransactionIntent, newTransactionIntent)
 import Network.Solana.Core.VersionedMessage qualified as VM
 import Network.Solana.Metaplex.TokenMetadata qualified as TM
 import Network.Solana.NativePrograms.AddressLookupTable qualified as ALT
@@ -34,6 +35,7 @@ import Network.Solana.NativePrograms.Stake qualified as Stake
 import Network.Solana.NativePrograms.SystemProgram qualified as SP
 import Network.Solana.RPC.HTTP.Account (confirmationStatusTxStatus, errTxStatus, getAccountInfo, getBalance, getSignatureStatuses)
 import Network.Solana.RPC.HTTP.Block (getTheLatestBlockhash)
+import Network.Solana.RPC.HTTP.Chain (PrioritizationFee (prioritizationFee), getRecentPrioritizationFees, percentilePriorityFee)
 import Network.Solana.RPC.HTTP.Transaction
 import Network.Solana.SplPrograms.Token qualified as Tok
 import Network.Web3 hiding (AccountData)
@@ -53,6 +55,48 @@ newTransaction signers instructions = do
   bh <- getTheLatestBlockhash
   signedTx <- either (liftIO . throwIO) pure (newTxInt bh)
   sendTransaction signedTx
+
+-- | Builds, signs, and submits a durable-nonce transaction that executes the
+-- given instructions, returning its signature.
+--
+-- Fetches the given nonce account with 'getNonceAccount' and builds the
+-- transaction with 'newDurableNonceTransactionIntent', which prepends the
+-- nonce-advance instruction ahead of the given instructions and uses the
+-- nonce account's durable nonce in place of a recent block hash (so the
+-- transaction never expires, unlike 'newTransaction'). The given signers
+-- must include the nonce authority (@nsAuthority@), or the resulting
+-- transaction will be rejected on submission. Requires a reachable RPC
+-- node.
+--
+-- Throws @'userError' "newNonceTransaction: nonce account not found"@ if
+-- the account does not exist, and @'userError' "newNonceTransaction: nonce
+-- account not initialized"@ if it exists but has not been initialized as a
+-- nonce account -- distinct from each other and from the 'CompileException'
+-- thrown if an instruction references an account key that cannot be
+-- resolved in the compiled message.
+newNonceTransaction :: [SolanaPrivateKey] -> SolanaPublicKey -> [Instruction] -> Web3 SolanaSignature
+newNonceTransaction signers nonceAccount instructions = do
+  mNonceState <- getNonceAccount nonceAccount
+  case mNonceState of
+    Nothing -> liftIO . throwIO . userError $ "newNonceTransaction: nonce account not found"
+    Just SP.NonceUninitialized -> liftIO . throwIO . userError $ "newNonceTransaction: nonce account not initialized"
+    Just (SP.NonceInitialized authority durableNonce _) -> do
+      let newTxInt = newDurableNonceTransactionIntent signers nonceAccount authority instructions
+      signedTx <- either (liftIO . throwIO) pure (newTxInt durableNonce)
+      sendTransaction signedTx
+
+-- | Estimates a priority fee (in micro-lamports per compute unit) for
+-- landing a transaction that writes to the given accounts, as the @p@-th
+-- percentile of recent per-compute-unit fees observed for them (via
+-- 'getRecentPrioritizationFees' and 'percentilePriorityFee').
+--
+-- Heuristic only: recent fees are no guarantee of what is needed to land
+-- the next transaction. Returns @0@ if no recent priority fees were
+-- observed for the given accounts. Requires a reachable RPC node.
+estimatePriorityFee :: [SolanaPublicKey] -> Double -> Web3 Word64
+estimatePriorityFee addresses p = do
+  fees <- getRecentPrioritizationFees (Just addresses)
+  pure (percentilePriorityFee p (map prioritizationFee fees))
 
 -- | Prints the balance of each of the given accounts to standard output using 'printBalance'.
 printBalances :: [SolanaPublicKey] -> Web3 ()
