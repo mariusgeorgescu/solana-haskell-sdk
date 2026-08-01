@@ -93,10 +93,7 @@ instance Binary MessageAddressTableLookup where
 -- and a key drained into it sits at position 256 or beyond — that position
 -- cannot be represented in the byte-sized lookup index the wire format
 -- requires, so it is rejected rather than silently truncated (wrapped) into
--- the wrong index, mirroring Rust's @AddressLookupTableIndexOverflow@. Since
--- 'CompileException'\'s constructor is private to
--- "Network.Solana.Core.Instruction", the exception produced this way carries
--- the offending table's own address as its message, not free-form text.
+-- the wrong index, mirroring Rust's @AddressLookupTableIndexOverflow@.
 compileV0Message :: BlockHash -> [Instruction] -> [AddressLookupTableAccount] -> Either CompileException BS.ByteString
 compileV0Message bh instructions tables = do
   let legacy = mkNewMessage bh instructions
@@ -189,23 +186,16 @@ toByteIndexes :: TableLoad -> Either CompileException ([Word8], [Word8])
 toByteIndexes tl
   | all fitsInByte (tlWritableIdx tl <> tlReadonlyIdx tl) =
       Right (fromIntegral <$> tlWritableIdx tl, fromIntegral <$> tlReadonlyIdx tl)
-  | otherwise = Left (addressLookupTableIndexOverflow (altKey (tlTable tl)))
+  | otherwise =
+      Left
+        ( MissingIndex
+            ( "address table lookup index overflow: table "
+                <> show (altKey (tlTable tl))
+                <> " has more than 256 addresses"
+            )
+        )
   where
     fitsInByte i = i <= fromIntegral (maxBound :: Word8)
-
--- | Manufacture a 'CompileException' identifying an oversized lookup table.
--- 'CompileException'\'s constructor ('Network.Solana.Core.Instruction.MissingIndex')
--- is private to "Network.Solana.Core.Instruction", which this module must
--- not modify, so this borrows that module's sole exported source of the
--- exception, 'compileInstruction', by forcing it to fail to resolve the
--- table's own address against an empty key list. Calls 'error' if that
--- somehow succeeds, which is unreachable: 'compileInstruction' always fails
--- its very first lookup against an empty key list.
-addressLookupTableIndexOverflow :: SolanaPublicKey -> CompileException
-addressLookupTableIndexOverflow tableKey =
-  case compileInstruction [] (mkInstruction tableKey [] ()) of
-    Left e -> e
-    Right _ -> error "unreachable: compileInstruction always fails against an empty key list"
 
 -- | Split a message's account keys into its four privilege sections
 -- (writable-signed, readonly-signed, writable-unsigned, readonly-unsigned)

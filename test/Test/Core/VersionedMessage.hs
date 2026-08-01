@@ -3,9 +3,10 @@
 module Test.Core.VersionedMessage (tests) where
 
 import Data.ByteString qualified as BS
+import Data.List (isInfixOf)
 import Network.Solana.Core.Block (BlockHash (..))
 import Network.Solana.Core.Crypto
-import Network.Solana.Core.Instruction (AccountMeta (..), CompileException, mkInstruction)
+import Network.Solana.Core.Instruction (AccountMeta (..), CompileException (..), mkInstruction)
 import Network.Solana.Core.VersionedMessage
 import Network.Solana.NativePrograms.SystemProgram qualified as SP
 import Test.Fixtures
@@ -120,7 +121,7 @@ tests =
             -- index 256, one past what a Word8 lookup index can hold.
             oversizedTable = AddressLookupTableAccount tableKey (replicate 256 fillerKey <> [recipientPk])
         case compileV0Message fixedBlockhash [ix] [oversizedTable] of
-          Left _ -> pure ()
+          Left (MissingIndex msg) -> assertBool ("expected an \"overflow\" message, got: " <> msg) ("overflow" `isInfixOf` msg)
           Right _ -> assertFailure "expected an oversized lookup table to fail compilation"
     ]
 
