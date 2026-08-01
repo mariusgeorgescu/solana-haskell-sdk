@@ -30,9 +30,9 @@ import Control.Exception (throwIO)
 import Control.Monad.IO.Class (liftIO)
 import Data.Maybe (fromMaybe)
 import Network.Solana.Core.Account (Lamport)
-import Network.Solana.Core.Crypto (SolanaPrivateKey, SolanaPublicKey, SolanaSignature, createSolanaKeyPair)
+import Network.Solana.Core.Crypto (SolanaPrivateKey, SolanaPublicKey, SolanaSignature, createSolanaKeyPair, toSolanaPublicKey)
 import Network.Solana.Core.Instruction (Instruction)
-import Network.Solana.Core.Message (newTransactionIntent)
+import Network.Solana.Core.Message (newTransactionIntentWithPayer)
 import Network.Solana.RPC.HTTP.Account (confirmationStatusTxStatus, errTxStatus, getSignatureStatuses)
 import Network.Solana.RPC.HTTP.Block (getTheLatestBlockhash)
 import Network.Solana.RPC.HTTP.Transaction (requestAirdrop, sendTransaction')
@@ -105,15 +105,22 @@ confirmFinalized sig = go (60 :: Int)
             Just err -> liftIO . throwIO . userError $ "confirmFinalized: " <> show sig <> " failed on-chain: " <> show err
         _ -> liftIO (threadDelay 1000000) >> go (n - 1)
 
--- | Compiles the given signers and instructions with 'newTransactionIntent'
--- (the first signer is the fee payer), sends the result with preflight
--- pinned at @confirmed@ (multi-step flows build on merely-confirmed state;
--- the default preflight at @finalized@ would reject them), and confirms it
--- with 'confirmOrFail'.
+-- | Compiles the given signers and instructions with
+-- 'newTransactionIntentWithPayer', naming the first signer as the fee payer
+-- (forced writable regardless of what the given instructions themselves
+-- declare -- plain 'newTransactionIntent' derives writability from the
+-- instructions alone, which leaves the sole signer of an authority-only
+-- instruction such as 'Network.Solana.SplPrograms.Token.mintTo' or
+-- 'Network.Solana.SplPrograms.Token.transferChecked' non-writable, and every
+-- Solana transaction requires its fee payer to be writable). Sends the
+-- result with preflight pinned at @confirmed@ (multi-step flows build on
+-- merely-confirmed state; the default preflight at @finalized@ would reject
+-- them), and confirms it with 'confirmOrFail'.
 sendAndConfirm :: [SolanaPrivateKey] -> [Instruction] -> Web3 SolanaSignature
-sendAndConfirm signers ixs = do
+sendAndConfirm [] _ = liftIO (throwIO (userError "sendAndConfirm: no signers given"))
+sendAndConfirm signers@(feePayer : _) ixs = do
   bh <- getTheLatestBlockhash
-  tx <- either (liftIO . throwIO) pure (newTransactionIntent signers ixs bh)
+  tx <- either (liftIO . throwIO) pure (newTransactionIntentWithPayer (toSolanaPublicKey feePayer) signers ixs bh)
   sig <- sendTransaction' tx (defaultConfigObject {encoding = Just "base64", preflightCommitment = Just "confirmed"})
   confirmOrFail "transaction" sig
   pure sig

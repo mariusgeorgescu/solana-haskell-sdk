@@ -8,6 +8,7 @@ import System.Exit (exitSuccess)
 import System.IO (BufferMode (LineBuffering), hSetBuffering, stdout)
 import System.Timeout (timeout)
 import Test.Integration.Setup (rpcUrl)
+import Test.Integration.Token qualified as Token
 import Test.Integration.Transfer qualified as Transfer
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -32,4 +33,4 @@ main = do
           exitSuccess
 
 integrationTests :: TestTree
-integrationTests = testGroup "integration" [Transfer.tests]
+integrationTests = testGroup "integration" [Transfer.tests, Token.tests]

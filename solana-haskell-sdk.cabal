@@ -181,6 +181,7 @@ test-suite integration-tests
   main-is:          Main.hs
   other-modules:
     Test.Integration.Setup
+    Test.Integration.Token
     Test.Integration.Transfer
   build-depends:
     , base                ^>=4.18.0.0
