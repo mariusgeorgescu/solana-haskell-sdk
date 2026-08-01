@@ -50,17 +50,12 @@ API documentation is generated with Haddock (`cabal haddock`). Serialization cor
     - [x] Memo
     - [x] SPL Token (instructions 0-20, incl. `transferChecked`)
     - [x] Associated Token Account (derive + create, idempotent variant)
+  - [x] Metaplex Token Metadata (create/update metadata, master edition)
 - [x] Serialization verified byte-for-byte against the official Rust SDK (golden-vector tests)
-
-### Post-1.0
-
-- Metaplex (Token Metadata; requires Borsh serialization)
-
-
 
 ### Release status
 
-The current stable release is **v1.0.0.0**. Serialization is verified byte-for-byte against the official Rust SDK by golden-vector tests (see test/fixtures/ and tools/README.md).
+The current stable release is **v1.1.0.0**. Serialization is verified byte-for-byte against the official Rust SDK by golden-vector tests (see test/fixtures/ and tools/README.md).
 
 ## Usage Examples
 
