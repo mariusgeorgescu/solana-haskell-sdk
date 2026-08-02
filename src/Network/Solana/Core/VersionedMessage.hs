@@ -98,19 +98,21 @@ instance Binary MessageAddressTableLookup where
 -- __A trap this module can't protect you from:__ an address only just added
 -- to a lookup table by an @ExtendLookupTable@ instruction that landed in
 -- slot @S@ only becomes eligible for lookup in a slot strictly greater than
--- @S@ (on-chain, the table's @last_extended_slot@ is set to @S@ and its
--- active-address count is the pre-extension length until the current slot
--- passes it). This is invisible from the client side: even once the
--- extending transaction has reached @finalized@ status and
--- 'Network.Solana.SolanaWeb3.getLookupTable' reads back the extended
--- addresses in full (it only exposes 'AddressLookupTableAccount', not the
--- on-chain @last_extended_slot@ that would let you check this), a
--- transaction compiled here and submitted for @finalized@-commitment
--- preflight can still be simulated against a bank sitting at exactly @S@,
--- and rejected with \"Transaction address table lookup uses an invalid
--- index\" -- not a bug in this function, but worth knowing before you build
--- a v0 transaction immediately after extending the table it references. A
--- send preflighted at @confirmed@ commitment (closer to the tip) avoids it.
+-- @S@ -- on-chain, the table's @last_extended_slot@ is set to @S@, and its
+-- active-address count stays at the length recorded in
+-- @last_extended_slot_start_index@ (the table's length before the first
+-- extension that landed in @S@ -- relevant if you batch several extends
+-- into the same slot) until the current slot passes @S@. The invariant that
+-- matters: whatever bank resolves the lookup (a preflight simulation, or
+-- the bank that actually processes the transaction) must be at a slot
+-- strictly greater than @S@, or the submission is rejected with
+-- \"Transaction address table lookup uses an invalid index\" -- not a bug
+-- in this function, but a real on-chain rule to wait out. Read @S@ back
+-- with 'Network.Solana.NativePrograms.AddressLookupTable.decodeLookupTable'
+-- (its 'Network.Solana.NativePrograms.AddressLookupTable.ltLastExtendedSlot'
+-- field) if you need to check it explicitly; the convenience wrapper
+-- 'Network.Solana.SolanaWeb3.getLookupTable' drops that field and returns
+-- only 'AddressLookupTableAccount', so it can't be used for this check.
 compileV0Message :: BlockHash -> [Instruction] -> [AddressLookupTableAccount] -> Either CompileException BS.ByteString
 compileV0Message bh instructions tables = do
   let legacy = mkNewMessage bh instructions
@@ -148,8 +150,10 @@ compileV0Message bh instructions tables = do
 -- to the right account keys.
 --
 -- If any given table was extended very recently, see the note on
--- 'compileV0Message' about the resulting transaction's activation window
--- before submitting it with a @finalized@-commitment preflight.
+-- 'compileV0Message' about the resulting transaction's activation window:
+-- whatever bank resolves the lookup must be at a slot strictly past the
+-- table's last extension, regardless of the preflight commitment level used
+-- to submit it (and regardless of preflight at all, if it is skipped).
 newV0TransactionIntent :: [SolanaPrivateKey] -> [Instruction] -> [AddressLookupTableAccount] -> BlockHash -> Either CompileException String
 newV0TransactionIntent signers instructions tables bh = do
   msg <- compileV0Message bh instructions tables

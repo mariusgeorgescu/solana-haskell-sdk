@@ -50,5 +50,12 @@ main = do
 -- validator with fresh airdrops) can't start running concurrently if
 -- @-threaded@ is ever added. 'AllFinish' keeps every group's results visible
 -- even if an earlier one fails, matching today's behaviour.
+--
+-- One consequence of the dependency chain 'sequentialTestGroup' builds:
+-- filtering to a single later group (e.g. @Alt@) with tasty's @-p@ pattern
+-- option also force-includes every earlier group in that run (tasty's
+-- pattern filter keeps whatever a dependency-chained test depends on), so
+-- @-p@ no longer isolates just the matched test the way it would under a
+-- plain 'testGroup'.
 integrationTests :: TestTree
 integrationTests = sequentialTestGroup "integration" AllFinish [Transfer.tests, Token.tests, Nonce.tests, PriorityFee.tests, Alt.tests]

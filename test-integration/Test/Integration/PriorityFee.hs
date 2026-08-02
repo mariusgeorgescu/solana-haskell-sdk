@@ -1,6 +1,6 @@
 -- | Live priority-fee coverage: a transfer prioritized with Compute Budget
--- instructions, and a smoke check of 'estimatePriorityFee' against the
--- resulting fee history.
+-- instructions, and a smoke check that 'estimatePriorityFee' returns without
+-- throwing.
 module Test.Integration.PriorityFee (tests) where
 
 import Control.Monad.IO.Class (liftIO)

@@ -126,13 +126,17 @@ confirmFinalized sig = go (60 :: Int)
 -- @confirmed@ multi-step flows build on merely-confirmed state; the node's
 -- default preflight at @finalized@ would reject them. This also matters for
 -- v0 sends specifically: an address added to a lookup table in slot @S@ only
--- resolves in slots strictly greater than @S@ (see
+-- resolves in a bank at a slot strictly greater than @S@ (see
 -- 'Network.Solana.Core.VersionedMessage.compileV0Message'), and a
 -- @finalized@-commitment preflight can simulate against a bank sitting
 -- exactly at @S@ even after the extending transaction is itself finalized,
 -- rejecting the send with \"Transaction address table lookup uses an
--- invalid index\"; @confirmed@ simulates close enough to the tip to always
--- be past @S@ by then.
+-- invalid index\". @confirmed@ preflight is not a general fix for that
+-- invariant (see 'Network.Solana.Core.VersionedMessage.compileV0Message');
+-- it only works for this suite's flows because every caller of this
+-- function that touches a lookup table (e.g. 'Test.Integration.Alt') first
+-- 'confirmFinalized's the extend, which by then puts the confirmed bank
+-- many slots past @S@.
 sendConfirmedPreflight :: String -> Web3 SolanaSignature
 sendConfirmedPreflight tx = sendTransaction' tx (defaultConfigObject {encoding = Just "base64", preflightCommitment = Just "confirmed"})
 
