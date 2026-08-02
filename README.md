@@ -21,6 +21,7 @@
 
 - 📋 [Documentation](#documentation)
 - 🧪 [Integration tests](#integration-tests)
+- 🔌 [WebSocket subscriptions](#websocket-subscriptions)
 - 🚀 [Features](#features)
 - 🧑‍💻 [Usage Examples](#usage-examples)
 - 📝 [Contributing](#contributing)
@@ -39,6 +40,24 @@ An opt-in test suite runs the SDK against a local validator:
     cabal test integration-tests
 
 Without a validator listening on `127.0.0.1:8899` the suite skips itself, so plain `cabal test all` stays green. Set `SOLANA_INTEGRATION=1` to make an unreachable validator a failure, or `SOLANA_RPC_URL` to target a different endpoint.
+
+## WebSocket subscriptions
+
+`Network.Solana.RPC.WebSocket` speaks Solana's PubSub protocol: signature and account subscriptions, and `awaitSignature`, which waits for a transaction to be *pushed* to you instead of polling for it.
+
+The module is transport-agnostic, so the SDK carries no WebSocket dependency and the same code serves plain `ws://` and TLS `wss://` endpoints — you supply the connection. With the [`websockets`](https://hackage.haskell.org/package/websockets) package:
+
+```haskell
+import Network.Solana.RPC.WebSocket
+import Network.WebSockets qualified as WS
+
+WS.runClient "127.0.0.1" 8900 "/" $ \conn -> do
+  let transport = WsTransport (WS.sendTextData conn) (WS.receiveData conn)
+  result <- awaitSignature transport (RequestId 1) (Just "confirmed") 30 signature
+  print result   -- Right <slot>, or Left with the on-chain or protocol error
+```
+
+For `wss://` endpoints use [`wuss`](https://hackage.haskell.org/package/wuss)'s `runSecureClient` in place of `runClient`; nothing else changes.
 
 ## Features
 
@@ -61,6 +80,8 @@ Without a validator listening on `127.0.0.1:8899` the suite skips itself, so pla
     - [x] SPL Token (instructions 0-20, incl. `transferChecked`)
     - [x] Associated Token Account (derive + create, idempotent variant)
   - [x] Metaplex Token Metadata (create/update metadata, master edition)
+- [x] On-chain account state decoders (SPL token accounts and mints, lookup tables, stake and nonce accounts, Metaplex metadata)
+- [x] PubSub (WebSocket) signature and account subscriptions, with push-based confirmation
 - [x] Serialization verified byte-for-byte against the official Rust crates (solana-sdk, spl-token, mpl-token-metadata) (golden-vector tests)
 
 ### Release status

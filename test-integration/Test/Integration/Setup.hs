@@ -15,6 +15,7 @@
 -- monotone by slot, so one wait covers every prior transaction).
 module Test.Integration.Setup
   ( rpcUrl,
+    wsEndpoint,
     run,
     fundedKeypair,
     fundedKeypairs,
@@ -29,6 +30,7 @@ where
 import Control.Concurrent (threadDelay)
 import Control.Exception (throwIO)
 import Control.Monad.IO.Class (liftIO)
+import Data.List (stripPrefix)
 import Data.Maybe (fromMaybe)
 import Network.Solana.Core.Account (Lamport)
 import Network.Solana.Core.Crypto (SolanaPrivateKey, SolanaPublicKey, SolanaSignature, createSolanaKeyPair, toSolanaPublicKey)
@@ -46,6 +48,24 @@ import System.Environment (lookupEnv)
 -- default local validator address.
 rpcUrl :: IO String
 rpcUrl = fromMaybe "http://127.0.0.1:8899" <$> lookupEnv "SOLANA_RPC_URL"
+
+-- | The PubSub (WebSocket) endpoint matching 'rpcUrl' as host and port.
+--
+-- Solana nodes serve PubSub on the RPC port plus one -- 8899 becomes 8900 --
+-- which is what @solana-test-validator@ does by default.
+wsEndpoint :: IO (String, Int)
+wsEndpoint = do
+  url <- rpcUrl
+  let authority = takeWhile (/= '/') (dropScheme url)
+      (host, rest) = break (== ':') authority
+  pure (host, rpcPort rest + 1)
+  where
+    dropScheme s
+      | Just rest <- stripPrefix "http://" s = rest
+      | Just rest <- stripPrefix "https://" s = rest
+      | otherwise = s
+    rpcPort (':' : digits) | [(p, "")] <- reads digits = p
+    rpcPort _ = 8899
 
 -- | Runs a 'Web3' action against 'rpcUrl', throwing a 'userError' describing
 -- the underlying 'Network.Web3.Provider.Web3Error' on RPC failure.

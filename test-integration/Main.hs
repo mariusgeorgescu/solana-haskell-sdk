@@ -21,6 +21,7 @@ import Test.Integration.PriorityFee qualified as PriorityFee
 import Test.Integration.Setup (rpcUrl)
 import Test.Integration.Token qualified as Token
 import Test.Integration.Transfer qualified as Transfer
+import Test.Integration.WebSocket qualified as WebSocket
 import Test.Tasty
 import Test.Tasty.HUnit
 
@@ -58,4 +59,4 @@ main = do
 -- @-p@ no longer isolates just the matched test the way it would under a
 -- plain 'testGroup'.
 integrationTests :: TestTree
-integrationTests = sequentialTestGroup "integration" AllFinish [Transfer.tests, Token.tests, Nonce.tests, PriorityFee.tests, Alt.tests]
+integrationTests = sequentialTestGroup "integration" AllFinish [Transfer.tests, Token.tests, Nonce.tests, PriorityFee.tests, Alt.tests, WebSocket.tests]

@@ -18,6 +18,7 @@ import Test.NativePrograms.Stake qualified
 import Test.NativePrograms.SystemProgram qualified
 import Test.NativePrograms.Vote qualified
 import Test.RPC.Chain qualified
+import Test.RPC.WebSocket qualified
 import Test.SplPrograms.AssociatedTokenAccount qualified
 import Test.SplPrograms.Memo qualified
 import Test.SplPrograms.Token qualified
@@ -46,6 +47,7 @@ main =
           Test.NativePrograms.SystemProgram.tests,
           Test.NativePrograms.Vote.tests,
           Test.RPC.Chain.tests,
+          Test.RPC.WebSocket.tests,
           Test.SplPrograms.AssociatedTokenAccount.tests,
           Test.SplPrograms.Memo.tests,
           Test.SplPrograms.Token.tests

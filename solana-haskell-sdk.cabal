@@ -71,6 +71,7 @@ library
     Network.Solana.RPC.HTTP.Tokenomics
     Network.Solana.RPC.HTTP.Transaction
     Network.Solana.RPC.HTTP.Types
+    Network.Solana.RPC.WebSocket
     Network.Solana.SolanaWeb3
     Network.Solana.Sysvar
 
@@ -157,6 +158,7 @@ test-suite solana-haskell-sdk-test
     Test.NativePrograms.SystemProgram
     Test.NativePrograms.Vote
     Test.RPC.Chain
+    Test.RPC.WebSocket
     Test.SplPrograms.AssociatedTokenAccount
     Test.SplPrograms.Memo
     Test.SplPrograms.Token
@@ -186,12 +188,15 @@ test-suite integration-tests
     Test.Integration.Setup
     Test.Integration.Token
     Test.Integration.Transfer
+    Test.Integration.WebSocket
   build-depends:
     , base                ^>=4.18.0.0
+    , bytestring          ^>=0.11.4.0
     , solana-haskell-sdk
     , tasty               ^>=1.5
     , tasty-hunit         ^>=0.10
     , web3-provider       ^>=1.1
+    , websockets          ^>=0.13
 
 source-repository head
   type:     git
