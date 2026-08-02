@@ -288,6 +288,15 @@ data WsTransport = WsTransport
 -- on-chain, a JSON-RPC error, an unparseable frame, or the timeout. Exceptions
 -- raised by the transport itself (a closed connection, for instance) are not
 -- caught.
+--
+-- A wait that ends in a timeout, a bad frame, or an on-chain failure may leave
+-- the subscription open, because only the terminal notification retires it.
+-- That costs nothing if the connection is about to be closed, which is the
+-- common case; a caller that keeps the connection alive should cancel it with
+-- 'signatureUnsubscribeRequest'. Note also that this reads frames directly
+-- from the transport, so one connection supports one wait at a time —
+-- multiplexing several concurrent subscriptions needs a reader loop
+-- dispatching on 'parseWsMessage', which this function deliberately is not.
 awaitSignature :: WsTransport -> RequestId -> Maybe String -> Int -> SolanaSignature -> IO (Either String Slot)
 awaitSignature transport reqId mCommitment timeoutSeconds sig = do
   result <- timeout (timeoutSeconds * 1000000) $ do
