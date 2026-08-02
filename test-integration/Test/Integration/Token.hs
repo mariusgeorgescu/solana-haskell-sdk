@@ -19,7 +19,7 @@ tests :: TestTree
 tests =
   testGroup
     "Token"
-    [testCase "mint → ATAs → mintTo → transferChecked, decoded state matches" (run tokenLifecycle)]
+    [testCase "mint -> ATAs -> mintTo -> transferChecked, decoded state matches" (run tokenLifecycle)]
 
 -- | Creates a mint (payer as mint authority, no freeze authority), derives
 -- the associated token accounts for the payer and a second wallet, mints

@@ -40,7 +40,7 @@ main = do
       if force == Just "1"
         then defaultMain (testCase "validator reachable" (assertFailure ("SOLANA_INTEGRATION=1 but no healthy validator at " <> url)))
         else do
-          putStrLn ("integration-tests: no validator at " <> url <> " — skipping (start solana-test-validator, or set SOLANA_INTEGRATION=1 to require it)")
+          putStrLn ("integration-tests: no validator at " <> url <> " - skipping (start solana-test-validator, or set SOLANA_INTEGRATION=1 to require it)")
           exitSuccess
 
 -- | The suite has no @-threaded@/@-N@ RTS options, so 'testGroup' already
