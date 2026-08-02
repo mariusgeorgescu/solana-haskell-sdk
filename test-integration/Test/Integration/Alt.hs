@@ -1,6 +1,7 @@
 -- | Live address-lookup-table coverage: create a table, extend it with
--- addresses, decode it back, and send a v0 transaction that resolves its fee
--- payer and recipient through the table instead of listing them in full.
+-- addresses, decode it back, and send a v0 transaction that resolves its
+-- recipient through the table (the fee payer and the System Program id stay
+-- static keys -- signers and program ids are never eligible for a lookup).
 module Test.Integration.Alt (tests) where
 
 import Control.Exception (throwIO)
@@ -12,8 +13,6 @@ import Network.Solana.NativePrograms.SystemProgram qualified as SystemProgram
 import Network.Solana.RPC.HTTP.Account (getBalance)
 import Network.Solana.RPC.HTTP.Block (getTheLatestBlockhash)
 import Network.Solana.RPC.HTTP.Ledger (getSlot)
-import Network.Solana.RPC.HTTP.Transaction (sendTransaction')
-import Network.Solana.RPC.HTTP.Types (defaultConfigObject, encoding, preflightCommitment)
 import Network.Solana.SolanaWeb3 (getLookupTable)
 import Network.Web3.Provider (Web3)
 import Test.Integration.Setup
@@ -28,24 +27,22 @@ tests =
 
 -- | Creates a lookup table at the current finalized slot (guaranteed present
 -- in the SlotHashes sysvar for the on-chain create check), extends it with a
--- recipient and a spare address, waits for the extension to finalize
--- (doubling as the table's warm-up -- it is usable once the current slot is
--- past its last-extension slot), checks the decoded table holds the
--- extended addresses, then sends a v0 transaction that resolves the payer
--- and recipient through the table and checks the transfer lands with the
--- exact amount.
+-- recipient and a spare address, waits for the extension to finalize, checks
+-- the decoded table holds the extended addresses, then sends a v0
+-- transaction that resolves the recipient through the table and checks the
+-- transfer lands with the exact amount.
 --
--- The v0 send pins preflight at @confirmed@ rather than the node's default
--- @finalized@: observed empirically (5 back-to-back full-suite runs against
--- a freshly reset local validator) to matter for address-lookup-table
--- resolution specifically -- even once the extending transaction has
--- genuinely reached @finalized@ status (per 'confirmFinalized') and a fresh
--- 'getLookupTable' read confirms the extended addresses are present, a
--- @finalized@-commitment preflight can still intermittently reject the v0
--- send with \"Transaction address table lookup uses an invalid index\",
--- while @confirmed@ (much closer to the tip) did not reproduce the failure
--- across repeated back-to-back runs. Every other RPC call in this flow
--- keeps the node's @finalized@ default, per 'Test.Integration.Setup'.
+-- The v0 send goes through 'sendConfirmedPreflight' rather than a
+-- @finalized@-commitment send: an address added to a lookup table in slot
+-- @S@ (the extend's landing slot, exposed on-chain as
+-- @last_extended_slot@) only resolves in slots strictly greater than @S@.
+-- 'confirmFinalized' guarantees the rooted bank has reached @S@, not passed
+-- it, so a @finalized@-commitment preflight can simulate against a bank
+-- sitting exactly at @S@ -- where the table's active-address count is still
+-- zero (it was empty before this extend) -- and reject the send with
+-- \"Transaction address table lookup uses an invalid index\", even though
+-- the extend is itself finalized and a fresh 'getLookupTable' read shows the
+-- addresses. See 'sendConfirmedPreflight' for the full rationale.
 altV0Flow :: Web3 ()
 altV0Flow = do
   (payerPk, payerSk) <- fundedKeypair 3_000_000_000
@@ -60,7 +57,7 @@ altV0Flow = do
   liftIO (assertBool "extended addresses present" (recipient `elem` altAddresses table))
   bh <- getTheLatestBlockhash
   tx <- either (liftIO . throwIO) pure (newV0TransactionIntent [payerSk] [SystemProgram.transfer payerPk recipient 200_000_000] [table] bh)
-  sig <- sendTransaction' tx (defaultConfigObject {encoding = Just "base64", preflightCommitment = Just "confirmed"})
+  sig <- sendConfirmedPreflight tx
   confirmFinalized sig
   bal <- getBalance recipient
   liftIO (bal @?= 200_000_000)

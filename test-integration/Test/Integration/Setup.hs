@@ -8,11 +8,11 @@
 -- so is the default preflight commitment used for submitted transactions.
 -- 'fundedKeypair' and 'fundedKeypairs' therefore finalize their airdrops
 -- before returning (later sends preflight against the finalized bank), and
--- 'sendAndConfirm' pins preflight at @confirmed@ so multi-step flows can
--- build on merely-confirmed intermediate state. Callers are expected to
--- 'confirmFinalized' the last transaction of a flow before asserting on
--- account state or balances (finalization is monotone by slot, so one wait
--- covers every prior transaction).
+-- 'sendAndConfirm' (via 'sendConfirmedPreflight') pins preflight at
+-- @confirmed@ so multi-step flows can build on merely-confirmed intermediate
+-- state. Callers are expected to 'confirmFinalized' the last transaction of
+-- a flow before asserting on account state or balances (finalization is
+-- monotone by slot, so one wait covers every prior transaction).
 module Test.Integration.Setup
   ( rpcUrl,
     run,
@@ -21,6 +21,7 @@ module Test.Integration.Setup
     confirmOrFail,
     confirmFinalized,
     sendAndConfirm,
+    sendConfirmedPreflight,
     requireJust,
   )
 where
@@ -79,12 +80,23 @@ fundedKeypairs amounts = do
 -- | Confirms the given signature with 'confirmTransaction' (reaches
 -- @confirmed@ or @finalized@ with no on-chain error), throwing a 'userError'
 -- naming the given label and the signature if it does not.
+--
+-- 'confirmTransaction' returns 'False' both when the signature never reaches
+-- the target commitment (e.g. it times out) and when it lands but fails
+-- on-chain; on failure this re-reads 'getSignatureStatuses' to tell the two
+-- apart, including the on-chain error in the message when there is one
+-- (mirroring 'confirmFinalized').
 confirmOrFail :: String -> SolanaSignature -> Web3 ()
 confirmOrFail what sig = do
   ok <- confirmTransaction sig
   if ok
     then pure ()
-    else liftIO . throwIO . userError $ what <> " failed to confirm: " <> show sig
+    else do
+      statuses <- getSignatureStatuses [sig]
+      case statuses of
+        [Just s] | Just err <- errTxStatus s ->
+          liftIO . throwIO . userError $ what <> " failed on-chain: " <> show sig <> ": " <> show err
+        _ -> liftIO . throwIO . userError $ what <> " failed to confirm: " <> show sig
 
 -- | Polls 'getSignatureStatuses' once a second, up to 60 times, until the
 -- given signature reaches @finalized@ status.
@@ -105,6 +117,25 @@ confirmFinalized sig = go (60 :: Int)
             Just err -> liftIO . throwIO . userError $ "confirmFinalized: " <> show sig <> " failed on-chain: " <> show err
         _ -> liftIO (threadDelay 1000000) >> go (n - 1)
 
+-- | Sends an already-encoded transaction with preflight pinned at
+-- @confirmed@ -- the suite's one commitment override, single-sourced here so
+-- every caller that must build/sign its own transaction (e.g. a v0 send
+-- referencing an address lookup table, which 'sendAndConfirm' can't compile)
+-- shares the same discipline instead of repeating the config literal.
+--
+-- @confirmed@ multi-step flows build on merely-confirmed state; the node's
+-- default preflight at @finalized@ would reject them. This also matters for
+-- v0 sends specifically: an address added to a lookup table in slot @S@ only
+-- resolves in slots strictly greater than @S@ (see
+-- 'Network.Solana.Core.VersionedMessage.compileV0Message'), and a
+-- @finalized@-commitment preflight can simulate against a bank sitting
+-- exactly at @S@ even after the extending transaction is itself finalized,
+-- rejecting the send with \"Transaction address table lookup uses an
+-- invalid index\"; @confirmed@ simulates close enough to the tip to always
+-- be past @S@ by then.
+sendConfirmedPreflight :: String -> Web3 SolanaSignature
+sendConfirmedPreflight tx = sendTransaction' tx (defaultConfigObject {encoding = Just "base64", preflightCommitment = Just "confirmed"})
+
 -- | Compiles the given signers and instructions with
 -- 'newTransactionIntentWithPayer', naming the first signer as the fee payer
 -- (forced writable regardless of what the given instructions themselves
@@ -113,15 +144,13 @@ confirmFinalized sig = go (60 :: Int)
 -- instruction such as 'Network.Solana.SplPrograms.Token.mintTo' or
 -- 'Network.Solana.SplPrograms.Token.transferChecked' non-writable, and every
 -- Solana transaction requires its fee payer to be writable). Sends the
--- result with preflight pinned at @confirmed@ (multi-step flows build on
--- merely-confirmed state; the default preflight at @finalized@ would reject
--- them), and confirms it with 'confirmOrFail'.
+-- result with 'sendConfirmedPreflight', and confirms it with 'confirmOrFail'.
 sendAndConfirm :: [SolanaPrivateKey] -> [Instruction] -> Web3 SolanaSignature
 sendAndConfirm [] _ = liftIO (throwIO (userError "sendAndConfirm: no signers given"))
 sendAndConfirm signers@(feePayer : _) ixs = do
   bh <- getTheLatestBlockhash
   tx <- either (liftIO . throwIO) pure (newTransactionIntentWithPayer (toSolanaPublicKey feePayer) signers ixs bh)
-  sig <- sendTransaction' tx (defaultConfigObject {encoding = Just "base64", preflightCommitment = Just "confirmed"})
+  sig <- sendConfirmedPreflight tx
   confirmOrFail "transaction" sig
   pure sig
 

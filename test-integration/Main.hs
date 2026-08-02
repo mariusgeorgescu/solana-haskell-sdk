@@ -1,3 +1,11 @@
+-- 'sequentialTestGroup' (used below) is deprecated as of tasty-1.5.4 in
+-- favor of 'dependentTestGroup', which has the same signature but only
+-- exists since 1.5.4 -- newer than this project's declared @tasty ^>=1.5@
+-- lower bound. Using the deprecated name keeps the suite building against
+-- the whole declared range instead of silently requiring 1.5.4+; suppressed
+-- here rather than left as a stray warning.
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 module Main (main) where
 
 import Control.Exception (SomeException, try)
@@ -35,5 +43,12 @@ main = do
           putStrLn ("integration-tests: no validator at " <> url <> " — skipping (start solana-test-validator, or set SOLANA_INTEGRATION=1 to require it)")
           exitSuccess
 
+-- | The suite has no @-threaded@/@-N@ RTS options, so 'testGroup' already
+-- runs its children one at a time today; 'sequentialTestGroup' makes that a
+-- load-bearing property of the test tree itself rather than an accident of
+-- the cabal stanza, so the five groups below (each hitting the same local
+-- validator with fresh airdrops) can't start running concurrently if
+-- @-threaded@ is ever added. 'AllFinish' keeps every group's results visible
+-- even if an earlier one fails, matching today's behaviour.
 integrationTests :: TestTree
-integrationTests = testGroup "integration" [Transfer.tests, Token.tests, Nonce.tests, PriorityFee.tests, Alt.tests]
+integrationTests = sequentialTestGroup "integration" AllFinish [Transfer.tests, Token.tests, Nonce.tests, PriorityFee.tests, Alt.tests]

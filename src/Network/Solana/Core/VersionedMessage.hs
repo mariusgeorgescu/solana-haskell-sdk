@@ -94,6 +94,23 @@ instance Binary MessageAddressTableLookup where
 -- cannot be represented in the byte-sized lookup index the wire format
 -- requires, so it is rejected rather than silently truncated (wrapped) into
 -- the wrong index, mirroring Rust's @AddressLookupTableIndexOverflow@.
+--
+-- __A trap this module can't protect you from:__ an address only just added
+-- to a lookup table by an @ExtendLookupTable@ instruction that landed in
+-- slot @S@ only becomes eligible for lookup in a slot strictly greater than
+-- @S@ (on-chain, the table's @last_extended_slot@ is set to @S@ and its
+-- active-address count is the pre-extension length until the current slot
+-- passes it). This is invisible from the client side: even once the
+-- extending transaction has reached @finalized@ status and
+-- 'Network.Solana.SolanaWeb3.getLookupTable' reads back the extended
+-- addresses in full (it only exposes 'AddressLookupTableAccount', not the
+-- on-chain @last_extended_slot@ that would let you check this), a
+-- transaction compiled here and submitted for @finalized@-commitment
+-- preflight can still be simulated against a bank sitting at exactly @S@,
+-- and rejected with \"Transaction address table lookup uses an invalid
+-- index\" -- not a bug in this function, but worth knowing before you build
+-- a v0 transaction immediately after extending the table it references. A
+-- send preflighted at @confirmed@ commitment (closer to the tip) avoids it.
 compileV0Message :: BlockHash -> [Instruction] -> [AddressLookupTableAccount] -> Either CompileException BS.ByteString
 compileV0Message bh instructions tables = do
   let legacy = mkNewMessage bh instructions
@@ -129,6 +146,10 @@ compileV0Message bh instructions tables = do
 -- The private keys passed here must be ordered to match the resulting account
 -- order (fee payer first), otherwise the produced signatures will not correspond
 -- to the right account keys.
+--
+-- If any given table was extended very recently, see the note on
+-- 'compileV0Message' about the resulting transaction's activation window
+-- before submitting it with a @finalized@-commitment preflight.
 newV0TransactionIntent :: [SolanaPrivateKey] -> [Instruction] -> [AddressLookupTableAccount] -> BlockHash -> Either CompileException String
 newV0TransactionIntent signers instructions tables bh = do
   msg <- compileV0Message bh instructions tables

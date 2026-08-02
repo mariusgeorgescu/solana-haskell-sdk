@@ -14,9 +14,6 @@ import Test.Integration.Setup
 import Test.Tasty
 import Test.Tasty.HUnit
 
--- Group order matters: 'priorityFeeTransfer' must run before
--- 'estimateSmoke' -- it creates the fee history 'estimateSmoke' relies on,
--- and tasty runs this group's cases sequentially.
 tests :: TestTree
 tests =
   testGroup
@@ -42,9 +39,12 @@ priorityFeeTransfer = do
   bal <- getBalance recipient
   liftIO (bal @?= 300_000_000)
 
--- | Runs AFTER 'priorityFeeTransfer' in the group: fee history exists.
--- Smoke check only -- the estimate is validator-dependent, so this asserts
--- 'estimatePriorityFee' returns without throwing rather than any value.
+-- | Smoke check only -- queries a fresh random pubkey with no fee history of
+-- its own (the address list is just a filter passed to
+-- 'Network.Solana.RPC.HTTP.Chain.getRecentPrioritizationFees', not a
+-- dependency on 'priorityFeeTransfer'), and the estimate is
+-- validator-dependent besides, so this asserts 'estimatePriorityFee' returns
+-- without throwing rather than any particular value.
 estimateSmoke :: Web3 ()
 estimateSmoke = do
   pk <- fst <$> liftIO createSolanaKeyPair
