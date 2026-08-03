@@ -128,7 +128,7 @@ decodeLookupTable bs
       where
         (count, remainder) = BS.length addrBytes `divMod` 32
 
--- | Builds the 'VM.AddressLookupTableAccount' 'compileV0Message' expects from
+-- | Builds the 'VM.AddressLookupTableAccount' 'Network.Solana.Core.VersionedMessage.compileV0Message' expects from
 -- the table's own address and its decoded on-chain state.
 lookupTableToAccount :: SolanaPublicKey -> LookupTableState -> VM.AddressLookupTableAccount
 lookupTableToAccount key state = VM.AddressLookupTableAccount key (ltAddresses state)

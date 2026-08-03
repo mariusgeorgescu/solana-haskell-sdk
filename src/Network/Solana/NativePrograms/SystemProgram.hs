@@ -45,7 +45,7 @@ data SystemInstruction
   | CreateAccountWithSeed
       { -- | Base public key
         base :: SolanaPublicKey,
-        -- | String of ASCII chars, no longer than `maxSeedLen`
+        -- | String of ASCII chars, no longer than 'Network.Solana.Constants.maxSeedLen'
         seed :: String,
         -- |  Number of lamports to transfer to the new account
         lamports :: Word64,
@@ -80,7 +80,7 @@ data SystemInstruction
     AllocateWithSeed
       { -- | Base public key
         base :: SolanaPublicKey,
-        -- | String of ASCII chars, no longer than `maxSeedLen`
+        -- | String of ASCII chars, no longer than 'Network.Solana.Constants.maxSeedLen'
         seed :: String,
         -- | Number of bytes of memory to allocate
         space :: Word64,
@@ -91,7 +91,7 @@ data SystemInstruction
     AssignWithSeed
       { -- | Base public key
         base :: SolanaPublicKey,
-        -- | String of ASCII chars, no longer than `maxSeedLen`
+        -- | String of ASCII chars, no longer than 'Network.Solana.Constants.maxSeedLen'
         seed :: String,
         -- | Owner program account
         owner :: SolanaPublicKey

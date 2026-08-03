@@ -95,7 +95,7 @@ newTransactionIntentWithPayer payer signingKeys instructions blockhash = do
 -- | Builds and signs a durable-nonce transaction: prepends
 -- @SystemProgram.advanceNonceAccount nonceAccount nonceAuthority@ ahead of
 -- the given instructions and delegates to 'newTransactionIntent'. The
--- durable nonce — read from the nonce account's on-chain 'NonceState' via
+-- durable nonce — read from the nonce account's on-chain 'Network.Solana.NativePrograms.SystemProgram.NonceState' via
 -- @nsDurableNonce@ — is passed in place of a recent block hash, since a
 -- durable-nonce transaction never expires and does not depend on a recent
 -- ledger entry. The nonce authority must be among the given signers, or the
