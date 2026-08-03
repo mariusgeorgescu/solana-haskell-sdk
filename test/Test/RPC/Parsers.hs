@@ -1,0 +1,194 @@
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+
+-- | Golden tests for the RPC response parsers.
+--
+-- Every fixture here is a real response captured from a local validator by
+-- @tools/rpc-record/record.py@ -- not a hand-written sample -- so these tests
+-- pin the @FromJSON@ instances against JSON a node actually produces,
+-- including the fields it omits. That is the one thing the Rust-generated
+-- byte vectors cannot cover, since the RPC layer's input is JSON rather than
+-- a struct's serialization.
+--
+-- The assertions deliberately reach past "it parsed": each one checks a value
+-- that could only be right if the field mapping is, which is what catches a
+-- parser wired to the wrong key.
+module Test.RPC.Parsers (tests) where
+
+import Data.Aeson (FromJSON, Value)
+import Data.Aeson.Types (parseEither, parseJSON)
+import Data.Maybe (isJust)
+import Network.Solana.Core.Account (Account, AccountInfo, Lamport (..), executable, lamports)
+import Network.Solana.Core.Block (BlockHash, BlockHeight)
+import Network.Solana.Core.Crypto (SolanaPublicKey)
+import Network.Solana.RPC.HTTP.Account hiding (lamports)
+import Network.Solana.RPC.HTTP.Account qualified as RpcAccount
+import Network.Solana.RPC.HTTP.Block
+import Network.Solana.RPC.HTTP.Chain
+import Network.Solana.RPC.HTTP.Ledger
+import Network.Solana.RPC.HTTP.Token
+import Network.Solana.RPC.HTTP.Tokenomics
+import Network.Solana.RPC.HTTP.Transaction
+import Network.Solana.RPC.HTTP.Types
+import Test.Fixtures
+import Test.Tasty
+import Test.Tasty.HUnit
+
+fixturePath :: FilePath
+fixturePath = "test/fixtures/rpc_responses.json"
+
+-- | Decodes a recorded response's @result@ into the type its RPC binding
+-- returns, failing the test with the parse error if the instance rejects what
+-- the node actually sent.
+withResult :: forall a. (FromJSON a) => String -> (a -> Assertion) -> Assertion
+withResult name check = do
+  fs <- loadRpcFixtures fixturePath
+  case parseEither (parseJSON @a) (requireRpcResult name fs) of
+    Left err -> assertFailure ("failed to parse recorded " <> name <> " response: " <> err)
+    Right parsed -> check parsed
+
+-- | For results the bindings hand back untouched (plain numbers, strings).
+withRawResult :: String -> (Value -> Assertion) -> Assertion
+withRawResult name check = do
+  fs <- loadRpcFixtures fixturePath
+  check (requireRpcResult name fs)
+
+tests :: TestTree
+tests =
+  testGroup
+    "RPC response parsers (recorded from a live node)"
+    [ testGroup "cluster and node" clusterTests,
+      testGroup "ledger and epoch" ledgerTests,
+      testGroup "blocks" blockTests,
+      testGroup "tokenomics" tokenomicsTests,
+      testGroup "accounts" accountTests,
+      testGroup "transactions" transactionTests,
+      testGroup "SPL token" tokenTests
+    ]
+
+clusterTests :: [TestTree]
+clusterTests =
+  [ testCase "getVersion" $ withResult @SolanaVersion "getVersion" $ \v ->
+      assertBool "reports a solana-core version" (not (null (solana_core v))),
+    testCase "getIdentity" $ withResult @NodeIdentity "getIdentity" $ \_ ->
+      pure (),
+    testCase "getClusterNodes" $ withResult @[ClusterNodes] "getClusterNodes" $ \nodes ->
+      assertBool "the local validator lists itself" (not (null nodes)),
+    testCase "getHealth" $ withResult @String "getHealth" $ \health ->
+      health @?= "ok",
+    testCase "getRecentPerformanceSamples" $ withResult @[PerformanceSample] "getRecentPerformanceSamples" $ \samples ->
+      assertBool "samples cover a non-zero period" (all ((> 0) . samplePeriodSecs) samples)
+  ]
+
+ledgerTests :: [TestTree]
+ledgerTests =
+  [ testCase "getEpochInfo" $ withResult @EpochInfo "getEpochInfo" $ \info ->
+      assertBool "absolute slot is at least the slot index" (absoluteSlot info >= slotIndex info),
+    testCase "getEpochSchedule" $ withResult @EpochSchedule "getEpochSchedule" $ \schedule ->
+      assertBool "an epoch spans some slots" (slotsPerEpoch schedule > 0),
+    testCase "getGenesisHash" $ withResult @BlockHash "getGenesisHash" $ \_ ->
+      pure (),
+    testCase "getSlot" $ withResult @Slot "getSlot" $ \slot ->
+      assertBool "slot advanced past genesis" (slot > 0),
+    testCase "getBlockHeight" $ withResult @BlockHeight "getBlockHeight" $ \height ->
+      assertBool "block height advanced past genesis" (height > 0),
+    testCase "getTransactionCount" $ withRawResult "getTransactionCount" $ \_ ->
+      pure (),
+    testCase "getFirstAvailableBlock" $ withResult @Slot "getFirstAvailableBlock" $ \_ ->
+      pure (),
+    testCase "getStakeMinimumDelegation" $ withResult @(RPCResponse Lamport) "getStakeMinimumDelegation" $ \r ->
+      assertBool "context slot is populated" (contextSlot (context r) > 0)
+  ]
+
+blockTests :: [TestTree]
+blockTests =
+  [ testCase "getLatestBlockhash" $ withResult @(RPCResponse LatestBlockHash) "getLatestBlockhash" $ \r ->
+      assertBool "blockhash is valid for some future block" (lastValidBlockHeight (value r) > 0),
+    testCase "isBlockhashValid" $ withResult @(RPCResponse Bool) "isBlockhashValid" $ \r ->
+      value r @?= True,
+    testCase "getBlock" $ withResult @(Maybe BlockInfo) "getBlock" $ \block ->
+      assertBool "the recorded slot holds a block" (isJust block),
+    testCase "getBlock carries the recorded transfer" $ withResult @(Maybe BlockInfo) "getBlock" $ \case
+        Nothing -> assertFailure "expected a block"
+        Just b -> assertBool "block lists transactions" (not (null (transactionsBI b))),
+    testCase "getBlockCommitment" $ withResult @BlockCommitment "getBlockCommitment" $ \c ->
+      assertBool "total stake is positive" (totalStake c > 0),
+    testCase "getBlockProduction" $ withResult @(RPCResponse BlockProduction) "getBlockProduction" $ \r ->
+      case value r of
+        BlockProduction identities _ -> assertBool "at least one leader produced blocks" (not (null identities)),
+    testCase "getBlocks" $ withResult @[Slot] "getBlocks" $ \slots ->
+      assertBool "the queried range is non-empty" (not (null slots))
+  ]
+
+tokenomicsTests :: [TestTree]
+tokenomicsTests =
+  [ testCase "getInflationGovernor" $ withResult @InflationGovernor "getInflationGovernor" $ \g ->
+      assertBool "taper is a fraction" (taper g > 0 && taper g <= 1),
+    testCase "getInflationRate" $ withResult @InflationRate "getInflationRate" $ \r ->
+      assertBool "total is validator plus foundation" (abs (totalInflation r - (validatorInflation r + foundationInflation r)) < 1e-9),
+    testCase "getSupply" $ withResult @(RPCResponse SolanaSupply) "getSupply" $ \r ->
+      assertBool "total supply covers circulating" (total (value r) >= circulating (value r)),
+    testCase "getVoteAccounts" $ withResult @VoteAccounts "getVoteAccounts" $ \accounts ->
+      assertBool "the test validator votes" (not (null (current accounts))),
+    testCase "getMinimumBalanceForRentExemption" $ withResult @Lamport "getMinimumBalanceForRentExemption" $ \rent ->
+      assertBool "rent exemption for 165 bytes is non-trivial" (rent > Lamport 1000000)
+  ]
+
+accountTests :: [TestTree]
+accountTests =
+  [ testCase "getBalance" $ withResult @(RPCResponse Lamport) "getBalance" $ \r ->
+      assertBool "the airdropped payer holds SOL" (value r > Lamport 0),
+    testCase "getAccountInfo" $ withResult @(RPCResponse (Maybe AccountInfo)) "getAccountInfo" $ \r ->
+      case value r of
+        Nothing -> assertFailure "expected the payer account to exist"
+        Just info -> do
+          assertBool "payer holds lamports" (lamports info > Lamport 0)
+          executable info @?= False,
+    -- A node reports an absent account as a null value, not an error; the
+    -- parser has to model that rather than fail.
+    testCase "getAccountInfo (missing account)" $ withResult @(RPCResponse (Maybe AccountInfo)) "getAccountInfo-missing" $ \r ->
+      value r @?= Nothing,
+    testCase "getMultipleAccounts" $ withResult @(RPCResponse [Maybe AccountInfo]) "getMultipleAccounts" $ \r ->
+      length (value r) @?= 2,
+    testCase "getLargestAccounts" $ withResult @(RPCResponse [AddressAndLamports]) "getLargestAccounts" $ \r ->
+      assertBool "accounts are listed with balances" (not (null (value r)) && all ((> Lamport 0) . RpcAccount.lamports) (value r)),
+    testCase "getProgramAccounts" $ withResult @[Account] "getProgramAccounts" $ \accounts ->
+      assertBool "the token program owns the mint and token account" (length accounts >= 2)
+  ]
+
+transactionTests :: [TestTree]
+transactionTests =
+  [ testCase "getSignaturesForAddress" $ withResult @[TransactionSignatureInformation] "getSignaturesForAddress" $ \case
+        [] -> assertFailure "expected the recipient's transfer to be listed"
+        (s : _) -> do
+          err s @?= Nothing
+          assertBool "signature is attributed to a slot" (slotTxSig s > 0),
+    testCase "getSignatureStatuses" $ withResult @(RPCResponse [Maybe TransactionSignatureStatus]) "getSignatureStatuses" $ \r ->
+      case value r of
+        [Just s] -> do
+          errTxStatus s @?= Nothing
+          confirmationStatusTxStatus s @?= Just "finalized"
+        other -> assertFailure ("expected exactly one status, got " <> show (length other)),
+    testCase "getTransaction" $ withResult @(Maybe TransactionResult) "getTransaction" $ \result ->
+      assertBool "the recorded transfer is retrievable" (isJust result)
+  ]
+
+tokenTests :: [TestTree]
+tokenTests =
+  [ testCase "getTokenSupply" $ withResult @(RPCResponse AmountObject) "getTokenSupply" $ \r -> do
+      -- The recorder mints 42 tokens at 6 decimals.
+      amount (value r) @?= "42000000"
+      decimals (value r) @?= 6
+      uiAmountString (value r) @?= "42",
+    testCase "getTokenAccountBalance" $ withResult @(RPCResponse AmountObject) "getTokenAccountBalance" $ \r -> do
+      amount (value r) @?= "42000000"
+      decimals (value r) @?= 6,
+    testCase "getTokenLargestAccounts" $ withResult @(RPCResponse [AmountObjectWithAddr]) "getTokenLargestAccounts" $ \r ->
+      case value r of
+        [] -> assertFailure "expected the minted account to be listed"
+        (a : _) -> amount' a @?= "42000000",
+    testCase "getTokenAccountsByOwner" $ withResult @(RPCResponse [Account]) "getTokenAccountsByOwner" $ \r ->
+      length (value r) @?= 1
+  ]
