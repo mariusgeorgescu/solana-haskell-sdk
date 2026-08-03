@@ -8,7 +8,6 @@ module Test.Integration.WebSocket (tests) where
 
 import Control.Exception (throwIO)
 import Control.Monad.IO.Class (liftIO)
-import Data.ByteString qualified as BS
 import Network.Solana.Core.Crypto (SolanaPublicKey, SolanaSignature, createSolanaKeyPair)
 import Network.Solana.Core.Message (newTransactionIntentWithPayer)
 import Network.Solana.NativePrograms.SystemProgram qualified as SystemProgram
@@ -40,7 +39,7 @@ wsConfirmFlow = do
   (host, port) <- wsEndpoint
   result <-
     WS.runClient host port "/" $ \conn ->
-      let transport = WsTransport (WS.sendTextData conn) (WS.receiveData conn :: IO BS.ByteString)
+      let transport = WsTransport (WS.sendTextData conn) (WS.receiveData conn)
        in awaitSignature transport (RequestId 1) (Just "finalized") 90 sig
   slot <- either assertFailure' pure result
   assertBool "confirmation reports a real slot" (slot > 0)

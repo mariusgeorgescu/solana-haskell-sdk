@@ -1,6 +1,6 @@
 cabal-version:   3.0
 name:            solana-haskell-sdk
-version:         1.1.0.0
+version:         1.2.0.0
 synopsis:        Solana SDK: transaction building, signing, program clients, and JSON-RPC.
 homepage:        https://github.com/mariusgeorgescu/solana-haskell-sdk
 bug-reports:     https://github.com/mariusgeorgescu/solana-haskell-sdk/issues
@@ -192,7 +192,6 @@ test-suite integration-tests
     Test.Integration.WebSocket
   build-depends:
     , base                ^>=4.18.0.0
-    , bytestring          ^>=0.11.4.0
     , solana-haskell-sdk
     , tasty               ^>=1.5
     , tasty-hunit         ^>=0.10
