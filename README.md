@@ -34,12 +34,12 @@ API documentation is generated with Haddock (`cabal haddock`). Serialization cor
 
 ## Integration tests
 
-An opt-in test suite runs the SDK against a local validator:
+An opt-in test suite runs the SDK against a local validator. It sits behind the `integration` cabal flag, so a plain `cabal test all` neither builds it nor pulls its extra dependencies:
 
     solana-test-validator --reset
-    cabal test integration-tests
+    cabal test integration-tests --flags=integration
 
-Without a validator listening on `127.0.0.1:8899` the suite skips itself, so plain `cabal test all` stays green. Set `SOLANA_INTEGRATION=1` to make an unreachable validator a failure, or `SOLANA_RPC_URL` to target a different endpoint.
+Without a validator listening on `127.0.0.1:8899` the suite skips itself and exits 0, so it stays green in CI even when enabled. Set `SOLANA_INTEGRATION=1` to make an unreachable validator a failure instead, or `SOLANA_RPC_URL` to target a different endpoint.
 
 ## WebSocket subscriptions
 

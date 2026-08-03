@@ -4,7 +4,7 @@
 
 * Added on-chain account-state decoders (SPL token accounts and mints, address lookup tables, stake and nonce accounts, Metaplex metadata) with typed SolanaWeb3 fetch helpers; decoded lookup tables feed compileV0Message directly.
 * Added developer-experience helpers: explicit fee-payer transactions with automatic signature ordering (sponsored fees supported), a durable-nonce transaction flow, and priority-fee estimation.
-* Added an opt-in local-validator integration test suite (`integration-tests`) covering SOL and sponsored transfers, the SPL token lifecycle, durable nonces, address lookup tables with v0 transactions, and priority fees; the suite skips itself when no validator is running.
+* Added an opt-in local-validator integration test suite (`integration-tests`, behind the `integration` cabal flag) covering SOL and sponsored transfers, the SPL token lifecycle, durable nonces, address lookup tables with v0 transactions, priority fees, and WebSocket confirmation; the suite skips itself when no validator is running.
 * Added golden tests for the JSON-RPC response parsers, replaying 37 responses recorded from a live validator by `tools/rpc-record`, so every `FromJSON` instance is asserted against JSON a node actually sends.
 * Added Solana PubSub (WebSocket) support in `Network.Solana.RPC.WebSocket`: signature and account subscribe/unsubscribe requests, notification parsing, and `awaitSignature` — a push-based confirmation that replaces polling. The module is transport-agnostic (`WsTransport`), so the library gains no new dependency and works with both `ws://` and `wss://` endpoints.
 

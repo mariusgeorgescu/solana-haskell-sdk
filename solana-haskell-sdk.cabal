@@ -32,6 +32,15 @@ extra-doc-files:
 extra-source-files:
   test/fixtures/*.json
 
+flag integration
+  description:
+    Build the local-validator integration test suite. Off by default so that
+    building this package's tests needs no WebSocket dependency and no running
+    validator; see the Integration tests section of the README.
+
+  default:     False
+  manual:      True
+
 common warnings
   ghc-options: -Wall
 
@@ -197,6 +206,9 @@ test-suite integration-tests
     , tasty-hunit         ^>=0.10
     , web3-provider       ^>=1.1
     , websockets          ^>=0.13
+
+  if !flag(integration)
+    buildable: False
 
 source-repository head
   type:     git
