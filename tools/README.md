@@ -59,7 +59,9 @@ kind rather than in detail, and keep assertions in `Test.RPC.Parsers` tied to
 values the script controls (the minted amount, the number of accounts) rather
 than to recorded identifiers.
 
-Note that everything is queried at the node's default `finalized` commitment.
+Note that everything is queried at the node's default `finalized` commitment,
+except `isBlockhashValid` and `getFeeForMessage`, which are queried at
+`processed` so a just-fetched blockhash is known to the node.
 State created during setup is finalized before recording — an earlier version
 of the script skipped that wait and captured a token supply of `0`, which the
 parser tests caught.

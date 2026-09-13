@@ -107,13 +107,18 @@
   test keeps the README text identical to them. The README now states that
   the examples also need the `web3-provider` package (`Network.Web3.Provider`)
   in `build-depends`.
-* Corrected the 1.2.0.0 note above, which overstated RPC golden-test coverage.
+* Corrected the 1.2.0.0 note below, which overstated RPC golden-test coverage.
   `tools/rpc-record` now records every RPC method the SDK binds except
   `requestAirdrop`, `sendTransaction` and `simulateTransaction`, aborts
   instead of silently skipping a method the node rejects, and requires
   `solana-test-validator --slots-per-epoch 32` so `getInflationReward` can be
   captured; `Test.RPC.Parsers` now asserts every RPC-layer `FromJSON`
   instance, including default-encoding (base58) and `jsonParsed` account data.
+* The integration suite gains cases for the fixes above: memo-only sends
+  through `newTransaction` (legacy and v0), the README SPL and priority-fee
+  flows, back-to-back durable-nonce use right after a confirmed create or
+  advance, default-encoding and `jsonParsed` account reads, and `getBlock` on
+  a slot holding no block.
 
 ## 1.2.0.0 -- 2026-08-03
 
