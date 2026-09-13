@@ -13,7 +13,11 @@
   on raw bytes.
 * Changed: `unsafeSolanaPublicKeyRaw` and `unsafeSolanaPrivateKeyRaw` now call
   `error` unless given exactly 32 / 64 bytes, matching the other `unsafe*`
-  constructors.
+  constructors; `mkPrivateKeyFromString` (and so `unsafeSolanaPrivateKey`)
+  applies the same public-key-half check as `mkPrivateKeyFromBytes`.
+* Changed (breaking): `SolanaPublicKey`, `SolanaPrivateKey` and
+  `SolanaSignature` no longer derive `Generic`, which let generic code build
+  unchecked values behind the abstract constructors.
 * Fixed: `newTransaction` now names its first signing key as the fee payer
   (via `newTransactionIntentWithPayer`), so transactions whose only signer is
   a read-only authority -- a memo-only transaction, or a standalone SPL
@@ -38,8 +42,9 @@
   base64. Per the RPC account-data format a bare string is the node's legacy
   `binary` encoding, i.e. base58, so `getAccountInfo'`, `getProgramAccounts'`
   and `getTokenAccountsByOwner'`/`ByDelegate'` called with a configuration
-  that omits `encoding` (or sets `"binary"`) returned silently corrupted
-  bytes for accounts of up to 128 bytes. Bare strings now decode strictly as
+  that omits `encoding` (or sets `"binary"`), and `getMultipleAccounts'` with
+  `"binary"`, returned silently corrupted bytes for accounts of up to 128
+  bytes. Bare strings now decode strictly as
   base58 (invalid input is a parse error) and `AccountData` round-trips
   through its own `ToJSON`; the `[data, "base64"]` form and the
   base64-requesting wrappers are unchanged.
@@ -103,8 +108,9 @@
   the examples also need the `web3-provider` package (`Network.Web3.Provider`)
   in `build-depends`.
 * Corrected the 1.2.0.0 note above, which overstated RPC golden-test coverage.
-  `tools/rpc-record` now records every read-only RPC method the SDK binds,
-  aborts instead of silently skipping a method the node rejects, and requires
+  `tools/rpc-record` now records every RPC method the SDK binds except
+  `requestAirdrop`, `sendTransaction` and `simulateTransaction`, aborts
+  instead of silently skipping a method the node rejects, and requires
   `solana-test-validator --slots-per-epoch 32` so `getInflationReward` can be
   captured; `Test.RPC.Parsers` now asserts every RPC-layer `FromJSON`
   instance, including default-encoding (base58) and `jsonParsed` account data.

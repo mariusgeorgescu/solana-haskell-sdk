@@ -36,10 +36,9 @@ serialization.
 
 The script drives a local validator into a known state — a funded account, a
 transfer, an SPL mint with a token account holding 42 tokens at 6 decimals and
-a delegate — then calls every read-only method the SDK binds
-(`requestAirdrop`, `sendTransaction` and `simulateTransaction` change state and
-are not recorded; `simulateTransaction`'s result is an untyped `Object`
-anyway):
+a delegate — then calls every method the SDK binds except `requestAirdrop` and
+`sendTransaction` (they mutate the ledger) and `simulateTransaction` (it needs
+a signed transaction as input and returns an untyped `Object`):
 
     solana-test-validator --reset --slots-per-epoch 32   # in another terminal
     python3 tools/rpc-record/record.py

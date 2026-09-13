@@ -5,9 +5,10 @@ The SDK's response parsers are the one layer that byte-level golden vectors
 cannot cover: their input is a node's JSON, not a Rust struct's serialization.
 This script drives a local validator into a known state (a funded account, a
 transfer, an SPL mint with a token account holding a balance and a delegate),
-calls every read-only RPC method the SDK binds (requestAirdrop, sendTransaction
-and simulateTransaction change state and are not recorded), and writes the raw
-responses to test/fixtures/rpc_responses.json.
+calls every RPC method the SDK binds except requestAirdrop and sendTransaction
+(they mutate the ledger) and simulateTransaction (it needs a signed transaction
+as input and returns an untyped Object), and writes the raw responses to
+test/fixtures/rpc_responses.json.
 
 Recording is additive and deliberate: run it, inspect the diff, commit. The
 test suite then replays the fixtures offline, so CI never needs a validator.

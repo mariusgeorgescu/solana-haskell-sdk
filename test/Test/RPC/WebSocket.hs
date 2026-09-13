@@ -196,7 +196,9 @@ awaitTests =
             "{\"jsonrpc\":\"2.0\",\"method\":\"signatureNotification\",\"params\":{\"result\":{\"context\":{\"slot\":5},\"value\":{}},\"subscription\":24006}}"
           ]
       result <- awaitSignature transport (RequestId 1) Nothing 5 (unsafeSigFromString docSignature)
-      assertBool ("expected a failure, got " <> show result) (either (const True) (const False) result)
+      assertBool
+        ("expected a parse failure naming the missing key, got " <> show result)
+        (either (\e -> "err" `isInfixOf` e && not ("timed out" `isInfixOf` e)) (const False) result)
   ]
 
 isLeft :: Either a b -> Bool

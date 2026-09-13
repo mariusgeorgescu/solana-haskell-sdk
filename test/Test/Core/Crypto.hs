@@ -7,6 +7,7 @@ import Data.Aeson (eitherDecode)
 import Data.Binary (decode, encode)
 import Data.ByteString qualified as BS
 import Data.Either (isLeft)
+import Data.List (isInfixOf)
 import Network.Solana.Core.Crypto
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -73,7 +74,12 @@ tests =
             forAll (choose (0, 130) `suchThat` (/= 64)) $ \n ->
               forAll (vectorOf n arbitrary) $ \ws -> isLeft (mkPrivateKeyFromBytes (BS.pack ws)),
           testProperty "rejects random 64-byte input" $
-            forAll (vectorOf 64 arbitrary) $ \ws -> isLeft (mkPrivateKeyFromBytes (BS.pack ws))
+            forAll (vectorOf 64 arbitrary) $ \ws -> isLeft (mkPrivateKeyFromBytes (BS.pack ws)),
+          testCase "mkPrivateKeyFromString applies the same checks to Base58 input" $ do
+            let raw = getSolanaPrivateKeyRaw (snd fixtureKeypair)
+                corrupted = BS.take 32 raw <> BS.replicate 32 9
+            mkPrivateKeyFromString (toBase58String raw) @?= Right (snd fixtureKeypair)
+            assertBool "accepted a Base58 key whose public half is not derived from its seed" (isLeft (mkPrivateKeyFromString (toBase58String corrupted)))
         ],
       testGroup
         "readSigningKeyFromFile"
@@ -91,7 +97,17 @@ tests =
             r <- try (readSigningKeyFromFile "test/fixtures/keypair_out_of_range.json")
             case r of
               Left (_ :: IOException) -> pure ()
-              Right _ -> assertFailure "accepted a key file with an entry of 256"
+              Right _ -> assertFailure "accepted a key file with an entry of 256",
+          -- A JSON parser's syntax error quotes the unparsed remainder of its
+          -- input; for a key file that would put secret bytes into an exception
+          -- applications routinely log.
+          testCase "does not echo the file's contents in the error for a malformed file" $ do
+            r <- try (readSigningKeyFromFile "test/fixtures/keypair_syntax_error.json")
+            case r of
+              Left (e :: IOException) -> do
+                assertBool ("unexpected message: " <> show e) ("not a JSON array of 64 integers" `isInfixOf` show e)
+                assertBool ("key bytes leaked into: " <> show e) (not ("1,1,1" `isInfixOf` show e) && not ("138" `isInfixOf` show e))
+              Right _ -> assertFailure "accepted a malformed key file"
         ],
       testGroup
         "raw constructors"

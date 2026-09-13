@@ -50,7 +50,6 @@ import Data.ByteString.Base64 (decodeBase64Lenient, encodeBase64')
 import Data.Either.Extra (maybeToEither)
 import Data.String (IsString, fromString)
 import Data.Text qualified as Text
-import GHC.Generics (Generic)
 
 -- | Encode a byte string as Base58 text (Bitcoin alphabet), the encoding
 -- Solana uses for addresses, signatures and hashes.
@@ -86,7 +85,7 @@ fromBase64String = decodeBase64Lenient . fromString
 -- | A 64-byte detached Ed25519 signature. 'Show' and the JSON instances use
 -- the Base58 rendering.
 newtype SolanaSignature = SolanaSignature Ed25519.Signature
-  deriving (Eq, Ord, Generic)
+  deriving (Eq, Ord)
 
 instance Show SolanaSignature where
   show :: SolanaSignature -> String
@@ -117,7 +116,7 @@ instance FromJSON SolanaSignature where
 -- 'IsString' instance is partial (see 'unsafeSolanaPublicKey').
 newtype SolanaPublicKey
   = SolanaPublicKey Ed25519.PublicKey
-  deriving (Eq, Ord, Generic)
+  deriving (Eq, Ord)
 
 instance Show SolanaPublicKey where
   show :: SolanaPublicKey -> String
@@ -158,7 +157,7 @@ instance ToJSONKey SolanaPublicKey where
 -- 'Show' renders it in Base58 — avoid logging values of this type.
 newtype SolanaPrivateKey
   = SolanaPrivateKey Ed25519.SecretKey
-  deriving (Eq, Ord, Generic)
+  deriving (Eq, Ord)
 
 instance Show SolanaPrivateKey where
   show :: SolanaPrivateKey -> String
@@ -195,9 +194,10 @@ mkPublicKeyFromString :: String -> Either String SolanaPublicKey
 mkPublicKeyFromString = mkKeyFromString 32 (SolanaPublicKey . Ed25519.PublicKey)
 
 -- | Parse Base58 text into a 'SolanaPrivateKey'. 'Left' if the input is not
--- Base58 or has the wrong length.
+-- Base58 or fails the checks of 'mkPrivateKeyFromBytes' (64 bytes whose
+-- public-key half is derived from the seed).
 mkPrivateKeyFromString :: String -> Either String SolanaPrivateKey
-mkPrivateKeyFromString = mkKeyFromString 64 (SolanaPrivateKey . Ed25519.SecretKey)
+mkPrivateKeyFromString str = maybeToEither "Not base58" (fromBase58String str) >>= mkPrivateKeyFromBytes
 
 -- | Build a 'SolanaPrivateKey' from the raw 64 bytes of a NaCl secret key
 -- (32-byte seed followed by the 32-byte public key). 'Left' unless the input
@@ -295,6 +295,10 @@ dverify (SolanaPublicKey pk) bs (SolanaSignature sig) = Ed25519.dverify pk bs si
 readSigningKeyFromFile :: FilePath -> IO SolanaPrivateKey
 readSigningKeyFromFile path = do
   contents <- BS.readFile path
-  case eitherDecodeStrict contents >>= mkPrivateKeyFromBytes . BS.pack of
-    Right sk -> return sk
-    Left err -> fail ("readSigningKeyFromFile: " <> path <> ": " <> err)
+  -- The JSON parser's own error would quote the unparsed remainder of the
+  -- file, i.e. secret bytes, so decode failures get a fixed message.
+  case eitherDecodeStrict contents of
+    Left _ -> failWith "not a JSON array of 64 integers in 0..255"
+    Right ws -> either failWith return (mkPrivateKeyFromBytes (BS.pack ws))
+  where
+    failWith err = fail ("readSigningKeyFromFile: " <> path <> ": " <> err)
