@@ -86,7 +86,7 @@ For `wss://` endpoints use [`wuss`](https://hackage.haskell.org/package/wuss)'s 
 
 ### Release status
 
-The current stable release is **v1.2.0.0**. Serialization is verified byte-for-byte against the official Rust SDK by golden-vector tests (see test/fixtures/ and [tools/README.md](https://github.com/mariusgeorgescu/solana-haskell-sdk/blob/main/tools/README.md)).
+The current stable release is **v1.3.0.0**. Serialization is verified byte-for-byte against the official Rust SDK by golden-vector tests (see test/fixtures/ and [tools/README.md](https://github.com/mariusgeorgescu/solana-haskell-sdk/blob/main/tools/README.md)).
 
 ## Usage Examples
 
