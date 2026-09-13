@@ -168,6 +168,7 @@ test-suite solana-haskell-sdk-test
     Test.NativePrograms.Vote
     Test.RPC.Chain
     Test.RPC.Parsers
+    Test.RPC.Types
     Test.RPC.WebSocket
     Test.SolanaWeb3
     Test.SplPrograms.AssociatedTokenAccount
@@ -194,6 +195,7 @@ test-suite integration-tests
   main-is:          Main.hs
   other-modules:
     Test.Integration.Alt
+    Test.Integration.Block
     Test.Integration.Nonce
     Test.Integration.PriorityFee
     Test.Integration.Setup

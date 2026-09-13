@@ -142,8 +142,9 @@ data PerformanceSample = PerformanceSample
     numSlots :: Word64,
     -- | Duration of the sampling window, in seconds.
     samplePeriodSecs :: Word16,
-    -- | Number of non-vote transactions during the sample.
-    numNonVoteTransactions :: Word64
+    -- | Number of non-vote transactions during the sample; 'Nothing' (@null@
+    -- on the wire) for older samples that do not record it.
+    numNonVoteTransactions :: Maybe Word64
   }
   deriving (Generic, Show, FromJSON)
 
@@ -208,8 +209,9 @@ getVersion = do
 data SolanaVersion = SolanaVersion
   { -- | Software version of 'solana-core'.
     solana_core :: String,
-    -- | Unique identifier of the software's feature set.
-    feature_set :: Word32
+    -- | Unique identifier of the software's feature set; 'Nothing' if the
+    -- node does not report one.
+    feature_set :: Maybe Word32
   }
   deriving (Generic, Show, Eq)
 
@@ -218,4 +220,4 @@ instance FromJSON SolanaVersion where
   parseJSON = withObject "SolanaVersion" $ \v ->
     SolanaVersion
       <$> v .: "solana-core"
-      <*> v .: "feature-set"
+      <*> v .:? "feature-set"

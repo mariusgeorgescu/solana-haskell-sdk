@@ -1,5 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+-- | Client for the Compute Budget program: instructions setting a
+-- transaction's compute-unit limit, compute-unit price (priority fee), heap
+-- size and loaded-accounts data size limit. Instruction data is
+-- byte-verified against the Rust SDK.
 module Network.Solana.NativePrograms.ComputeBudget where
 
 import Data.Binary

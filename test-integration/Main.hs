@@ -16,6 +16,7 @@ import System.Exit (exitSuccess)
 import System.IO (BufferMode (LineBuffering), hSetBuffering, stdout)
 import System.Timeout (timeout)
 import Test.Integration.Alt qualified as Alt
+import Test.Integration.Block qualified as Block
 import Test.Integration.Nonce qualified as Nonce
 import Test.Integration.PriorityFee qualified as PriorityFee
 import Test.Integration.Setup (rpcUrl)
@@ -47,7 +48,7 @@ main = do
 -- | The suite has no @-threaded@/@-N@ RTS options, so 'testGroup' already
 -- runs its children one at a time today; 'sequentialTestGroup' makes that a
 -- load-bearing property of the test tree itself rather than an accident of
--- the cabal stanza, so the five groups below (each hitting the same local
+-- the cabal stanza, so the groups below (each hitting the same local
 -- validator with fresh airdrops) can't start running concurrently if
 -- @-threaded@ is ever added. 'AllFinish' keeps every group's results visible
 -- even if an earlier one fails, matching today's behaviour.
@@ -59,4 +60,4 @@ main = do
 -- @-p@ no longer isolates just the matched test the way it would under a
 -- plain 'testGroup'.
 integrationTests :: TestTree
-integrationTests = sequentialTestGroup "integration" AllFinish [Transfer.tests, Token.tests, Nonce.tests, PriorityFee.tests, Alt.tests, WebSocket.tests]
+integrationTests = sequentialTestGroup "integration" AllFinish [Transfer.tests, Token.tests, Nonce.tests, PriorityFee.tests, Alt.tests, WebSocket.tests, Block.tests]

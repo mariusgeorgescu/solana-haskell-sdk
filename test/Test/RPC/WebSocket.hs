@@ -119,7 +119,13 @@ parseTests =
     testCase "an unknown notification method is rejected rather than misread" $
       assertBool
         "expected a Left"
-        (isLeft (parseWsMessage "{\"jsonrpc\":\"2.0\",\"method\":\"slotNotification\",\"params\":{\"result\":{\"slot\":1},\"subscription\":1}}"))
+        (isLeft (parseWsMessage "{\"jsonrpc\":\"2.0\",\"method\":\"slotNotification\",\"params\":{\"result\":{\"slot\":1},\"subscription\":1}}")),
+    -- The node always sends err (null on success); a value without it is
+    -- malformed and must not read as a success.
+    testCase "signature notification value without an err key is rejected" $
+      assertBool
+        "expected a Left"
+        (isLeft (parseWsMessage "{\"jsonrpc\":\"2.0\",\"method\":\"signatureNotification\",\"params\":{\"result\":{\"context\":{\"slot\":5},\"value\":{}},\"subscription\":1}}"))
   ]
 
 -- | A 'WsTransport' that replays a fixed script of incoming frames and
@@ -182,7 +188,15 @@ awaitTests =
     testCase "times out when the node never answers" $ do
       (transport, _) <- scriptedTransport []
       result <- awaitSignature transport (RequestId 1) Nothing 1 (unsafeSigFromString docSignature)
-      assertBool ("expected a timeout, got " <> show result) (either ("timed out" `isInfixOf`) (const False) result)
+      assertBool ("expected a timeout, got " <> show result) (either ("timed out" `isInfixOf`) (const False) result),
+    testCase "does not report success for a notification lacking err" $ do
+      (transport, _) <-
+        scriptedTransport
+          [ ack,
+            "{\"jsonrpc\":\"2.0\",\"method\":\"signatureNotification\",\"params\":{\"result\":{\"context\":{\"slot\":5},\"value\":{}},\"subscription\":24006}}"
+          ]
+      result <- awaitSignature transport (RequestId 1) Nothing 5 (unsafeSigFromString docSignature)
+      assertBool ("expected a failure, got " <> show result) (either (const True) (const False) result)
   ]
 
 isLeft :: Either a b -> Bool

@@ -30,8 +30,9 @@ type Slot = Word64
 --
 -- Includes API version and the slot at which the response is valid.
 data Context = Context
-  { -- | API version string returned by the cluster (e.g. @"1.17.0"@).
-    apiVersion :: Text,
+  { -- | API version string reported by the node (e.g. @"2.1.16"@); 'Nothing'
+    -- when the node omits it, as older nodes and some RPC proxies do.
+    apiVersion :: Maybe Text,
     -- | The slot at which the data in the response is valid.
     contextSlot :: Slot
   }
@@ -41,7 +42,7 @@ instance FromJSON Context where
   parseJSON :: Value -> Parser Context
   parseJSON = withObject "Context" $ \v ->
     Context
-      <$> v .: "apiVersion"
+      <$> v .:? "apiVersion"
       <*> v .: "slot"
 
 -- | Generic wrapper for Solana RPC responses that include a context and a value.

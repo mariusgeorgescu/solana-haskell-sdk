@@ -1,5 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+-- | Client for the SPL Memo program (v2): a single instruction whose data is
+-- the memo's UTF-8 bytes; any accounts passed along must sign the
+-- transaction, which the program verifies.
 module Network.Solana.SplPrograms.Memo where
 
 import Data.Binary

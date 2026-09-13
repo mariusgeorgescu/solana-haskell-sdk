@@ -13,9 +13,12 @@
 -- 'getLookupTable', 'getStakeAccount', 'getNonceAccount',
 -- 'getMetadataAccount') that fetch an account over RPC and decode its state
 -- with the corresponding on-chain-state decoder, so callers don't have to
--- extract and decode 'Network.Solana.Core.Account.AccountData' by hand; like
--- every other helper in this module, they require a reachable RPC node and
--- are compile-verified only.
+-- extract and decode 'Network.Solana.Core.Account.AccountData' by hand. Like
+-- every other helper in this module, they require a reachable RPC node, so
+-- the unit suite only compiles them; live coverage comes from the opt-in
+-- local-validator integration suite (@cabal test integration-tests
+-- --flags=integration@, see the README), which exercises most but not all of
+-- them.
 module Network.Solana.SolanaWeb3 where
 
 import Control.Concurrent (threadDelay)

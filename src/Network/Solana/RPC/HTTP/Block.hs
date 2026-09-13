@@ -32,7 +32,14 @@ import Network.Solana.RPC.HTTP.Types
 
 -- | Returns identity and transaction information about a confirmed block in
 -- the ledger, using the given configuration.
--- Returns 'Nothing' if the slot has been skipped or pruned from the ledger.
+--
+-- A slot that holds no block is answered by the node with a JSON-RPC error,
+-- not with @null@: @-32007@ (slot skipped), @-32001@ (pruned from the ledger)
+-- or @-32004@ (not yet produced or rooted). The transport raises such errors
+-- as a @JsonRpcException@ (@CallException@) that @runWeb3'@ does not catch,
+-- so wrap the call in 'Control.Exception.try' to handle them. 'Nothing' is
+-- returned only when the node itself answers @null@, which Agave does solely
+-- for a rooted slot missing from its blockstore without being flagged skipped.
 getBlock' :: (JsonRpc m) => Slot -> ConfigurationObject -> m (Maybe BlockInfo)
 getBlock' = do
   remote "getBlock"
@@ -45,7 +52,8 @@ getBlock' = do
 -- transactions are returned without their address-lookup-table data, so
 -- instruction account indices may reference addresses not present in the
 -- parsed account keys.
--- Returns 'Nothing' if the slot has been skipped or pruned from the ledger.
+-- A slot holding no block is a JSON-RPC error rather than 'Nothing'; see
+-- 'getBlock''.
 getBlock :: (JsonRpc m) => Slot -> m (Maybe BlockInfo)
 getBlock slot = getBlock' slot (defaultConfigObject {encoding = Just "json", maxSupportedTransactionVersion = Just 0})
 {-# INLINE getBlock #-}
@@ -209,7 +217,8 @@ getBlocksWithLimit = do
 
 -- | Returns the estimated production time of a block (as Unix timestamp).
 -- This is based on stake-weighted votes and validator-reported timestamps.
--- Returns 'Nothing' if the timestamp is not available for the given slot.
+-- Returns 'Nothing' if the block exists but carries no timestamp; a slot
+-- holding no block is a JSON-RPC error, as for 'getBlock''.
 getBlockTime :: (JsonRpc m) => Slot -> m (Maybe Int)
 getBlockTime = do
   remote "getBlockTime"

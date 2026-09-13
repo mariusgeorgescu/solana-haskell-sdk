@@ -72,6 +72,22 @@
   index overflow" message), mirroring the Rust SDK's
   `CompileError::AccountIndexOverflow`. Messages with up to 256 account keys
   (static plus table-loaded for v0) are unaffected.
+* Changed (breaking): `Context.apiVersion` is now `Maybe Text`,
+  `PerformanceSample.numNonVoteTransactions` is now `Maybe Word64` and
+  `SolanaVersion.feature_set` is now `Maybe Word32`, matching the upstream
+  schema where older nodes and some RPC proxies omit `apiVersion` and older
+  performance samples report `numNonVoteTransactions` as `null`; previously
+  such responses failed to parse.
+* WebSocket: a `signatureNotification` whose value lacks the `err` key is now
+  rejected by `parseWsMessage` (and reported as `Left` by `awaitSignature`)
+  instead of being treated as a successful confirmation.
+* Docs: `getBlock`/`getBlock'`/`getBlockTime` now document that skipped,
+  pruned and not-yet-available slots are JSON-RPC errors (-32007/-32001/
+  -32004) raised as a `JsonRpcException` that `runWeb3'` does not catch,
+  rather than `Nothing`; module headers added for `Core.Instruction`,
+  `NativePrograms.ComputeBudget`, `NativePrograms.SystemProgram` and
+  `SplPrograms.Memo`; the `SolanaWeb3` header reflects the integration suite;
+  CONTRIBUTING links defined.
 
 ## 1.2.0.0 -- 2026-08-03
 

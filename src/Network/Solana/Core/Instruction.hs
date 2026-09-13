@@ -1,6 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
+-- | Instructions -- a program id, the 'AccountMeta's it touches and its input
+-- bytes -- and their compilation into the message wire format:
+-- 'compileInstruction' resolves each account (and the program id) to an
+-- index into a message's ordered account list, failing with
+-- 'CompileException' when a key is absent or its index does not fit in a
+-- byte.
 module Network.Solana.Core.Instruction
   ( Instruction,
     mkInstruction,

@@ -2,7 +2,7 @@
 
 ## Opening Issues
 
-Use an [existing template] to:
+[Open an issue] to:
 - Report a bug
 - Update the docs
 - Request a new feature
@@ -30,4 +30,7 @@ The team will do their best to help you get your PRs across the finish line!
 
 ## Discussions
 Feel free to participate in [discussions] with the team and community! 
+
+[Open an issue]: https://github.com/mariusgeorgescu/solana-haskell-sdk/issues/new
+[discussions]: https://github.com/mariusgeorgescu/solana-haskell-sdk/issues
 

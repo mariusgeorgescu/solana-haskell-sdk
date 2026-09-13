@@ -1,5 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+-- | Client for the System program: account creation and allocation (plain
+-- and seed-derived), program assignment, lamport transfers and durable-nonce
+-- account management, plus 'decodeNonceAccount' for nonce account state.
+-- Instruction data is byte-verified against the Rust SDK.
 module Network.Solana.NativePrograms.SystemProgram where
 
 import Data.Binary

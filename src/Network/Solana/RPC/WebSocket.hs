@@ -196,9 +196,9 @@ data WsMessage
 -- | Parses one PubSub frame.
 --
 -- Note that PubSub notifications carry a @context@ object holding only a
--- @slot@ -- unlike the HTTP RPC responses modelled by
--- 'Network.Solana.RPC.HTTP.Types.Context', they omit @apiVersion@ -- so they
--- are parsed here rather than through @RPCResponse@.
+-- @slot@ (no @apiVersion@, unlike the HTTP RPC responses modelled by
+-- 'Network.Solana.RPC.HTTP.Types.Context'), so they are parsed here rather
+-- than through @RPCResponse@.
 parseWsMessage :: BS.ByteString -> Either String WsMessage
 parseWsMessage raw = eitherDecodeStrict' raw >>= parseEither wsMessageParser
 
@@ -244,7 +244,9 @@ signatureNotificationParser = withNotificationContext $ \slot value ->
   case value of
     String "receivedSignature" -> pure (SignatureNotification slot Nothing True)
     _ -> flip (withObject "signature notification value") value $ \v -> do
-      err <- v .:? "err"
+      -- The node always sends @err@ (null on success); a value without it
+      -- is malformed, not a success.
+      err <- v .: "err"
       pure (SignatureNotification slot err False)
 
 accountNotificationParser :: Value -> Parser AccountNotification
