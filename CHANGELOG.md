@@ -43,6 +43,20 @@
   base58 (invalid input is a parse error) and `AccountData` round-trips
   through its own `ToJSON`; the `[data, "base64"]` form and the
   base64-requesting wrappers are unchanged.
+* Fixed: `AccountData` now parses the `{program, parsed, space}` object a
+  node returns for `encoding: "jsonParsed"` when it has a parser for the
+  owner program (nonce, SPL Token, stake, vote, sysvars, ...). Previously
+  every such response failed with `parsing AccountDataArray failed, expected
+  Array, but encountered Object` through `getAccountInfo'`,
+  `getMultipleAccounts'`, `getProgramAccounts'`, `getTokenAccountsByOwner'`
+  and `getTokenAccountsByDelegate'`. The base64 pair the node falls back to
+  when no parser exists still decodes to `AccountDataBinary`.
+* Changed (breaking): `AccountDataJSON` now carries `accDataProgram ::
+  String`, `accDataParsed :: Data.Aeson.Value` and `accDataSpace :: Word64`
+  instead of `accDataObj :: String`, and its `ToJSON` instance emits the
+  node's object. The `["...","json"]` / `["...","jsonParsed"]` pair forms,
+  which no node emits, are no longer accepted. `base64+zstd` account data is
+  still rejected as unsupported.
 
 ## 1.2.0.0 -- 2026-08-03
 

@@ -7,13 +7,13 @@ module Test.Integration.Nonce (tests) where
 
 import Control.Exception (throwIO)
 import Control.Monad.IO.Class (liftIO)
-import Network.Solana.Core.Account (AccountInfo (dataField))
+import Network.Solana.Core.Account (AccountData (..), AccountInfo (dataField))
 import Network.Solana.Core.Block (BlockHash)
 import Network.Solana.Core.Crypto (SolanaPublicKey, createSolanaKeyPair)
 import Network.Solana.NativePrograms.SystemProgram qualified as SystemProgram
 import Network.Solana.RPC.HTTP.Account (getAccountInfo, getAccountInfo', getBalance)
 import Network.Solana.RPC.HTTP.Tokenomics (getMinimumBalanceForRentExemption)
-import Network.Solana.RPC.HTTP.Types (defaultConfigObject, value)
+import Network.Solana.RPC.HTTP.Types (defaultConfigObject, encoding, value)
 import Network.Solana.SolanaWeb3 (accountDataBytes, cfgNonceAccountConfirmed, getNonceAccount, newNonceTransaction)
 import Network.Web3.Provider (Web3)
 import Test.Integration.Setup
@@ -54,6 +54,15 @@ nonceFlow = do
   raw <- value <$> getAccountInfo' noncePk defaultConfigObject
   b64 <- getAccountInfo noncePk
   liftIO (fmap dataField raw @?= fmap dataField b64)
+  -- Under encoding "jsonParsed" the node returns its parsed view for accounts
+  -- it has a parser for (the nonce account) and the base64 pair otherwise
+  -- (the payer, a plain system account with no data).
+  parsed <- value <$> getAccountInfo' noncePk (defaultConfigObject {encoding = Just "jsonParsed"})
+  case dataField <$> parsed of
+    Just (AccountDataJSON prog _ space) -> liftIO ((prog @?= "nonce") >> (space @?= 80))
+    other -> liftIO (assertFailure ("expected parsed nonce data, got " <> show other))
+  fallback <- value <$> getAccountInfo' payerPk (defaultConfigObject {encoding = Just "jsonParsed"})
+  liftIO (fmap dataField fallback @?= Just (AccountDataBinary mempty))
   before <- requireJust "nonce account (before)" =<< getNonceAccount noncePk
   nonceBefore <- case before of
     SystemProgram.NonceInitialized auth dn _ -> liftIO (auth @?= payerPk) >> pure dn

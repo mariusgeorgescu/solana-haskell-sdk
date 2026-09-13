@@ -98,26 +98,39 @@ instance FromJSON AccountInfo where
 
 ------------------------------------------------------------------------------------------------
 
--- | A byte array that stores arbitrary data for an account.
+-- | An account's @data@ field as the node returns it: the raw bytes for the
+-- @base58@ / @base64@ encodings, or the node's own program-parsed view for
+-- @jsonParsed@.
 --
--- On the wire, RPC account @data@ is either a bare Base58 string (the node's
+-- On the wire, binary @data@ is either a bare Base58 string (the node's
 -- default @binary@ encoding, only offered for accounts of at most 128 bytes)
--- or a @[data, encoding]@ pair; 'toJSON' emits the bare Base58 form.
+-- or a @[data, encoding]@ pair; 'toJSON' emits the bare Base58 form. With
+-- @jsonParsed@ the node only parses accounts whose owner program it has a
+-- parser for and falls back to the @base64@ pair otherwise, so a
+-- @jsonParsed@ request can still yield 'AccountDataBinary'.
 data AccountData
   = AccountDataBinary
       { accData :: S.ByteString
       }
-  | AccountDataJSON {accDataObj :: String}
+  | AccountDataJSON
+      { -- | The node parser that produced 'accDataParsed' (e.g. @"nonce"@, @"spl-token"@, @"sysvar"@).
+        accDataProgram :: String,
+        -- | The program-specific parsed state, as the node returned it.
+        accDataParsed :: Value,
+        -- | The account's data length in bytes.
+        accDataSpace :: Word64
+      }
   deriving (Eq, Generic)
 
 instance Show AccountData where
   show :: AccountData -> String
   show (AccountDataBinary bs) = toBase58String bs
-  show (AccountDataJSON o) = show o
+  show (AccountDataJSON prog parsed _) = prog <> ": " <> show parsed
 
 instance ToJSON AccountData where
   toJSON :: AccountData -> Value
-  toJSON ac = toJSON (show ac)
+  toJSON (AccountDataBinary bs) = toJSON (toBase58String bs)
+  toJSON (AccountDataJSON prog parsed space) = object ["program" .= prog, "parsed" .= parsed, "space" .= space]
 
 instance FromJSON AccountData where
   parseJSON :: Value -> Parser AccountData
@@ -144,11 +157,16 @@ instance FromJSON AccountData where
                   else case arr V.! 1 of
                     "base58" -> base58StringParser $ arr V.! 0
                     "base64" -> base64StringParser $ arr V.! 0
-                    "json" -> withText "AccountDataJSON" (return . AccountDataJSON . T.unpack) $ arr V.! 0
-                    "jsonParsed" -> withText "AccountDataJSON" (return . AccountDataJSON . T.unpack) $ arr V.! 0
                     other -> fail ("AccountData: unsupported encoding: " <> show other)
             )
             v
+
+        parsedParser =
+          withObject
+            "AccountDataJSON"
+            (\o -> AccountDataJSON <$> o .: "program" <*> o .: "parsed" <*> o .: "space")
      in case v of
           String _ -> base58StringParser v
-          _ -> encodedParser
+          Array _ -> encodedParser
+          Object _ -> parsedParser v
+          _ -> typeMismatch "AccountData" v

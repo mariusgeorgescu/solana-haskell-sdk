@@ -199,7 +199,7 @@ confirmTransaction sig = go (30 :: Int)
 -- failure.
 accountDataBytes :: AccountData -> Either String BS.ByteString
 accountDataBytes (AccountDataBinary bs) = Right bs
-accountDataBytes (AccountDataJSON _) = Left "account data was not base64-encoded"
+accountDataBytes AccountDataJSON {} = Left "account data was returned jsonParsed, not as bytes"
 
 -- | Fetches the given account with 'Network.Solana.RPC.HTTP.Account.getAccountInfo'
 -- and decodes its data with the given decoder, prefixing any failure message

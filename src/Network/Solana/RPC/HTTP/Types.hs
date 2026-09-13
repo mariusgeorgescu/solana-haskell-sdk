@@ -77,7 +77,9 @@ instance (FromJSON a) => FromJSON (RPCResponse a) where
 data ConfigurationObject = ConfigurationObject
   { -- | Optional commitment level (e.g. @"finalized"@, @"confirmed"@).
     commitment :: Maybe String,
-    -- | Desired encoding for returned data (e.g. @"base58"@, @"base64"@).
+    -- | Desired encoding for returned data (e.g. @"base58"@, @"base64"@,
+    -- @"jsonParsed"@). Account data returned as @"base64+zstd"@ is not
+    -- decoded by 'Network.Solana.Core.Account.AccountData' and is rejected.
     encoding :: Maybe String,
     -- | Optional partial data slice configuration.
     dataSlice :: Maybe Object,
