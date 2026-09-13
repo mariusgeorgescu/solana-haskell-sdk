@@ -231,7 +231,7 @@ unsafeSolanaPublicKeyRaw = unsafeKeyFromWords 32 (SolanaPublicKey . Ed25519.Publ
 -- | Partial version of 'mkPrivateKeyFromString': calls 'error' on invalid
 -- input.
 unsafeSolanaPrivateKey :: String -> SolanaPrivateKey
-unsafeSolanaPrivateKey = unsafeKeyFromString 64 (SolanaPrivateKey . Ed25519.SecretKey)
+unsafeSolanaPrivateKey = either error id . mkPrivateKeyFromString
 
 -- | Build a 'SolanaPrivateKey' directly from the raw 64 bytes of a NaCl
 -- secret key. Calls 'error' on any other length; the public-key half is not

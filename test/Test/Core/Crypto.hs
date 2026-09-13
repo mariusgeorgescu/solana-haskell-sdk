@@ -126,6 +126,13 @@ tests =
             r <- try (evaluate (unsafeSolanaPublicKeyRaw (replicate 33 0)))
             case r of
               Left (_ :: ErrorCall) -> pure ()
-              Right _ -> assertFailure "built a 33-byte public key"
+              Right _ -> assertFailure "built a 33-byte public key",
+          testCase "unsafeSolanaPrivateKey calls error on a mismatched public-key half" $ do
+            let raw = getSolanaPrivateKeyRaw (snd fixtureKeypair)
+                corrupted = toBase58String (BS.take 32 raw <> BS.replicate 32 9)
+            r <- try (evaluate (unsafeSolanaPrivateKey corrupted))
+            case r of
+              Left (_ :: ErrorCall) -> pure ()
+              Right _ -> assertFailure "built a private key whose public half is not derived from its seed"
         ]
     ]
