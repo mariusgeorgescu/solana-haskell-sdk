@@ -184,7 +184,7 @@ mkNewMessage bh =
 -- | Like 'mkNewMessage', but with an explicitly named fee payer. The payer
 -- is seeded as a writable signer before the instructions' account metas are
 -- folded in, so it ends up in the message (and pinned first by
--- 'canonicalizeAccountOrder') even if no instruction references it —
+-- @canonicalizeAccountOrder@) even if no instruction references it —
 -- enabling sponsored-fee transactions.
 mkNewMessageWithPayer :: SolanaPublicKey -> BlockHash -> [Instruction] -> Message
 mkNewMessageWithPayer payer bh =
