@@ -48,6 +48,10 @@ basicTransfer = do
   confirmFinalized sig
   bal <- getBalance recipient
   liftIO (bal @?= 1_000_000_000)
+  -- The README's sequence: balances read right after confirmFinalized reflect
+  -- the transfer on both sides.
+  senderBal <- getBalance payerPk
+  liftIO (assertBool "sender paid the transfer and the fee" (senderBal < 1_000_000_000))
 
 -- | A sponsor pays the fee for a transfer sent by another funded account, with
 -- the private keys deliberately passed in the wrong order to

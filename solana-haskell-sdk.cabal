@@ -141,6 +141,31 @@ executable solana-haskell-sdk
   -- Base language which the package is written in.
   default-language: GHC2021
 
+-- The README's SPL-token example, compiled so the documented flow cannot
+-- silently break (Test.Readme keeps the README text identical to app/).
+executable example-spl-transfer
+  import:           warnings
+  main-is:          SplTransfer.hs
+  build-depends:
+    , base                ^>=4.18.0.0
+    , solana-haskell-sdk
+    , web3-provider       ^>=1.1
+
+  hs-source-dirs:   app
+  default-language: GHC2021
+
+-- The README's priority-fee example, compiled for the same reason.
+executable example-priority-fee
+  import:           warnings
+  main-is:          PriorityFee.hs
+  build-depends:
+    , base                ^>=4.18.0.0
+    , solana-haskell-sdk
+    , web3-provider       ^>=1.1
+
+  hs-source-dirs:   app
+  default-language: GHC2021
+
 test-suite solana-haskell-sdk-test
   import:           warnings
   default-language: GHC2021
@@ -170,6 +195,7 @@ test-suite solana-haskell-sdk-test
     Test.RPC.Parsers
     Test.RPC.Types
     Test.RPC.WebSocket
+    Test.Readme
     Test.SolanaWeb3
     Test.SplPrograms.AssociatedTokenAccount
     Test.SplPrograms.Memo

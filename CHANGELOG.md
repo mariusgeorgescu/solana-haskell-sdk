@@ -88,6 +88,20 @@
   `NativePrograms.ComputeBudget`, `NativePrograms.SystemProgram` and
   `SplPrograms.Memo`; the `SolanaWeb3` header reflects the integration suite;
   CONTRIBUTING links defined.
+* Added `confirmFinalized` to `SolanaWeb3`: polls `getSignatureStatuses` up
+  to 60 s until a signature is `finalized`, throwing on an on-chain error or
+  timeout (previously an integration-suite-only helper). Use it before
+  `printBalances`/`getBalance`, which read at the node's default `finalized`
+  commitment; `confirmTransaction` returns at `confirmed`, so balances read
+  right after it can still show pre-transaction state.
+* README usage examples are now complete flows that run as-is against
+  `solana-test-validator`: payers are funded and finalized, the SPL example
+  creates its own mint and token account, and every flow finalizes before
+  reading state. The SPL and priority-fee examples are built as the
+  `example-spl-transfer` and `example-priority-fee` executables, and a unit
+  test keeps the README text identical to them. The README now states that
+  the examples also need the `web3-provider` package (`Network.Web3.Provider`)
+  in `build-depends`.
 
 ## 1.2.0.0 -- 2026-08-03
 

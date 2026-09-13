@@ -173,7 +173,7 @@ wait s = liftIO $ do
 -- node reports no on-chain error for it (its @err@ field is 'Nothing'); a
 -- transaction that landed but failed on-chain (e.g. a program error) yields
 -- 'False', not 'True'. Also returns 'False' if it does not confirm within
--- the poll budget.
+-- the poll budget. See 'confirmFinalized' to wait for finalization instead.
 confirmTransaction :: SolanaSignature -> Web3 Bool
 confirmTransaction sig = go (30 :: Int)
   where
@@ -187,6 +187,30 @@ confirmTransaction sig = go (30 :: Int)
         [_] -> wait 1 >> go (n - 1)
         _ -> liftIO . throwIO . userError $
           "confirmTransaction: expected exactly one status for one signature, got " <> show (length statuses)
+
+-- | Polls 'Network.Solana.RPC.HTTP.Account.getSignatureStatuses' once a
+-- second, up to 60 times, until the given signature reaches @finalized@
+-- status.
+--
+-- Throws a 'userError' if the transaction finalizes with an on-chain error,
+-- or if it does not finalize within the poll budget (naming the signature in
+-- both cases). Use it before reading state through helpers that use the
+-- node's default commitment ('printBalances',
+-- 'Network.Solana.RPC.HTTP.Account.getBalance', 'getTokenAccount', ...): a
+-- transaction that 'confirmTransaction' reports at @confirmed@ is not yet
+-- visible there.
+confirmFinalized :: SolanaSignature -> Web3 ()
+confirmFinalized sig = go (60 :: Int)
+  where
+    go 0 = liftIO . throwIO . userError $ "confirmFinalized: timed out waiting for finalization of " <> show sig
+    go n = do
+      statuses <- getSignatureStatuses [sig]
+      case statuses of
+        [Just s] | confirmationStatusTxStatus s == Just "finalized" ->
+          case errTxStatus s of
+            Nothing -> pure ()
+            Just err -> liftIO . throwIO . userError $ "confirmFinalized: " <> show sig <> " failed on-chain: " <> show err
+        _ -> liftIO (threadDelay 1000000) >> go (n - 1)
 
 ------------------------------------------------------------------------------------------------
 

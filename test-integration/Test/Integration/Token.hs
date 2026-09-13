@@ -7,7 +7,7 @@ import Control.Monad.IO.Class (liftIO)
 import Network.Solana.Core.Crypto (createSolanaKeyPair)
 import Network.Solana.NativePrograms.SystemProgram qualified as SystemProgram
 import Network.Solana.RPC.HTTP.Tokenomics (getMinimumBalanceForRentExemption)
-import Network.Solana.SolanaWeb3 (getMint, getTokenAccount)
+import Network.Solana.SolanaWeb3 (getMint, getTokenAccount, newTransaction)
 import Network.Solana.SplPrograms.AssociatedTokenAccount qualified as ATA
 import Network.Solana.SplPrograms.Token qualified as Token
 import Network.Web3.Provider (Web3)
@@ -19,7 +19,9 @@ tests :: TestTree
 tests =
   testGroup
     "Token"
-    [testCase "mint -> ATAs -> mintTo -> transferChecked, decoded state matches" (run tokenLifecycle)]
+    [ testCase "mint -> ATAs -> mintTo -> transferChecked, decoded state matches" (run tokenLifecycle),
+      testCase "README SPL flow via newTransaction: setup tx, then idempotent ATA + transferChecked" (run readmeSplFlow)
+    ]
 
 -- | Creates a mint (payer as mint authority, no freeze authority), derives
 -- the associated token accounts for the payer and a second wallet, mints
@@ -51,3 +53,37 @@ tokenLifecycle = do
   liftIO ((Token.taAmount accA @?= 750_000) >> (Token.taMint accA @?= mintPk) >> (Token.taOwner accA @?= payerPk))
   accB <- requireJust "token account B" =<< getTokenAccount ataB
   liftIO ((Token.taAmount accB @?= 250_000) >> (Token.taOwner accB @?= walletB))
+
+-- | The README's SPL example, structurally verbatim: one setup transaction
+-- (createAccount + initializeMint2 + createAssociatedTokenAccount + mintTo,
+-- signed by the payer and the mint) and one transfer transaction
+-- (createAssociatedTokenAccountIdempotent + transferChecked), both through
+-- the public 'newTransaction' rather than the suite's 'sendAndConfirm'.
+readmeSplFlow :: Web3 ()
+readmeSplFlow = do
+  (payerPk, payerSk) <- fundedKeypair 3_000_000_000
+  (mintPk, mintSk) <- liftIO createSolanaKeyPair
+  recipient <- fst <$> liftIO createSolanaKeyPair
+  sourceAta <- requireJust "source ATA derivation" (ATA.getAssociatedTokenAddress payerPk mintPk)
+  destinationAta <- requireJust "destination ATA derivation" (ATA.getAssociatedTokenAddress recipient mintPk)
+  mintRent <- getMinimumBalanceForRentExemption 82
+  setupTx <-
+    newTransaction
+      [payerSk, mintSk]
+      [ SystemProgram.createAccount payerPk mintPk mintRent 82 Token.tokenProgramId,
+        Token.initializeMint2 mintPk 6 payerPk Nothing,
+        ATA.createAssociatedTokenAccount payerPk payerPk mintPk,
+        Token.mintTo mintPk sourceAta payerPk [] 10_000_000
+      ]
+  confirmFinalized setupTx
+  transferTx <-
+    newTransaction
+      [payerSk]
+      [ ATA.createAssociatedTokenAccountIdempotent payerPk recipient mintPk,
+        Token.transferChecked sourceAta mintPk destinationAta payerPk [] 1_000_000 6
+      ]
+  confirmFinalized transferTx
+  source <- requireJust "source token account" =<< getTokenAccount sourceAta
+  liftIO (Token.taAmount source @?= 9_000_000)
+  destination <- requireJust "destination token account" =<< getTokenAccount destinationAta
+  liftIO (Token.taAmount destination @?= 1_000_000)

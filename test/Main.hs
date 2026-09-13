@@ -21,6 +21,7 @@ import Test.RPC.Chain qualified
 import Test.RPC.Parsers qualified
 import Test.RPC.Types qualified
 import Test.RPC.WebSocket qualified
+import Test.Readme qualified
 import Test.SolanaWeb3 qualified
 import Test.SplPrograms.AssociatedTokenAccount qualified
 import Test.SplPrograms.Memo qualified
@@ -53,6 +54,7 @@ main =
           Test.RPC.Parsers.tests,
           Test.RPC.Types.tests,
           Test.RPC.WebSocket.tests,
+          Test.Readme.tests,
           Test.SolanaWeb3.tests,
           Test.SplPrograms.AssociatedTokenAccount.tests,
           Test.SplPrograms.Memo.tests,

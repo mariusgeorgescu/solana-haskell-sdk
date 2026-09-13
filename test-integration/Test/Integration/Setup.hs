@@ -10,9 +10,10 @@
 -- before returning (later sends preflight against the finalized bank), and
 -- 'sendAndConfirm' (via 'sendConfirmedPreflight') pins preflight at
 -- @confirmed@ so multi-step flows can build on merely-confirmed intermediate
--- state. Callers are expected to 'confirmFinalized' the last transaction of
--- a flow before asserting on account state or balances (finalization is
--- monotone by slot, so one wait covers every prior transaction).
+-- state. Callers are expected to 'confirmFinalized' (re-exported from
+-- "Network.Solana.SolanaWeb3") the last transaction of a flow before
+-- asserting on account state or balances (finalization is monotone by slot,
+-- so one wait covers every prior transaction).
 module Test.Integration.Setup
   ( rpcUrl,
     wsEndpoint,
@@ -27,7 +28,6 @@ module Test.Integration.Setup
   )
 where
 
-import Control.Concurrent (threadDelay)
 import Control.Exception (throwIO)
 import Control.Monad.IO.Class (liftIO)
 import Data.List (stripPrefix)
@@ -36,11 +36,11 @@ import Network.Solana.Core.Account (Lamport)
 import Network.Solana.Core.Crypto (SolanaPrivateKey, SolanaPublicKey, SolanaSignature, createSolanaKeyPair, toSolanaPublicKey)
 import Network.Solana.Core.Instruction (Instruction)
 import Network.Solana.Core.Message (newTransactionIntentWithPayer)
-import Network.Solana.RPC.HTTP.Account (confirmationStatusTxStatus, errTxStatus, getSignatureStatuses)
+import Network.Solana.RPC.HTTP.Account (errTxStatus, getSignatureStatuses)
 import Network.Solana.RPC.HTTP.Block (getTheLatestBlockhash)
 import Network.Solana.RPC.HTTP.Transaction (requestAirdrop, sendTransaction')
 import Network.Solana.RPC.HTTP.Types (defaultConfigObject, encoding, preflightCommitment)
-import Network.Solana.SolanaWeb3 (confirmTransaction)
+import Network.Solana.SolanaWeb3 (confirmFinalized, confirmTransaction)
 import Network.Web3.Provider (Provider (HttpProvider), Web3, runWeb3')
 import System.Environment (lookupEnv)
 
@@ -117,25 +117,6 @@ confirmOrFail what sig = do
         [Just s] | Just err <- errTxStatus s ->
           liftIO . throwIO . userError $ what <> " failed on-chain: " <> show sig <> ": " <> show err
         _ -> liftIO . throwIO . userError $ what <> " failed to confirm: " <> show sig
-
--- | Polls 'getSignatureStatuses' once a second, up to 60 times, until the
--- given signature reaches @finalized@ status.
---
--- Throws a 'userError' if the transaction finalizes with an on-chain error,
--- or if it does not finalize within the poll budget (naming the signature in
--- both cases).
-confirmFinalized :: SolanaSignature -> Web3 ()
-confirmFinalized sig = go (60 :: Int)
-  where
-    go 0 = liftIO . throwIO . userError $ "confirmFinalized: timed out waiting for finalization of " <> show sig
-    go n = do
-      statuses <- getSignatureStatuses [sig]
-      case statuses of
-        [Just s] | confirmationStatusTxStatus s == Just "finalized" ->
-          case errTxStatus s of
-            Nothing -> pure ()
-            Just err -> liftIO . throwIO . userError $ "confirmFinalized: " <> show sig <> " failed on-chain: " <> show err
-        _ -> liftIO (threadDelay 1000000) >> go (n - 1)
 
 -- | Sends an already-encoded transaction with preflight pinned at
 -- @confirmed@ -- the suite's one commitment override, single-sourced here so

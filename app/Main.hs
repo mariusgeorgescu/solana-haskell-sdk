@@ -2,7 +2,6 @@
 
 module Main where
 
-import Control.Monad (void)
 import Control.Monad.IO.Class (liftIO)
 import Network.Solana.Core.Crypto
 import Network.Solana.NativePrograms.SystemProgram qualified as SystemProgram
@@ -17,9 +16,9 @@ main = do
 
   -- Create Connection, local validator in this example
   result <- runWeb3' (HttpProvider "http://127.0.0.1:8899") $ do
-    -- Fund fee payer
-    void $ requestAirdrop myPublicKey 10_000_000_000
-    wait 15 -- Wait 15 seconds be sure the tx was confirmed
+    -- Fund the fee payer and wait until the airdrop is finalized: sends are
+    -- preflighted against the finalized bank, and balances are read there too
+    requestAirdrop myPublicKey 10_000_000_000 >>= confirmFinalized
 
     -- Define recipient's address from a base58-encoded string
     let recipient = "A988FuUtUVk8jMUuVc1ccaoTA3VS9CB4dkEf9XUAUqV4"
@@ -30,7 +29,7 @@ main = do
     -- Create a new transaction.
     txId <-
       newTransaction
-        [myPrivateKey] -- Signing keys (with all required signers)
+        [myPrivateKey] -- Signing keys (the first key pays the fee)
         -- List of instructions
         [ SystemProgram.transfer
             myPublicKey -- sender address
@@ -39,8 +38,9 @@ main = do
         ]
     liftIO $ putStrLn ("Transaction sent: " <> show txId)
 
-    void $ confirmTransaction txId
-    -- Check balance
+    -- Wait for finalization (throws if the transaction failed on-chain or
+    -- timed out), so the balances below reflect the transfer
+    confirmFinalized txId
     printBalances [myPublicKey, recipient]
 
   either (\e -> putStrLn ("RPC error: " <> show e)) pure result

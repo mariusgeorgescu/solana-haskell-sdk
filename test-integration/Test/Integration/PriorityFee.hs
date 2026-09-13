@@ -8,7 +8,8 @@ import Network.Solana.Core.Crypto (createSolanaKeyPair)
 import Network.Solana.NativePrograms.ComputeBudget qualified as ComputeBudget
 import Network.Solana.NativePrograms.SystemProgram qualified as SystemProgram
 import Network.Solana.RPC.HTTP.Account (getBalance)
-import Network.Solana.SolanaWeb3 (estimatePriorityFee)
+import Network.Solana.SolanaWeb3 (estimatePriorityFee, newTransaction)
+import Network.Solana.SplPrograms.Memo qualified as Memo
 import Network.Web3.Provider (Web3)
 import Test.Integration.Setup
 import Test.Tasty
@@ -19,7 +20,8 @@ tests =
   testGroup
     "PriorityFee"
     [ testCase "prioritized transfer lands with the exact amount" (run priorityFeeTransfer),
-      testCase "estimatePriorityFee smoke: returns without throwing" (run estimateSmoke)
+      testCase "estimatePriorityFee smoke: returns without throwing" (run estimateSmoke),
+      testCase "README priority-fee flow via newTransaction lands with its memo" (run readmePriorityFlow)
     ]
 
 -- | Sends a transfer prioritized with a compute unit limit and price, and
@@ -50,3 +52,22 @@ estimateSmoke = do
   pk <- fst <$> liftIO createSolanaKeyPair
   fee <- estimatePriorityFee [pk] 0.5
   liftIO (fee `seq` pure ())
+
+-- | The README's priority-fee example through the public 'newTransaction':
+-- compute-budget instructions, a transfer and a memo whose only signer is
+-- the (writable) fee payer.
+readmePriorityFlow :: Web3 ()
+readmePriorityFlow = do
+  (payerPk, payerSk) <- fundedKeypair 2_000_000_000
+  recipient <- fst <$> liftIO createSolanaKeyPair
+  sig <-
+    newTransaction
+      [payerSk]
+      [ ComputeBudget.setComputeUnitLimit 200_000,
+        ComputeBudget.setComputeUnitPrice 10_000,
+        SystemProgram.transfer payerPk recipient 1_000_000_000,
+        Memo.buildMemo "thanks for the coffee" [payerPk]
+      ]
+  confirmFinalized sig
+  bal <- getBalance recipient
+  liftIO (bal @?= 1_000_000_000)
