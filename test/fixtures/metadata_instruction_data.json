@@ -57,5 +57,55 @@
       }
     ],
     "name": "create-v3-full-accounts"
+  },
+  {
+    "accounts": [
+      {
+        "pubkey": "a8b0140612ffc013e3300b768c9e666c6e1712d945bf6ca2cead99fbaa29c1e7",
+        "signer": false,
+        "writable": true
+      },
+      {
+        "pubkey": "0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c",
+        "signer": false,
+        "writable": true
+      },
+      {
+        "pubkey": "8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
+        "signer": true,
+        "writable": false
+      },
+      {
+        "pubkey": "8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
+        "signer": true,
+        "writable": false
+      },
+      {
+        "pubkey": "8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
+        "signer": true,
+        "writable": true
+      },
+      {
+        "pubkey": "56a9c8b183e68c0582ef458b28a9f28894971e5aa21bd380aa210f6824f6ea89",
+        "signer": false,
+        "writable": true
+      },
+      {
+        "pubkey": "06ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a9",
+        "signer": false,
+        "writable": false
+      },
+      {
+        "pubkey": "0000000000000000000000000000000000000000000000000000000000000000",
+        "signer": false,
+        "writable": false
+      },
+      {
+        "pubkey": "06a7d517192c5c51218cc94c3d4af17f58daee089ba1fd44e3dbd98a00000000",
+        "signer": false,
+        "writable": false
+      }
+    ],
+    "name": "master-edition-some-accounts"
   }
 ]

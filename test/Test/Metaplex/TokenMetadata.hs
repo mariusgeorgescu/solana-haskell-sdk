@@ -16,9 +16,6 @@ import Data.Text.Encoding qualified as TE
 import Network.Solana.Core.Crypto (SolanaPublicKey, createSolanaKeypairFromSeed, getSolanaPublicKeyRaw, unsafeSolanaPublicKeyRaw)
 import Network.Solana.Core.Instruction (AccountMeta (..), iAccounts)
 import Network.Solana.Metaplex.TokenMetadata qualified as TM
-import Network.Solana.NativePrograms.SystemProgram qualified as SystemProgram
-import Network.Solana.SplPrograms.Token qualified as Token
-import Network.Solana.Sysvar qualified as Sysvar
 import Test.Fixtures
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -66,8 +63,9 @@ dataV2Minimal =
     }
 
 -- metadata_instruction_data.json mixes two shapes in one array: six
--- {name, hex} entries (the golden vectors) and one {name, accounts} entry
--- (create-v3-full-accounts). Test.Fixtures.loadFixtures decodes the whole
+-- {name, hex} entries (the golden vectors) and two {name, accounts} entries
+-- (create-v3-full-accounts, master-edition-some-accounts).
+-- Test.Fixtures.loadFixtures decodes the whole
 -- file as [Fixture], which requires every element to carry a "hex" field, so
 -- it can't be used directly here. Load the file as [Value] instead and pick
 -- out each shape locally, without extending the shared loader.
@@ -79,8 +77,8 @@ loadDataFixtures path = do
   vals <- either fail pure =<< eitherDecodeFileStrict path
   pure (mapMaybe (parseMaybe parseJSON) (vals :: [Value]))
 
--- Local decode of the `create-v3-full-accounts` entry (ground truth for the
--- createMetadataAccountV3 meta test).
+-- Local decode of the {name, accounts} entries (ground truth for the
+-- builder meta tests).
 
 data FixtureAccountMeta = FixtureAccountMeta T.Text Bool Bool
 
@@ -97,12 +95,20 @@ instance FromJSON AccountsFixture where
   parseJSON = withObject "AccountsFixture" $ \v ->
     AccountsFixture <$> v .: "name" <*> v .: "accounts"
 
-loadCreateV3FullAccounts :: FilePath -> IO [AccountMeta]
-loadCreateV3FullAccounts path = do
+-- | The {name, accounts} entries of the given fixture file; elements of the
+-- other shape are skipped.
+loadAccountsFixtures :: FilePath -> IO [AccountsFixture]
+loadAccountsFixtures path = do
   vals <- either fail pure =<< eitherDecodeFileStrict path
-  case find ((== "create-v3-full-accounts") . afName) (mapMaybe (parseMaybe parseJSON) (vals :: [Value])) of
-    Just af -> pure (map toAccountMeta (afAccounts af))
-    Nothing -> fail "create-v3-full-accounts entry not found"
+  pure (mapMaybe (parseMaybe parseJSON) (vals :: [Value]))
+
+-- | The account metas of the named {name, accounts} entry; calls 'error' if
+-- it is missing (mirroring 'requireFixture').
+requireAccounts :: String -> [AccountsFixture] -> [AccountMeta]
+requireAccounts name afs =
+  case find ((== name) . afName) afs of
+    Just af -> map toAccountMeta (afAccounts af)
+    Nothing -> error ("accounts fixture not found: " <> name)
   where
     toAccountMeta (FixtureAccountMeta hexPubkey signer writable) =
       AccountMeta
@@ -110,7 +116,7 @@ loadCreateV3FullAccounts path = do
           isSigner = signer,
           isWritable = writable
         }
-    decodeHex hexPubkey = either (error . ("bad hex in create-v3-full-accounts: " <>)) id (B16.decode (TE.encodeUtf8 hexPubkey))
+    decodeHex hexPubkey = either (error . (("bad hex in " <> name <> ": ") <>)) id (B16.decode (TE.encodeUtf8 hexPubkey))
 
 -- Small QuickCheck generators covering every support type and instruction
 -- variant, for the round-trip property below.
@@ -169,7 +175,7 @@ tests :: TestTree
 tests =
   withResource (loadDataFixtures "test/fixtures/metadata_instruction_data.json") (const (pure ())) $ \getFixtures ->
     withResource (loadFixtures "test/fixtures/pda.json") (const (pure ())) $ \getPdaFixtures ->
-      withResource (loadCreateV3FullAccounts "test/fixtures/metadata_instruction_data.json") (const (pure ())) $ \getCreateV3Accounts ->
+      withResource (loadAccountsFixtures "test/fixtures/metadata_instruction_data.json") (const (pure ())) $ \getAccountsFixtures ->
         withResource (loadFixtures "test/fixtures/state_fixtures.json") (const (pure ())) $ \getStateFixtures ->
           testGroup
             "Metaplex Token Metadata"
@@ -266,7 +272,7 @@ tests =
               testGroup
                 "builder metas"
                 [ testCase "createMetadataAccountV3 matches create-v3-full-accounts fixture" $ do
-                    expected <- getCreateV3Accounts
+                    expected <- requireAccounts "create-v3-full-accounts" <$> getAccountsFixtures
                     iAccounts (TM.createMetadataAccountV3 mintPk payerPk payerPk payerPk True dataV2Full True (Just (TM.CollectionDetailsV1 0)))
                       @?= expected,
                   testCase "updateMetadataAccountV2 metas" $
@@ -277,21 +283,9 @@ tests =
                           @?= [ AccountMeta {accountPubKey = metadataAddr, isSigner = False, isWritable = True},
                                 AccountMeta {accountPubKey = payerPk, isSigner = True, isWritable = False}
                               ],
-                  testCase "createMasterEditionV3 metas" $
-                    case (TM.deriveMasterEditionAddress mintPk, TM.deriveMetadataAddress mintPk) of
-                      (Just editionAddr, Just metadataAddr) ->
-                        iAccounts (TM.createMasterEditionV3 mintPk payerPk payerPk payerPk (Just 100))
-                          @?= [ AccountMeta {accountPubKey = editionAddr, isSigner = False, isWritable = True},
-                                AccountMeta {accountPubKey = mintPk, isSigner = False, isWritable = True},
-                                AccountMeta {accountPubKey = payerPk, isSigner = True, isWritable = False},
-                                AccountMeta {accountPubKey = payerPk, isSigner = True, isWritable = False},
-                                AccountMeta {accountPubKey = payerPk, isSigner = True, isWritable = True},
-                                AccountMeta {accountPubKey = metadataAddr, isSigner = False, isWritable = False},
-                                AccountMeta {accountPubKey = Token.tokenProgramId, isSigner = False, isWritable = False},
-                                AccountMeta {accountPubKey = SystemProgram.systemProgramId, isSigner = False, isWritable = False},
-                                AccountMeta {accountPubKey = Sysvar.rent, isSigner = False, isWritable = False}
-                              ]
-                      _ -> assertFailure "PDA derivation failed"
+                  testCase "createMasterEditionV3 matches master-edition-some-accounts fixture" $ do
+                    expected <- requireAccounts "master-edition-some-accounts" <$> getAccountsFixtures
+                    iAccounts (TM.createMasterEditionV3 mintPk payerPk payerPk payerPk (Just 100)) @?= expected
                 ]
             ]
   where

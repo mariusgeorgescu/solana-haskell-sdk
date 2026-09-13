@@ -57,6 +57,12 @@
   node's object. The `["...","json"]` / `["...","jsonParsed"]` pair forms,
   which no node emits, are no longer accepted. `base64+zstd` account data is
   still rejected as unsupported.
+* Fixed: `createMasterEditionV3` now marks the metadata account (index 5)
+  writable, matching the official `mpl-token-metadata` client. Previously the
+  on-chain program silently left `token_standard` un-upgraded
+  (`FungibleAsset` instead of `NonFungible`) when the instruction was sent on
+  its own. The builder's account metas are now golden-tested against the
+  crate (`master-edition-some-accounts`).
 
 ## 1.2.0.0 -- 2026-08-03
 

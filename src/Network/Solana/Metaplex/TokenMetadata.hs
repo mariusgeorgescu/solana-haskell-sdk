@@ -353,7 +353,8 @@ updateMetadataAccountV2 mint updateAuthority dataV2 newUpdateAuthority primarySa
 -- 2. `[SIGNER]` Update authority
 -- 3. `[SIGNER]` Mint authority
 -- 4. `[WRITE, SIGNER]` Payer
--- 5. `[]` Metadata account (derived)
+-- 5. `[WRITE]` Metadata account (derived; the program upgrades its @token_standard@ to
+--    @NonFungible@ only if it is writable)
 -- 6. `[]` Token program
 -- 7. `[]` System program
 -- 8. `[]` Rent sysvar
@@ -366,7 +367,7 @@ createMasterEditionV3 mint updateAuthority mintAuthority payer maxSupply =
       AccountMeta {accountPubKey = updateAuthority, isSigner = True, isWritable = False},
       AccountMeta {accountPubKey = mintAuthority, isSigner = True, isWritable = False},
       AccountMeta {accountPubKey = payer, isSigner = True, isWritable = True},
-      AccountMeta {accountPubKey = metadata, isSigner = False, isWritable = False},
+      AccountMeta {accountPubKey = metadata, isSigner = False, isWritable = True},
       AccountMeta {accountPubKey = Token.tokenProgramId, isSigner = False, isWritable = False},
       AccountMeta {accountPubKey = SystemProgram.systemProgramId, isSigner = False, isWritable = False},
       AccountMeta {accountPubKey = Sysvar.rent, isSigner = False, isWritable = False}

@@ -365,6 +365,9 @@ fn main() {
         .mint_authority(payer.pubkey())
         .payer(payer.pubkey())
         .metadata(metadata_pda)
+        // rent set so the account list matches the Haskell builder, which
+        // always passes the sysvar (the builder omits it unless set)
+        .rent(Some(solana_sdk::sysvar::rent::id()))
         .max_supply(100)
         .instruction();
 
@@ -387,6 +390,14 @@ fn main() {
         json!({
             "name": "create-v3-full-accounts",
             "accounts": create_v3_full_ix.accounts.iter().map(|m| json!({
+                "pubkey": hex(&m.pubkey.to_bytes()),
+                "signer": m.is_signer,
+                "writable": m.is_writable,
+            })).collect::<Vec<_>>(),
+        }),
+        json!({
+            "name": "master-edition-some-accounts",
+            "accounts": master_edition_some_ix.accounts.iter().map(|m| json!({
                 "pubkey": hex(&m.pubkey.to_bytes()),
                 "signer": m.is_signer,
                 "writable": m.is_writable,
