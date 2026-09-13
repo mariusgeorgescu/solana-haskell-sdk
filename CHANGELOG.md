@@ -63,6 +63,15 @@
   (`FungibleAsset` instead of `NonFungible`) when the instruction was sent on
   its own. The builder's account metas are now golden-tested against the
   crate (`master-edition-some-accounts`).
+* Fixed: `compileInstruction`, and every message compiler built on it
+  (`newMessage`, `newTransactionIntent`, `newTransactionIntentWithPayer`, the
+  durable-nonce variants, `compileV0Message`, `newV0TransactionIntent`, and
+  the `SolanaWeb3` senders), silently wrapped account indices at or past 256
+  into the wrong byte, producing a message the node rejects; such messages
+  now fail with a `CompileException` (`MissingIndex` carrying an "account
+  index overflow" message), mirroring the Rust SDK's
+  `CompileError::AccountIndexOverflow`. Messages with up to 256 account keys
+  (static plus table-loaded for v0) are unaffected.
 
 ## 1.2.0.0 -- 2026-08-03
 

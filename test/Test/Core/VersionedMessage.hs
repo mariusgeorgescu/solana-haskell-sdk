@@ -192,8 +192,27 @@ tests =
           Left (MissingIndex msg) -> assertBool ("expected \"missing signer\" in: " <> msg) ("missing signer" `isInfixOf` msg)
         case newV0TransactionIntentWithPayer (fst payerKeys) [snd payerKeys, snd newAccountKeys, snd extraKeys] [ix] [] fixedBlockhash of
           Right _ -> assertFailure "expected Left for unused signing key"
-          Left (MissingIndex msg) -> assertBool ("expected \"unused signing key\" in: " <> msg) ("unused signing key" `isInfixOf` msg)
+          Left (MissingIndex msg) -> assertBool ("expected \"unused signing key\" in: " <> msg) ("unused signing key" `isInfixOf` msg),
+      testCase "static and table-loaded keys totalling more than 256 fail to compile" $ do
+        -- Each table stays under 256 addresses (the per-table check passes);
+        -- 2 static keys + 300 loaded keys exceed what a byte index can address.
+        let tableA = AddressLookupTableAccount tableKey [numberedKey b | b <- [0 .. 199]]
+            tableB = AddressLookupTableAccount otherTableKey [numberedKey b | b <- [200 .. 299]]
+            ix = mkInstruction dummyProgramId (AccountMeta (fst payerKeys) True True : [AccountMeta (numberedKey b) False True | b <- [0 .. 299]]) ()
+        case compileV0Message fixedBlockhash [ix] [tableA, tableB] of
+          Left (MissingIndex msg) -> assertBool ("expected \"account index overflow\" in: " <> msg) ("account index overflow" `isInfixOf` msg)
+          Right _ -> assertFailure "compiled a v0 message resolving more than 256 keys",
+      testCase "static plus table-loaded keys totalling exactly 256 compile" $ do
+        let table = AddressLookupTableAccount tableKey [numberedKey b | b <- [0 .. 253]]
+            ix = mkInstruction dummyProgramId (AccountMeta (fst payerKeys) True True : [AccountMeta (numberedKey b) False True | b <- [0 .. 253]]) ()
+        case compileV0Message fixedBlockhash [ix] [table] of
+          Left err -> assertFailure (show err)
+          Right _ -> pure ()
     ]
+
+-- | A distinct 32-byte key per number (up to 65535), for large key sets.
+numberedKey :: Int -> SolanaPublicKey
+numberedKey b = unsafeSolanaPublicKeyRaw (2 : fromIntegral (b `div` 256) : fromIntegral (b `mod` 256) : replicate 29 0)
 
 -- | Compare two compile results by their message bytes ('CompileException'
 -- has no 'Eq' instance to compare), failing loudly if either side failed.

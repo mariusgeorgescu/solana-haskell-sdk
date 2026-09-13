@@ -148,28 +148,45 @@ instance Binary CompiledInstruction where
 
 -- | Replace each pubkey referenced by an instruction with its index into
 -- the given account-key table. 'Left' when a key is not present in the
--- table.
+-- table, or sits at position 256 or beyond -- a compiled index is a single
+-- byte, so such a key is rejected rather than silently wrapped into the
+-- wrong index (mirroring the Rust SDK's @CompileError::AccountIndexOverflow@).
 compileInstruction :: [SolanaPublicKey] -> Instruction -> Either CompileException CompiledInstruction
 compileInstruction keys instruction = do
   programIdIndex <- keyToIndex (iProgramId instruction) keys
   accIndices <- mapM ((`keyToIndex` keys) . accountPubKey) (iAccounts instruction)
   return $
     CompiledInstruction
-      { ciProgramIdIndex = fromIntegral programIdIndex,
-        ciAccounts = mkCompact (fromIntegral <$> accIndices),
+      { ciProgramIdIndex = programIdIndex,
+        ciAccounts = mkCompact accIndices,
         ciData = mkCompact . S.unpack $ instrData (iData instruction)
       }
 
-keyToIndex :: SolanaPublicKey -> [SolanaPublicKey] -> Either CompileException Int
-keyToIndex k keys = maybeToRight (MissingIndex $ show k) $ k `elemIndex` keys
+-- | Position of a key in the account table, narrowed to the byte the wire
+-- format requires; 'Left' if the key is absent or its position does not
+-- fit in a byte.
+keyToIndex :: SolanaPublicKey -> [SolanaPublicKey] -> Either CompileException Word8
+keyToIndex k keys = do
+  i <- maybeToRight (MissingIndex $ show k) $ k `elemIndex` keys
+  if i <= fromIntegral (maxBound :: Word8)
+    then Right (fromIntegral i)
+    else
+      Left
+        ( MissingIndex
+            ( "account index overflow: " <> show k <> " sits at position " <> show i
+                <> " of the account table, past the 256 addressable by a byte"
+            )
+        )
 
 ------------------------------------------------------------------------------------------------
 
 -- *** CompileException
 
 ------------------------------------------------------------------------------------------------
--- | Compilation failure: an instruction references an account key that is
--- missing from the message's account table.
+-- | Compilation failure, carrying a message: an instruction references an
+-- account key that is missing from the message's account table, an account
+-- or lookup-table index does not fit in a byte, or a signing key does not
+-- match the message's required signers.
 newtype CompileException = MissingIndex String
   deriving (Show)
 

@@ -275,5 +275,21 @@ tests =
           Left (MissingIndex msg') -> assertBool ("expected \"missing signer\" in: " <> msg') ("missing signer" `isInfixOf` msg')
         case orderSigningKeys msg [snd payerKeys, snd newAccountKeys, snd extraKeys] of
           Right _ -> assertFailure "expected Left for unused signing key"
-          Left (MissingIndex msg') -> assertBool ("expected \"unused signing key\" in: " <> msg') ("unused signing key" `isInfixOf` msg')
+          Left (MissingIndex msg') -> assertBool ("expected \"unused signing key\" in: " <> msg') ("unused signing key" `isInfixOf` msg'),
+      testCase "a message with more than 256 account keys fails to compile instead of wrapping indices" $ do
+        let metas = [AccountMeta (unsafeSolanaPublicKeyRaw (replicate 31 7 <> [b])) False False | b <- [0 .. 254]]
+            ix = mkInstruction Memo.memoProgramId (AccountMeta (fst payerKeys) True True : metas) ()
+        case newMessage fixedBlockhash [ix] of
+          Left (MissingIndex msg) -> assertBool ("expected \"overflow\" in: " <> msg) ("overflow" `isInfixOf` msg)
+          Right _ -> assertFailure "compiled a message with 257 account keys"
+        case newTransactionIntentWithPayer (fst payerKeys) [snd payerKeys] [ix] fixedBlockhash of
+          Left (MissingIndex msg) -> assertBool ("expected \"overflow\" in: " <> msg) ("overflow" `isInfixOf` msg)
+          Right _ -> assertFailure "signed a message with 257 account keys",
+      testCase "a message with exactly 256 account keys compiles and its header does not wrap" $ do
+        let metas = [AccountMeta (unsafeSolanaPublicKeyRaw (replicate 31 7 <> [b])) False False | b <- [0 .. 253]]
+            ix = mkInstruction Memo.memoProgramId (AccountMeta (fst payerKeys) True True : metas) ()
+        numReadonlyUnsignedAccounts (mHeader (mkNewMessage fixedBlockhash [ix])) @?= 255
+        case newMessage fixedBlockhash [ix] of
+          Left err -> assertFailure (show err)
+          Right _ -> pure ()
     ]

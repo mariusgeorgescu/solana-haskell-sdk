@@ -96,6 +96,9 @@ instance Binary MessageAddressTableLookup where
 -- cannot be represented in the byte-sized lookup index the wire format
 -- requires, so it is rejected rather than silently truncated (wrapped) into
 -- the wrong index, mirroring Rust's @AddressLookupTableIndexOverflow@.
+-- Compilation also fails when the static and table-loaded keys together
+-- exceed 256, since instruction account indices are single bytes (the
+-- on-chain v0 sanitize rule; see 'compileInstruction').
 --
 -- __A trap this module can't protect you from:__ an address only just added
 -- to a lookup table by an @ExtendLookupTable@ instruction that landed in
