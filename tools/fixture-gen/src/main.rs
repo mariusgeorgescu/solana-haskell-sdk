@@ -168,6 +168,13 @@ fn main() {
     );
     let priority_tx = Transaction::new(&[&payer], priority_msg, blockhash);
 
+    // Memo-only transaction: the memo's only account is the payer as a
+    // *read-only* signer, so a compiler deriving the fee payer from the
+    // instructions alone finds no writable signer to pin. `Some(&payer)` is what
+    // promotes it to a writable fee payer at account 0 (header [1, 0, 1]).
+    let memo_only_msg = Message::new_with_blockhash(&[memo_ix.clone()], Some(&payer.pubkey()), &blockhash);
+    let memo_only_tx = Transaction::new(&[&payer], memo_only_msg, blockhash);
+
     let new_account = keypair_from_seed(&[10u8; 32]).unwrap();
     assert!(
         new_account.pubkey().to_bytes() < payer.pubkey().to_bytes(),
@@ -508,6 +515,12 @@ fn main() {
     let versioned = VersionedMessage::V0(v0_msg);
     let v0_tx = VersionedTransaction::try_new(versioned.clone(), &[&payer]).unwrap();
 
+    // Same memo-only shape through the v0 compiler, which always takes an
+    // explicit payer (`try_compile(payer, ..)`); no lookup tables.
+    let v0_memo_only_msg = v0::Message::try_compile(&payer.pubkey(), &[memo_ix.clone()], &[], blockhash).unwrap();
+    let v0_memo_only_tx =
+        VersionedTransaction::try_new(VersionedMessage::V0(v0_memo_only_msg), &[&payer]).unwrap();
+
     let nonce_account_pk = Pubkey::new_from_array([37u8; 32]);
     // Computed here (rather than down by the nonce-account state fixture) so the
     // same `DurableNonce` value is reused for both: the durable-nonce transaction
@@ -558,6 +571,8 @@ fn main() {
         json!({ "name": "v0-transfer-transaction", "hex": hex(&bincode::serialize(&v0_tx).unwrap()) }),
         json!({ "name": "sponsored-transfer-transaction", "hex": hex(&bincode::serialize(&sponsored_tx).unwrap()) }),
         json!({ "name": "nonce-transfer-transaction", "hex": hex(&bincode::serialize(&nonce_tx).unwrap()) }),
+        json!({ "name": "memo-only-transaction", "hex": hex(&bincode::serialize(&memo_only_tx).unwrap()) }),
+        json!({ "name": "v0-memo-only-transaction", "hex": hex(&bincode::serialize(&v0_memo_only_tx).unwrap()) }),
     ];
     fs::write(
         "../../test/fixtures/transactions.json",

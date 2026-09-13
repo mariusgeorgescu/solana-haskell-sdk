@@ -103,6 +103,22 @@ prop_messageInvariants =
             counterexample "writable key in readonly section" (property (not (any writableOf (sr <> ur))))
           ]
 
+-- | 'mkNewMessageWithPayer' must pin the named payer to account 0 as a
+-- writable signer whatever the instructions declare (or fail to declare)
+-- about it.
+prop_payerInvariants :: Property
+prop_payerInvariants =
+  forAll (resize 5 (listOf1 genInstruction)) $ \instrs ->
+    forAll (elements keyPool) $ \payer ->
+      let msg = mkNewMessageWithPayer payer fixedBlockhash instrs
+          hdr = mHeader msg
+          keys = mAccountKeys msg
+       in conjoin
+            [ counterexample "payer is not account 0" (take 1 keys === [payer]),
+              counterexample "no writable signer" (property (numReadonlySignedAccounts hdr < numRequiredSignatures hdr)),
+              counterexample "duplicate keys" (keys === nub keys)
+            ]
+
 tests :: TestTree
 tests =
   testGroup
@@ -233,5 +249,31 @@ tests =
         case newDurableNonceTransactionIntentWithPayer sponsorPk [sponsorPriv, authorityPriv] noncePk authorityPk [] durableNonceBh of
           Left err -> assertFailure (show err)
           Right b64 -> BS.head (fromBase64String b64) @?= 2,
-      testProperty "message header/key-ordering invariants" prop_messageInvariants
+      testProperty "message header/key-ordering invariants" prop_messageInvariants,
+      testCase "memo-only transaction via explicit fee payer matches Rust" $ do
+        fs <- loadFixtures "test/fixtures/transactions.json"
+        let ix = Memo.buildMemo "hello-memo" [fst payerKeys]
+        case newTransactionIntentWithPayer (fst payerKeys) [snd payerKeys] [ix] fixedBlockhash of
+          Left err -> assertFailure (show err)
+          Right b64 -> b64 @?= toBase64String (requireFixture "memo-only-transaction" fs),
+      testCase "memo-only message: explicit fee payer seeds a writable signer, instruction-derived payer does not" $ do
+        let ix = Memo.buildMemo "hello-memo" [fst payerKeys]
+        mHeader (mkNewMessageWithPayer (fst payerKeys) fixedBlockhash [ix]) @?= MessageHeader 1 0 1
+        mHeader (mkNewMessage fixedBlockhash [ix]) @?= MessageHeader 1 1 1,
+      testProperty "explicit fee payer is account 0 and a writable signer" prop_payerInvariants,
+      testCase "orderSigningKeys: permuted keys are ordered to the message's required signers" $ do
+        let ix = SP.createAccount (fst payerKeys) (fst newAccountKeys) 1000000 165 ownerPk
+            msg = mkNewMessageWithPayer (fst newAccountKeys) fixedBlockhash [ix]
+        case orderSigningKeys msg [snd payerKeys, snd newAccountKeys] of
+          Left err -> assertFailure (show err)
+          Right ordered -> map toSolanaPublicKey ordered @?= take 2 (mAccountKeys msg),
+      testCase "orderSigningKeys: missing and unused keys are reported" $ do
+        let ix = SP.createAccount (fst payerKeys) (fst newAccountKeys) 1000000 165 ownerPk
+            msg = mkNewMessageWithPayer (fst newAccountKeys) fixedBlockhash [ix]
+        case orderSigningKeys msg [snd payerKeys] of
+          Right _ -> assertFailure "expected Left for missing signer"
+          Left (MissingIndex msg') -> assertBool ("expected \"missing signer\" in: " <> msg') ("missing signer" `isInfixOf` msg')
+        case orderSigningKeys msg [snd payerKeys, snd newAccountKeys, snd extraKeys] of
+          Right _ -> assertFailure "expected Left for unused signing key"
+          Left (MissingIndex msg') -> assertBool ("expected \"unused signing key\" in: " <> msg') ("unused signing key" `isInfixOf` msg')
     ]

@@ -18,6 +18,8 @@ module Network.Solana.Core.Message
     newMessage,
     newMessageToBase64String,
     mkNewMessage,
+    mkNewMessageWithPayer,
+    orderSigningKeys,
   )
 where
 
@@ -56,6 +58,11 @@ type SignedTransactionIntent = (BlockHash -> Either CompileException String)
 -- account keys. If you would rather name the fee payer explicitly and not
 -- worry about signer order, consider 'newTransactionIntentWithPayer',
 -- which orders signatures automatically.
+--
+-- If no instruction marks a signer writable (a memo-only or SPL
+-- authority-only instruction list), the message compiled here has no valid
+-- fee payer and the node rejects it at sanitize time; use
+-- 'newTransactionIntentWithPayer' for such transactions.
 newTransactionIntent :: [SolanaPrivateKey] -> [Instruction] -> SignedTransactionIntent
 newTransactionIntent signers instructions blockhash = do
   msg <- newMessage blockhash instructions -- make the binary message
@@ -76,21 +83,30 @@ newTransactionIntentWithPayer :: SolanaPublicKey -> [SolanaPrivateKey] -> [Instr
 newTransactionIntentWithPayer payer signingKeys instructions blockhash = do
   let msg = mkNewMessageWithPayer payer blockhash instructions
   msgBytes <- compileMessageToBinary msg
-  let requiredSigners = take (fromIntegral (numRequiredSignatures (mHeader msg))) (mAccountKeys msg)
-      keyedByPubkey = [(toSolanaPublicKey k, k) | k <- signingKeys]
-  orderedKeys <- mapM (findSigningKey keyedByPubkey) requiredSigners
-  mapM_ (checkKeyIsRequired requiredSigners . fst) keyedByPubkey
+  orderedKeys <- orderSigningKeys msg signingKeys
   let signatures = S.toStrict . Data.Binary.encode $ mkCompact $ flip dsign msgBytes <$> orderedKeys
   return $ toBase64String $ S.append signatures msgBytes
+
+-- | Orders the given private keys to match the required signers of the given
+-- message (its first @numRequiredSignatures@ account keys, fee payer first).
+-- 'Left' if a required signer has no corresponding key, or if a given key
+-- corresponds to no required signer. Duplicate keys for the same signer are
+-- tolerated: the first match signs, mirroring the Rust SDK's @try_sign@.
+orderSigningKeys :: Message -> [SolanaPrivateKey] -> Either CompileException [SolanaPrivateKey]
+orderSigningKeys msg signingKeys = do
+  orderedKeys <- mapM findSigningKey requiredSigners
+  mapM_ (checkKeyIsRequired . fst) keyedByPubkey
+  pure orderedKeys
   where
-    findSigningKey keyedByPubkey pk =
+    requiredSigners = take (fromIntegral (numRequiredSignatures (mHeader msg))) (mAccountKeys msg)
+    keyedByPubkey = [(toSolanaPublicKey k, k) | k <- signingKeys]
+    findSigningKey pk =
       case lookup pk keyedByPubkey of
         Just k -> Right k
         Nothing -> Left (MissingIndex ("missing signer for " <> show pk))
-    checkKeyIsRequired requiredSigners pk =
-      if pk `elem` requiredSigners
-        then Right ()
-        else Left (MissingIndex ("unused signing key " <> show pk))
+    checkKeyIsRequired pk
+      | pk `elem` requiredSigners = Right ()
+      | otherwise = Left (MissingIndex ("unused signing key " <> show pk))
 
 -- | Builds and signs a durable-nonce transaction: prepends
 -- @SystemProgram.advanceNonceAccount nonceAccount nonceAuthority@ ahead of

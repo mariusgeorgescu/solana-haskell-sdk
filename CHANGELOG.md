@@ -14,6 +14,20 @@
 * Changed: `unsafeSolanaPublicKeyRaw` and `unsafeSolanaPrivateKeyRaw` now call
   `error` unless given exactly 32 / 64 bytes, matching the other `unsafe*`
   constructors.
+* Fixed: `newTransaction` now names its first signing key as the fee payer
+  (via `newTransactionIntentWithPayer`), so transactions whose only signer is
+  a read-only authority -- a memo-only transaction, or a standalone SPL
+  `mintTo`/`transferChecked` -- are no longer rejected by the node with
+  "Transaction failed to sanitize accounts offsets correctly". The first key
+  is forced writable and pinned to account 0 even if no instruction
+  references it (sponsored fees), the remaining keys may be passed in any
+  order, an empty key list throws `userError`, and an unused key is reported
+  as a `CompileException` before the send. Output is byte-identical for every
+  transaction that was already valid.
+* Added `compileV0MessageWithPayer` and `newV0TransactionIntentWithPayer`,
+  the explicit-fee-payer counterparts of the v0 compiler and signer
+  (mirroring the Rust SDK's `v0::Message::try_compile(payer, ..)`), plus
+  `mkNewMessageWithPayer` and `orderSigningKeys` as exported building blocks.
 
 ## 1.2.0.0 -- 2026-08-03
 

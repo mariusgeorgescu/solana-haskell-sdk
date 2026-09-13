@@ -27,7 +27,7 @@ import Data.Word (Word64)
 import Network.Solana.Core.Account (AccountData (..), AccountInfo (dataField))
 import Network.Solana.Core.Crypto
 import Network.Solana.Core.Instruction
-import Network.Solana.Core.Message (newDurableNonceTransactionIntentWithPayer, newTransactionIntent)
+import Network.Solana.Core.Message (newDurableNonceTransactionIntentWithPayer, newTransactionIntentWithPayer)
 import Network.Solana.Core.VersionedMessage qualified as VM
 import Network.Solana.Metaplex.TokenMetadata qualified as TM
 import Network.Solana.NativePrograms.AddressLookupTable qualified as ALT
@@ -45,16 +45,27 @@ import Network.Web3 hiding (AccountData, value)
 -- instructions, returning its signature.
 --
 -- Fetches the latest blockhash from the cluster, compiles the instructions
--- into a message, signs it with the given keys (the first key is the fee
--- payer), and broadcasts the result with 'sendTransaction'.
+-- with 'newTransactionIntentWithPayer' naming the first key as the fee
+-- payer (forced into account 0 as a writable signer, even if no instruction
+-- marks it writable -- e.g. a memo-only or SPL authority-only transaction
+-- -- or references it at all), signs with the given keys (any order;
+-- signatures are placed in message order automatically), and broadcasts
+-- the result with 'sendTransaction'.
 --
--- Throws a 'CompileException' if an instruction references an account key
--- that cannot be resolved in the compiled message.
+-- Throws @'userError' "newTransaction: no signers given"@ if the key list
+-- is empty, and a 'CompileException' if an instruction references an
+-- account key that cannot be resolved in the compiled message, if a
+-- required signer has no corresponding key, or if a given key signs
+-- nothing.
 newTransaction :: [SolanaPrivateKey] -> [Instruction] -> Web3 SolanaSignature
-newTransaction signers instructions = do
-  let newTxInt = newTransactionIntent signers instructions
+newTransaction [] _ = liftIO . throwIO . userError $ "newTransaction: no signers given"
+newTransaction signers@(payer : _) instructions = do
   bh <- getTheLatestBlockhash
-  signedTx <- either (liftIO . throwIO) pure (newTxInt bh)
+  signedTx <-
+    either
+      (liftIO . throwIO)
+      pure
+      (newTransactionIntentWithPayer (toSolanaPublicKey payer) signers instructions bh)
   sendTransaction signedTx
 
 -- | Configuration used to fetch the nonce account in 'newNonceTransaction':

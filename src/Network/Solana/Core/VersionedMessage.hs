@@ -7,7 +7,9 @@ module Network.Solana.Core.VersionedMessage
   ( AddressLookupTableAccount (..),
     MessageAddressTableLookup (..),
     compileV0Message,
+    compileV0MessageWithPayer,
     newV0TransactionIntent,
+    newV0TransactionIntentWithPayer,
   )
 where
 
@@ -114,12 +116,26 @@ instance Binary MessageAddressTableLookup where
 -- 'Network.Solana.SolanaWeb3.getLookupTable' drops that field and returns
 -- only 'AddressLookupTableAccount', so it can't be used for this check.
 compileV0Message :: BlockHash -> [Instruction] -> [AddressLookupTableAccount] -> Either CompileException BS.ByteString
-compileV0Message bh instructions tables = do
-  let legacy = mkNewMessage bh instructions
-      header = mHeader legacy
+compileV0Message bh instructions = compileV0FromLegacy (mkNewMessage bh instructions)
+
+-- | Like 'compileV0Message', but with an explicitly named fee payer, seeded
+-- as a writable signer and pinned to account 0 via
+-- 'Network.Solana.Core.Message.mkNewMessageWithPayer' -- which is what the
+-- Rust SDK's @v0::Message::try_compile(payer, ..)@ always does. Required
+-- when no instruction marks a signer writable (a memo-only or SPL
+-- authority-only instruction list) and for sponsored fees.
+compileV0MessageWithPayer :: SolanaPublicKey -> BlockHash -> [Instruction] -> [AddressLookupTableAccount] -> Either CompileException BS.ByteString
+compileV0MessageWithPayer payer bh instructions = compileV0FromLegacy (mkNewMessageWithPayer payer bh instructions)
+
+-- | Move eligible keys of an assembled legacy message into the given lookup
+-- tables and serialize the v0 message (shared body of 'compileV0Message'
+-- and 'compileV0MessageWithPayer').
+compileV0FromLegacy :: Message -> [AddressLookupTableAccount] -> Either CompileException BS.ByteString
+compileV0FromLegacy legacy tables = do
+  let header = mHeader legacy
       keys = mAccountKeys legacy
       (rws, ros, rwus, rous) = splitAccountsByPurpose header keys
-      programIds = iProgramId <$> instructions
+      programIds = iProgramId <$> mInstructions legacy
       (rwusRemaining, rousRemaining, tableLoads) = drainTables programIds rwus rous tables
       statics = rws <> ros <> rwusRemaining <> rousRemaining
       newHeader = header {numReadonlyUnsignedAccounts = fromIntegral (length rousRemaining)}
@@ -147,7 +163,8 @@ compileV0Message bh instructions tables = do
 -- followed by the message bytes). Mirrors 'Network.Solana.Core.Message.newTransactionIntent'.
 -- The private keys passed here must be ordered to match the resulting account
 -- order (fee payer first), otherwise the produced signatures will not correspond
--- to the right account keys.
+-- to the right account keys. If you would rather name the fee payer explicitly
+-- and not worry about signer order, use 'newV0TransactionIntentWithPayer'.
 --
 -- If any given table was extended very recently, see the note on
 -- 'compileV0Message' about the resulting transaction's activation window:
@@ -158,6 +175,19 @@ newV0TransactionIntent :: [SolanaPrivateKey] -> [Instruction] -> [AddressLookupT
 newV0TransactionIntent signers instructions tables bh = do
   msg <- compileV0Message bh instructions tables
   let signatures = BL.toStrict . encode $ mkCompact $ flip dsign msg <$> signers
+  return $ toBase64String $ BS.append signatures msg
+
+-- | Like 'newV0TransactionIntent', but with an explicitly named fee payer
+-- (see 'compileV0MessageWithPayer'); the given private keys may be listed
+-- in any order -- they are matched against the message's required signers
+-- and placed in message order automatically, with the same 'Left' cases as
+-- 'Network.Solana.Core.Message.newTransactionIntentWithPayer'.
+newV0TransactionIntentWithPayer :: SolanaPublicKey -> [SolanaPrivateKey] -> [Instruction] -> [AddressLookupTableAccount] -> BlockHash -> Either CompileException String
+newV0TransactionIntentWithPayer payer signingKeys instructions tables bh = do
+  let legacy = mkNewMessageWithPayer payer bh instructions
+  msg <- compileV0FromLegacy legacy tables
+  orderedKeys <- orderSigningKeys legacy signingKeys
+  let signatures = BL.toStrict . encode $ mkCompact $ flip dsign msg <$> orderedKeys
   return $ toBase64String $ BS.append signatures msg
 
 ------------------------------------------------------------------------------------------------

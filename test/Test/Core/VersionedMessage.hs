@@ -10,6 +10,7 @@ import Network.Solana.Core.Instruction (AccountMeta (..), CompileException (..),
 import Network.Solana.Core.VersionedMessage
 import Network.Solana.NativePrograms.AddressLookupTable qualified as ALT
 import Network.Solana.NativePrograms.SystemProgram qualified as SP
+import Network.Solana.SplPrograms.Memo qualified as Memo
 import Test.Fixtures
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -23,8 +24,23 @@ payerKeys =
     Just kp -> kp
     Nothing -> error "failed to derive payer keypair from seed"
 
+newAccountKeys :: (SolanaPublicKey, SolanaPrivateKey)
+newAccountKeys =
+  case createSolanaKeypairFromSeed (BS.replicate 32 10) of
+    Just kp -> kp
+    Nothing -> error "failed to derive new-account keypair from seed"
+
+extraKeys :: (SolanaPublicKey, SolanaPrivateKey)
+extraKeys =
+  case createSolanaKeypairFromSeed (BS.replicate 32 40) of
+    Just kp -> kp
+    Nothing -> error "failed to derive extra keypair from seed"
+
 recipientPk :: SolanaPublicKey
 recipientPk = unsafeSolanaPublicKeyRaw (replicate 32 2)
+
+ownerPk :: SolanaPublicKey
+ownerPk = unsafeSolanaPublicKeyRaw (replicate 32 5)
 
 addr29 :: SolanaPublicKey
 addr29 = unsafeSolanaPublicKeyRaw (replicate 32 29)
@@ -137,7 +153,46 @@ tests =
                   ]
             case compileV0Message fixedBlockhash ixs [table] of
               Left err -> assertFailure (show err)
-              Right bytes -> bytes @?= requireFixture "v0-message" txFs
+              Right bytes -> bytes @?= requireFixture "v0-message" txFs,
+      testCase "v0 signed transaction via explicit fee payer matches Rust" $ do
+        fs <- loadFixtures "test/fixtures/transactions.json"
+        let ixs =
+              [ SP.transfer (fst payerKeys) recipientPk 1000000000,
+                SP.transfer (fst payerKeys) addr29 500000
+              ]
+        case newV0TransactionIntentWithPayer (fst payerKeys) [snd payerKeys] ixs [lookupTable] fixedBlockhash of
+          Left err -> assertFailure (show err)
+          Right b64 -> b64 @?= toBase64String (requireFixture "v0-transfer-transaction" fs),
+      testCase "v0 memo-only transaction via explicit fee payer matches Rust" $ do
+        fs <- loadFixtures "test/fixtures/transactions.json"
+        let ix = Memo.buildMemo "hello-memo" [fst payerKeys]
+        case newV0TransactionIntentWithPayer (fst payerKeys) [snd payerKeys] [ix] [] fixedBlockhash of
+          Left err -> assertFailure (show err)
+          Right b64 -> b64 @?= toBase64String (requireFixture "v0-memo-only-transaction" fs),
+      testCase "v0 memo-only message: explicit fee payer seeds a writable signer, compileV0Message does not" $ do
+        let ix = Memo.buildMemo "hello-memo" [fst payerKeys]
+        case compileV0MessageWithPayer (fst payerKeys) fixedBlockhash [ix] [] of
+          Left err -> assertFailure (show err)
+          Right bytes -> BS.take 4 bytes @?= BS.pack [0x80, 1, 0, 1]
+        case compileV0Message fixedBlockhash [ix] [] of
+          Left err -> assertFailure (show err)
+          Right bytes -> BS.take 4 bytes @?= BS.pack [0x80, 1, 1, 1],
+      testCase "v0 explicit fee payer: signers may be given in any order" $ do
+        let ix = SP.createAccount (fst payerKeys) (fst newAccountKeys) 1000000 165 ownerPk
+        case ( newV0TransactionIntentWithPayer (fst payerKeys) [snd newAccountKeys, snd payerKeys] [ix] [] fixedBlockhash,
+               newV0TransactionIntentWithPayer (fst payerKeys) [snd payerKeys, snd newAccountKeys] [ix] [] fixedBlockhash
+             ) of
+          (Right permuted, Right inOrder) -> permuted @?= inOrder
+          (Left err, _) -> assertFailure (show err)
+          (_, Left err) -> assertFailure (show err),
+      testCase "v0 explicit fee payer: missing and unused signing keys are reported" $ do
+        let ix = SP.createAccount (fst payerKeys) (fst newAccountKeys) 1000000 165 ownerPk
+        case newV0TransactionIntentWithPayer (fst payerKeys) [snd payerKeys] [ix] [] fixedBlockhash of
+          Right _ -> assertFailure "expected Left for missing signer"
+          Left (MissingIndex msg) -> assertBool ("expected \"missing signer\" in: " <> msg) ("missing signer" `isInfixOf` msg)
+        case newV0TransactionIntentWithPayer (fst payerKeys) [snd payerKeys, snd newAccountKeys, snd extraKeys] [ix] [] fixedBlockhash of
+          Right _ -> assertFailure "expected Left for unused signing key"
+          Left (MissingIndex msg) -> assertBool ("expected \"unused signing key\" in: " <> msg) ("unused signing key" `isInfixOf` msg)
     ]
 
 -- | Compare two compile results by their message bytes ('CompileException'

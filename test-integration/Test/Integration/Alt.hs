@@ -7,13 +7,15 @@ module Test.Integration.Alt (tests) where
 import Control.Exception (throwIO)
 import Control.Monad.IO.Class (liftIO)
 import Network.Solana.Core.Crypto (createSolanaKeyPair)
-import Network.Solana.Core.VersionedMessage (altAddresses, newV0TransactionIntent)
+import Network.Solana.Core.VersionedMessage (altAddresses, newV0TransactionIntent, newV0TransactionIntentWithPayer)
 import Network.Solana.NativePrograms.AddressLookupTable (createLookupTable, extendLookupTable)
 import Network.Solana.NativePrograms.SystemProgram qualified as SystemProgram
 import Network.Solana.RPC.HTTP.Account (getBalance)
 import Network.Solana.RPC.HTTP.Block (getTheLatestBlockhash)
 import Network.Solana.RPC.HTTP.Ledger (getSlot)
+import Network.Solana.RPC.HTTP.Transaction (sendTransaction)
 import Network.Solana.SolanaWeb3 (getLookupTable)
+import Network.Solana.SplPrograms.Memo qualified as Memo
 import Network.Web3.Provider (Web3)
 import Test.Integration.Setup
 import Test.Tasty
@@ -23,7 +25,9 @@ tests :: TestTree
 tests =
   testGroup
     "Alt"
-    [testCase "on-chain ALT: create, extend, decode, v0 transfer through the table" (run altV0Flow)]
+    [ testCase "on-chain ALT: create, extend, decode, v0 transfer through the table" (run altV0Flow),
+      testCase "v0 memo-only transaction via explicit fee payer lands without a lookup table" (run v0MemoOnly)
+    ]
 
 -- | Creates a lookup table at the current finalized slot (guaranteed present
 -- in the SlotHashes sysvar for the on-chain create check), extends it with a
@@ -61,3 +65,13 @@ altV0Flow = do
   confirmFinalized sig
   bal <- getBalance recipient
   liftIO (bal @?= 200_000_000)
+
+-- | The v0 counterpart of the legacy memo-only case: the memo's only signer
+-- is read-only, so only an explicitly named fee payer yields a valid header.
+v0MemoOnly :: Web3 ()
+v0MemoOnly = do
+  (payerPk, payerSk) <- fundedKeypair 1_000_000_000
+  bh <- getTheLatestBlockhash
+  tx <- either (liftIO . throwIO) pure (newV0TransactionIntentWithPayer payerPk [payerSk] [Memo.buildMemo "v0" [payerPk]] [] bh)
+  sig <- sendTransaction tx
+  confirmFinalized sig
