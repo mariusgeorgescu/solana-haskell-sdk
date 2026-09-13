@@ -34,6 +34,15 @@
   rejected the send with `BlockhashNotFound` whenever the nonce account had
   been created or advanced within the last ~32 slots -- i.e. on every
   back-to-back use -- unless the caller first waited for finalization.
+* Fixed: `AccountData`'s `FromJSON` decoded a bare `data` string as (lenient)
+  base64. Per the RPC account-data format a bare string is the node's legacy
+  `binary` encoding, i.e. base58, so `getAccountInfo'`, `getProgramAccounts'`
+  and `getTokenAccountsByOwner'`/`ByDelegate'` called with a configuration
+  that omits `encoding` (or sets `"binary"`) returned silently corrupted
+  bytes for accounts of up to 128 bytes. Bare strings now decode strictly as
+  base58 (invalid input is a parse error) and `AccountData` round-trips
+  through its own `ToJSON`; the `[data, "base64"]` form and the
+  base64-requesting wrappers are unchanged.
 
 ## 1.2.0.0 -- 2026-08-03
 

@@ -12,7 +12,6 @@ import Data.ByteString qualified as S
 import Data.Text qualified as T
 import Data.Vector qualified as V
 import Data.Word (Word64)
-import GHC.Base (Alternative (..))
 import GHC.Generics (Generic)
 import Network.Solana.Constants
 import Network.Solana.Core.Crypto
@@ -100,6 +99,10 @@ instance FromJSON AccountInfo where
 ------------------------------------------------------------------------------------------------
 
 -- | A byte array that stores arbitrary data for an account.
+--
+-- On the wire, RPC account @data@ is either a bare Base58 string (the node's
+-- default @binary@ encoding, only offered for accounts of at most 128 bytes)
+-- or a @[data, encoding]@ pair; 'toJSON' emits the bare Base58 form.
 data AccountData
   = AccountDataBinary
       { accData :: S.ByteString
@@ -146,4 +149,6 @@ instance FromJSON AccountData where
                     other -> fail ("AccountData: unsupported encoding: " <> show other)
             )
             v
-     in base64StringParser v <|> encodedParser
+     in case v of
+          String _ -> base58StringParser v
+          _ -> encodedParser

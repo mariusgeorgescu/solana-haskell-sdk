@@ -11,9 +11,9 @@ import Network.Solana.Core.Account (AccountInfo (dataField))
 import Network.Solana.Core.Block (BlockHash)
 import Network.Solana.Core.Crypto (SolanaPublicKey, createSolanaKeyPair)
 import Network.Solana.NativePrograms.SystemProgram qualified as SystemProgram
-import Network.Solana.RPC.HTTP.Account (getAccountInfo', getBalance)
+import Network.Solana.RPC.HTTP.Account (getAccountInfo, getAccountInfo', getBalance)
 import Network.Solana.RPC.HTTP.Tokenomics (getMinimumBalanceForRentExemption)
-import Network.Solana.RPC.HTTP.Types (value)
+import Network.Solana.RPC.HTTP.Types (defaultConfigObject, value)
 import Network.Solana.SolanaWeb3 (accountDataBytes, cfgNonceAccountConfirmed, getNonceAccount, newNonceTransaction)
 import Network.Web3.Provider (Web3)
 import Test.Integration.Setup
@@ -49,6 +49,11 @@ nonceFlow = do
         SystemProgram.initializeNonceAccount noncePk payerPk
       ]
   confirmFinalized createSig -- getNonceAccount reads the finalized bank
+  -- The node's default encoding (a bare base58 string) and the explicit
+  -- base64 pair must decode to the same 80 bytes.
+  raw <- value <$> getAccountInfo' noncePk defaultConfigObject
+  b64 <- getAccountInfo noncePk
+  liftIO (fmap dataField raw @?= fmap dataField b64)
   before <- requireJust "nonce account (before)" =<< getNonceAccount noncePk
   nonceBefore <- case before of
     SystemProgram.NonceInitialized auth dn _ -> liftIO (auth @?= payerPk) >> pure dn
