@@ -127,7 +127,8 @@ compileV0Message bh instructions = compileV0FromLegacy (mkNewMessage bh instruct
 -- Rust SDK's @v0::Message::try_compile(payer, ..)@ always does. Required
 -- when no instruction marks a signer writable (a memo-only or SPL
 -- authority-only instruction list) and for sponsored fees.
-compileV0MessageWithPayer :: SolanaPublicKey -> BlockHash -> [Instruction] -> [AddressLookupTableAccount] -> Either CompileException BS.ByteString
+compileV0MessageWithPayer ::
+  SolanaPublicKey -> BlockHash -> [Instruction] -> [AddressLookupTableAccount] -> Either CompileException BS.ByteString
 compileV0MessageWithPayer payer bh instructions = compileV0FromLegacy (mkNewMessageWithPayer payer bh instructions)
 
 -- | Move eligible keys of an assembled legacy message into the given lookup
@@ -185,7 +186,9 @@ newV0TransactionIntent signers instructions tables bh = do
 -- in any order -- they are matched against the message's required signers
 -- and placed in message order automatically, with the same 'Left' cases as
 -- 'Network.Solana.Core.Message.newTransactionIntentWithPayer'.
-newV0TransactionIntentWithPayer :: SolanaPublicKey -> [SolanaPrivateKey] -> [Instruction] -> [AddressLookupTableAccount] -> BlockHash -> Either CompileException String
+newV0TransactionIntentWithPayer ::
+  SolanaPublicKey -> [SolanaPrivateKey] -> [Instruction] -> [AddressLookupTableAccount] -> BlockHash ->
+  Either CompileException String
 newV0TransactionIntentWithPayer payer signingKeys instructions tables bh = do
   let legacy = mkNewMessageWithPayer payer bh instructions
   msg <- compileV0FromLegacy legacy tables

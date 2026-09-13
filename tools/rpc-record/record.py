@@ -175,9 +175,10 @@ def methods(state):
     blockhash = rpc("getLatestBlockhash")["result"]["value"]["blockhash"]
     # The bootstrap validator's stake account: the one account that earns an
     # inflation reward on a fresh test validator.
+    stake_program = "Stake11111111111111111111111111111111111111"
     stake_account = rpc(
         "getProgramAccounts",
-        ["Stake11111111111111111111111111111111111111", {"encoding": "base64", "dataSlice": {"offset": 0, "length": 0}}],
+        [stake_program, {"encoding": "base64", "dataSlice": {"offset": 0, "length": 0}}],
     )["result"][0]["pubkey"]
     # A signed-only transfer message (never submitted) gives getFeeForMessage
     # a real, script-controlled input: one signature at the default fee.

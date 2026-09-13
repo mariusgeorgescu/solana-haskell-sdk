@@ -115,7 +115,9 @@ prop_payerInvariants =
           keys = mAccountKeys msg
        in conjoin
             [ counterexample "payer is not account 0" (take 1 keys === [payer]),
-              counterexample "no writable signer" (property (numReadonlySignedAccounts hdr < numRequiredSignatures hdr)),
+              counterexample
+                "no writable signer"
+                (property (numReadonlySignedAccounts hdr < numRequiredSignatures hdr)),
               counterexample "duplicate keys" (keys === nub keys)
             ]
 
@@ -272,10 +274,12 @@ tests =
             msg = mkNewMessageWithPayer (fst newAccountKeys) fixedBlockhash [ix]
         case orderSigningKeys msg [snd payerKeys] of
           Right _ -> assertFailure "expected Left for missing signer"
-          Left (MissingIndex msg') -> assertBool ("expected \"missing signer\" in: " <> msg') ("missing signer" `isInfixOf` msg')
+          Left (MissingIndex msg') ->
+            assertBool ("expected \"missing signer\" in: " <> msg') ("missing signer" `isInfixOf` msg')
         case orderSigningKeys msg [snd payerKeys, snd newAccountKeys, snd extraKeys] of
           Right _ -> assertFailure "expected Left for unused signing key"
-          Left (MissingIndex msg') -> assertBool ("expected \"unused signing key\" in: " <> msg') ("unused signing key" `isInfixOf` msg'),
+          Left (MissingIndex msg') ->
+            assertBool ("expected \"unused signing key\" in: " <> msg') ("unused signing key" `isInfixOf` msg'),
       testCase "a message with more than 256 account keys fails to compile instead of wrapping indices" $ do
         let metas = [AccountMeta (unsafeSolanaPublicKeyRaw (replicate 31 7 <> [b])) False False | b <- [0 .. 254]]
             ix = mkInstruction Memo.memoProgramId (AccountMeta (fst payerKeys) True True : metas) ()

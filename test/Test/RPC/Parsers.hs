@@ -21,7 +21,15 @@ import Data.Aeson (FromJSON, Value)
 import Data.Aeson.Types (parseEither, parseJSON)
 import Data.Map.Strict qualified as M
 import Data.Maybe (isJust)
-import Network.Solana.Core.Account (Account, AccountData (..), AccountInfo, Lamport (..), dataField, executable, lamports)
+import Network.Solana.Core.Account
+  ( Account,
+    AccountData (..),
+    AccountInfo,
+    Lamport (..),
+    dataField,
+    executable,
+    lamports,
+  )
 import Network.Solana.Core.Block (BlockHash, BlockHeight)
 import Network.Solana.Core.Crypto (SolanaPublicKey)
 import Network.Solana.RPC.HTTP.Account hiding (lamports)
@@ -86,8 +94,9 @@ clusterTests =
       assertBool "a full snapshot exists" (full s > 0),
     testCase "getRecentPrioritizationFees" $ withResult @[PrioritizationFee] "getRecentPrioritizationFees" $ \fees ->
       assertBool "recent slots are sampled" (not (null fees) && length fees <= 150),
-    testCase "getRecentPrioritizationFees (address filter)" $ withResult @[PrioritizationFee] "getRecentPrioritizationFees-filtered" $ \fees ->
-      assertBool "recent slots are sampled" (not (null fees))
+    testCase "getRecentPrioritizationFees (address filter)" $
+      withResult @[PrioritizationFee] "getRecentPrioritizationFees-filtered" $ \fees ->
+        assertBool "recent slots are sampled" (not (null fees))
   ]
 
 ledgerTests :: [TestTree]
@@ -193,22 +202,25 @@ accountTests =
       assertBool "the token program owns the mint and token account" (length accounts >= 2),
     -- Recorded with no configuration: the node's default encoding is a bare
     -- base58 string (the recorder's 82-byte mint).
-    testCase "getAccountInfo (node default encoding: bare base58)" $ withResult @(RPCResponse (Maybe AccountInfo)) "getAccountInfo-base58" $ \r ->
-      case dataField <$> value r of
-        Just (AccountDataBinary bs) -> case decodeMint bs of
-          Left e -> assertFailure e
-          Right m -> do
-            mDecimals m @?= 6
-            mSupply m @?= 42000000
-        other -> assertFailure ("expected binary mint data, got " <> show other),
-    testCase "getAccountInfo (jsonParsed)" $ withResult @(RPCResponse (Maybe AccountInfo)) "getAccountInfo-jsonParsed" $ \r ->
-      case dataField <$> value r of
-        Just (AccountDataJSON prog _ space) -> do
-          prog @?= "spl-token"
-          space @?= 165
-        other -> assertFailure ("expected parsed token account data, got " <> show other),
-    testCase "getAccountInfo (jsonParsed falls back to base64 without a parser)" $ withResult @(RPCResponse (Maybe AccountInfo)) "getAccountInfo-jsonParsed-fallback" $ \r ->
-      fmap dataField (value r) @?= Just (AccountDataBinary "")
+    testCase "getAccountInfo (node default encoding: bare base58)" $
+      withResult @(RPCResponse (Maybe AccountInfo)) "getAccountInfo-base58" $ \r ->
+        case dataField <$> value r of
+          Just (AccountDataBinary bs) -> case decodeMint bs of
+            Left e -> assertFailure e
+            Right m -> do
+              mDecimals m @?= 6
+              mSupply m @?= 42000000
+          other -> assertFailure ("expected binary mint data, got " <> show other),
+    testCase "getAccountInfo (jsonParsed)" $
+      withResult @(RPCResponse (Maybe AccountInfo)) "getAccountInfo-jsonParsed" $ \r ->
+        case dataField <$> value r of
+          Just (AccountDataJSON prog _ space) -> do
+            prog @?= "spl-token"
+            space @?= 165
+          other -> assertFailure ("expected parsed token account data, got " <> show other),
+    testCase "getAccountInfo (jsonParsed falls back to base64 without a parser)" $
+      withResult @(RPCResponse (Maybe AccountInfo)) "getAccountInfo-jsonParsed-fallback" $ \r ->
+        fmap dataField (value r) @?= Just (AccountDataBinary "")
   ]
 
 transactionTests :: [TestTree]

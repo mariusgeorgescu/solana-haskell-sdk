@@ -72,6 +72,10 @@ v0MemoOnly :: Web3 ()
 v0MemoOnly = do
   (payerPk, payerSk) <- fundedKeypair 1_000_000_000
   bh <- getTheLatestBlockhash
-  tx <- either (liftIO . throwIO) pure (newV0TransactionIntentWithPayer payerPk [payerSk] [Memo.buildMemo "v0" [payerPk]] [] bh)
+  tx <-
+    either
+      (liftIO . throwIO)
+      pure
+      (newV0TransactionIntentWithPayer payerPk [payerSk] [Memo.buildMemo "v0" [payerPk]] [] bh)
   sig <- sendTransaction tx
   confirmFinalized sig

@@ -179,32 +179,37 @@ tests =
           Right bytes -> BS.take 4 bytes @?= BS.pack [0x80, 1, 1, 1],
       testCase "v0 explicit fee payer: signers may be given in any order" $ do
         let ix = SP.createAccount (fst payerKeys) (fst newAccountKeys) 1000000 165 ownerPk
-        case ( newV0TransactionIntentWithPayer (fst payerKeys) [snd newAccountKeys, snd payerKeys] [ix] [] fixedBlockhash,
-               newV0TransactionIntentWithPayer (fst payerKeys) [snd payerKeys, snd newAccountKeys] [ix] [] fixedBlockhash
-             ) of
-          (Right permuted, Right inOrder) -> permuted @?= inOrder
+            sign keys = newV0TransactionIntentWithPayer (fst payerKeys) keys [ix] [] fixedBlockhash
+        case (sign [snd newAccountKeys, snd payerKeys], sign [snd payerKeys, snd newAccountKeys]) of
+          (Right p, Right o) -> p @?= o
           (Left err, _) -> assertFailure (show err)
           (_, Left err) -> assertFailure (show err),
       testCase "v0 explicit fee payer: missing and unused signing keys are reported" $ do
         let ix = SP.createAccount (fst payerKeys) (fst newAccountKeys) 1000000 165 ownerPk
         case newV0TransactionIntentWithPayer (fst payerKeys) [snd payerKeys] [ix] [] fixedBlockhash of
           Right _ -> assertFailure "expected Left for missing signer"
-          Left (MissingIndex msg) -> assertBool ("expected \"missing signer\" in: " <> msg) ("missing signer" `isInfixOf` msg)
-        case newV0TransactionIntentWithPayer (fst payerKeys) [snd payerKeys, snd newAccountKeys, snd extraKeys] [ix] [] fixedBlockhash of
+          Left (MissingIndex msg) ->
+            assertBool ("expected \"missing signer\" in: " <> msg) ("missing signer" `isInfixOf` msg)
+        let tooManyKeys = [snd payerKeys, snd newAccountKeys, snd extraKeys]
+        case newV0TransactionIntentWithPayer (fst payerKeys) tooManyKeys [ix] [] fixedBlockhash of
           Right _ -> assertFailure "expected Left for unused signing key"
-          Left (MissingIndex msg) -> assertBool ("expected \"unused signing key\" in: " <> msg) ("unused signing key" `isInfixOf` msg),
+          Left (MissingIndex msg) ->
+            assertBool ("expected \"unused signing key\" in: " <> msg) ("unused signing key" `isInfixOf` msg),
       testCase "static and table-loaded keys totalling more than 256 fail to compile" $ do
         -- Each table stays under 256 addresses (the per-table check passes);
         -- 2 static keys + 300 loaded keys exceed what a byte index can address.
         let tableA = AddressLookupTableAccount tableKey [numberedKey b | b <- [0 .. 199]]
             tableB = AddressLookupTableAccount otherTableKey [numberedKey b | b <- [200 .. 299]]
-            ix = mkInstruction dummyProgramId (AccountMeta (fst payerKeys) True True : [AccountMeta (numberedKey b) False True | b <- [0 .. 299]]) ()
+            metas = [AccountMeta (numberedKey b) False True | b <- [0 .. 299]]
+            ix = mkInstruction dummyProgramId (AccountMeta (fst payerKeys) True True : metas) ()
         case compileV0Message fixedBlockhash [ix] [tableA, tableB] of
-          Left (MissingIndex msg) -> assertBool ("expected \"account index overflow\" in: " <> msg) ("account index overflow" `isInfixOf` msg)
+          Left (MissingIndex msg) ->
+            assertBool ("expected \"account index overflow\" in: " <> msg) ("account index overflow" `isInfixOf` msg)
           Right _ -> assertFailure "compiled a v0 message resolving more than 256 keys",
       testCase "static plus table-loaded keys totalling exactly 256 compile" $ do
         let table = AddressLookupTableAccount tableKey [numberedKey b | b <- [0 .. 253]]
-            ix = mkInstruction dummyProgramId (AccountMeta (fst payerKeys) True True : [AccountMeta (numberedKey b) False True | b <- [0 .. 253]]) ()
+            metas = [AccountMeta (numberedKey b) False True | b <- [0 .. 253]]
+            ix = mkInstruction dummyProgramId (AccountMeta (fst payerKeys) True True : metas) ()
         case compileV0Message fixedBlockhash [ix] [table] of
           Left err -> assertFailure (show err)
           Right _ -> pure ()

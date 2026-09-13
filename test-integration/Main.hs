@@ -60,4 +60,8 @@ main = do
 -- @-p@ no longer isolates just the matched test the way it would under a
 -- plain 'testGroup'.
 integrationTests :: TestTree
-integrationTests = sequentialTestGroup "integration" AllFinish [Transfer.tests, Token.tests, Nonce.tests, PriorityFee.tests, Alt.tests, WebSocket.tests, Block.tests]
+integrationTests =
+  sequentialTestGroup
+    "integration"
+    AllFinish
+    [Transfer.tests, Token.tests, Nonce.tests, PriorityFee.tests, Alt.tests, WebSocket.tests, Block.tests]

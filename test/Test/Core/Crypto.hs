@@ -69,7 +69,9 @@ tests =
           testCase "rejects a mismatched public-key half" $ do
             let raw = getSolanaPrivateKeyRaw (snd fixtureKeypair)
                 corrupted = BS.init raw <> BS.singleton (BS.last raw + 1)
-            assertBool "accepted a key whose public half is not derived from its seed" (isLeft (mkPrivateKeyFromBytes corrupted)),
+            assertBool
+              "accepted a key whose public half is not derived from its seed"
+              (isLeft (mkPrivateKeyFromBytes corrupted)),
           testProperty "rejects every length other than 64" $
             forAll (choose (0, 130) `suchThat` (/= 64)) $ \n ->
               forAll (vectorOf n arbitrary) $ \ws -> isLeft (mkPrivateKeyFromBytes (BS.pack ws)),
@@ -79,7 +81,9 @@ tests =
             let raw = getSolanaPrivateKeyRaw (snd fixtureKeypair)
                 corrupted = BS.take 32 raw <> BS.replicate 32 9
             mkPrivateKeyFromString (toBase58String raw) @?= Right (snd fixtureKeypair)
-            assertBool "accepted a Base58 key whose public half is not derived from its seed" (isLeft (mkPrivateKeyFromString (toBase58String corrupted)))
+            assertBool
+              "accepted a Base58 key whose public half is not derived from its seed"
+              (isLeft (mkPrivateKeyFromString (toBase58String corrupted)))
         ],
       testGroup
         "readSigningKeyFromFile"
@@ -106,7 +110,9 @@ tests =
             case r of
               Left (e :: IOException) -> do
                 assertBool ("unexpected message: " <> show e) ("not a JSON array of 64 integers" `isInfixOf` show e)
-                assertBool ("key bytes leaked into: " <> show e) (not ("1,1,1" `isInfixOf` show e) && not ("138" `isInfixOf` show e))
+                assertBool
+                  ("key bytes leaked into: " <> show e)
+                  (not ("1,1,1" `isInfixOf` show e) && not ("138" `isInfixOf` show e))
               Right _ -> assertFailure "accepted a malformed key file"
         ],
       testGroup

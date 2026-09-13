@@ -33,18 +33,21 @@ sampleTests =
   testGroup
     "PerformanceSample"
     [ testCase "numNonVoteTransactions omitted parses as Nothing" $
-        case eitherDecode "{\"slot\":1,\"numTransactions\":2,\"numSlots\":3,\"samplePeriodSecs\":60}" of
+        case eitherDecode (sample "") of
           Left err -> assertFailure err
           Right s -> numNonVoteTransactions s @?= Nothing,
       testCase "numNonVoteTransactions null parses as Nothing" $
-        case eitherDecode "{\"slot\":1,\"numTransactions\":2,\"numSlots\":3,\"samplePeriodSecs\":60,\"numNonVoteTransactions\":null}" of
+        case eitherDecode (sample ",\"numNonVoteTransactions\":null") of
           Left err -> assertFailure err
           Right s -> numNonVoteTransactions s @?= Nothing,
       testCase "numNonVoteTransactions present is kept" $
-        case eitherDecode "{\"slot\":1,\"numTransactions\":2,\"numSlots\":3,\"samplePeriodSecs\":60,\"numNonVoteTransactions\":4}" of
+        case eitherDecode (sample ",\"numNonVoteTransactions\":4") of
           Left err -> assertFailure err
           Right s -> numNonVoteTransactions s @?= Just 4
     ]
+  where
+    -- A sample's mandatory fields, plus whatever tail the case under test needs.
+    sample tail' = "{\"slot\":1,\"numTransactions\":2,\"numSlots\":3,\"samplePeriodSecs\":60" <> tail' <> "}"
 
 -- | Upstream @RpcVersionInfo.feature_set@ is an @Option@ as well.
 versionTests :: TestTree
@@ -54,5 +57,6 @@ versionTests =
     [ testCase "feature-set omitted parses as Nothing" $
         eitherDecode "{\"solana-core\":\"2.1.16\"}" @?= Right (SolanaVersion "2.1.16" Nothing),
       testCase "feature-set present is kept" $
-        eitherDecode "{\"solana-core\":\"2.1.16\",\"feature-set\":3271415109}" @?= Right (SolanaVersion "2.1.16" (Just 3271415109))
+        eitherDecode "{\"solana-core\":\"2.1.16\",\"feature-set\":3271415109}"
+          @?= Right (SolanaVersion "2.1.16" (Just 3271415109))
     ]

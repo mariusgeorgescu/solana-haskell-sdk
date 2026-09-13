@@ -40,7 +40,13 @@ import Network.Solana.RPC.HTTP.Account (confirmationStatusTxStatus, errTxStatus,
 import Network.Solana.RPC.HTTP.Block (getTheLatestBlockhash)
 import Network.Solana.RPC.HTTP.Chain (PrioritizationFee (prioritizationFee), getRecentPrioritizationFees, percentilePriorityFee)
 import Network.Solana.RPC.HTTP.Transaction
-import Network.Solana.RPC.HTTP.Types (ConfigurationObject, cfgJustEncodingBase64, commitment, preflightCommitment, value)
+import Network.Solana.RPC.HTTP.Types
+  ( ConfigurationObject,
+    cfgJustEncodingBase64,
+    commitment,
+    preflightCommitment,
+    value,
+  )
 import Network.Solana.SplPrograms.Token qualified as Tok
 import Network.Web3 hiding (AccountData, value)
 
@@ -209,7 +215,8 @@ confirmFinalized sig = go (60 :: Int)
         [Just s] | confirmationStatusTxStatus s == Just "finalized" ->
           case errTxStatus s of
             Nothing -> pure ()
-            Just err -> liftIO . throwIO . userError $ "confirmFinalized: " <> show sig <> " failed on-chain: " <> show err
+            Just err ->
+              liftIO . throwIO . userError $ "confirmFinalized: " <> show sig <> " failed on-chain: " <> show err
         _ -> liftIO (threadDelay 1000000) >> go (n - 1)
 
 ------------------------------------------------------------------------------------------------

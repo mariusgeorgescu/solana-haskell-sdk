@@ -19,5 +19,6 @@ tests =
       testCase "nonce commitment is confirmed (finalized/finalized would silently drop advanced-nonce sends)" $
         commitment cfgNonceAccountConfirmed @?= Just "confirmed",
       testCase "nonce send config wire form keeps preflight on and pins it" $
-        toJSON cfgNonceSendConfirmed @?= object ["encoding" .= String "base64", "preflightCommitment" .= String "confirmed"]
+        toJSON cfgNonceSendConfirmed
+          @?= object ["encoding" .= String "base64", "preflightCommitment" .= String "confirmed"]
     ]

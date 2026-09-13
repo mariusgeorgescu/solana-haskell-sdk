@@ -116,7 +116,8 @@ requireAccounts name afs =
           isSigner = signer,
           isWritable = writable
         }
-    decodeHex hexPubkey = either (error . (("bad hex in " <> name <> ": ") <>)) id (B16.decode (TE.encodeUtf8 hexPubkey))
+    decodeHex hexPubkey =
+      either (error . (("bad hex in " <> name <> ": ") <>)) id (B16.decode (TE.encodeUtf8 hexPubkey))
 
 -- Small QuickCheck generators covering every support type and instruction
 -- variant, for the round-trip property below.
@@ -171,11 +172,14 @@ genTokenMetadataInstruction =
 enc :: TM.TokenMetadataInstruction -> BS.ByteString
 enc = BL.toStrict . encode
 
+accountsFixturePath :: FilePath
+accountsFixturePath = "test/fixtures/metadata_instruction_data.json"
+
 tests :: TestTree
 tests =
   withResource (loadDataFixtures "test/fixtures/metadata_instruction_data.json") (const (pure ())) $ \getFixtures ->
     withResource (loadFixtures "test/fixtures/pda.json") (const (pure ())) $ \getPdaFixtures ->
-      withResource (loadAccountsFixtures "test/fixtures/metadata_instruction_data.json") (const (pure ())) $ \getAccountsFixtures ->
+      withResource (loadAccountsFixtures accountsFixturePath) (const (pure ())) $ \getAccountsFixtures ->
         withResource (loadFixtures "test/fixtures/state_fixtures.json") (const (pure ())) $ \getStateFixtures ->
           testGroup
             "Metaplex Token Metadata"

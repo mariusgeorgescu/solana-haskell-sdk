@@ -71,9 +71,13 @@ tests =
       testCase "AccountData FromJSON decodes the jsonParsed base64 fallback pair as binary" $
         eitherDecode "[\"c3lzdGVtX3Byb2dyYW0=\",\"base64\"]" @?= Right (AccountDataBinary "system_program"),
       testCase "AccountData FromJSON rejects a jsonParsed object missing space" $
-        assertBool "accepted an object without space" (isLeft (eitherDecode "{\"parsed\":{},\"program\":\"nonce\"}" :: Either String AccountData)),
+        assertBool
+          "accepted an object without space"
+          (isLeft (eitherDecode "{\"parsed\":{},\"program\":\"nonce\"}" :: Either String AccountData)),
       testCase "AccountData FromJSON rejects the never-emitted [text, \"jsonParsed\"] pair" $
-        assertBool "accepted a jsonParsed pair" (isLeft (eitherDecode "[\"{}\",\"jsonParsed\"]" :: Either String AccountData)),
+        assertBool
+          "accepted a jsonParsed pair"
+          (isLeft (eitherDecode "[\"{}\",\"jsonParsed\"]" :: Either String AccountData)),
       testCase "AccountData ToJSON/FromJSON round-trips parsed data" $
         case eitherDecode nonceParsedJson :: Either String AccountData of
           Left err -> assertFailure err

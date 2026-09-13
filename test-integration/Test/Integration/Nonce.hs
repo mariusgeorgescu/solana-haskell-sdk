@@ -25,7 +25,9 @@ tests =
   testGroup
     "Nonce"
     [ testCase "durable-nonce flow: create, use via newNonceTransaction, nonce advances" (run nonceFlow),
-      testCase "newNonceTransaction works immediately after a confirmed create and a confirmed advance" (run nonceImmediateUse)
+      testCase
+        "newNonceTransaction works immediately after a confirmed create and a confirmed advance"
+        (run nonceImmediateUse)
     ]
 
 -- | Creates and initializes a nonce account (payer as authority), checks its
@@ -102,7 +104,8 @@ nonceImmediateUse = do
   confirmFinalized sig2
   afterAcc <- requireJust "nonce account (after)" =<< getNonceAccount noncePk
   case afterAcc of
-    SystemProgram.NonceInitialized _ dn _ -> liftIO (assertBool "durable nonce advanced after the second use" (dn /= nonce1))
+    SystemProgram.NonceInitialized _ dn _ ->
+      liftIO (assertBool "durable nonce advanced after the second use" (dn /= nonce1))
     _ -> liftIO (throwIO (userError "nonce account no longer initialized"))
   bal <- getBalance recipient
   liftIO (bal @?= 200_000_000)
@@ -114,7 +117,11 @@ nonceImmediateUse = do
 durableNonceAtConfirmed :: SolanaPublicKey -> Web3 BlockHash
 durableNonceAtConfirmed noncePk = do
   acc <- requireJust "nonce account (confirmed)" . value =<< getAccountInfo' noncePk cfgNonceAccountConfirmed
-  state <- either (liftIO . throwIO . userError) pure (accountDataBytes (dataField acc) >>= SystemProgram.decodeNonceAccount)
+  state <-
+    either
+      (liftIO . throwIO . userError)
+      pure
+      (accountDataBytes (dataField acc) >>= SystemProgram.decodeNonceAccount)
   case state of
     SystemProgram.NonceInitialized _ dn _ -> pure dn
     _ -> liftIO (throwIO (userError "nonce account not initialized"))
