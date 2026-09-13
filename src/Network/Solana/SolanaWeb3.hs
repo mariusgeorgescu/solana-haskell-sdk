@@ -37,7 +37,7 @@ import Network.Solana.RPC.HTTP.Account (confirmationStatusTxStatus, errTxStatus,
 import Network.Solana.RPC.HTTP.Block (getTheLatestBlockhash)
 import Network.Solana.RPC.HTTP.Chain (PrioritizationFee (prioritizationFee), getRecentPrioritizationFees, percentilePriorityFee)
 import Network.Solana.RPC.HTTP.Transaction
-import Network.Solana.RPC.HTTP.Types (ConfigurationObject, cfgJustEncodingBase64, commitment, value)
+import Network.Solana.RPC.HTTP.Types (ConfigurationObject, cfgJustEncodingBase64, commitment, preflightCommitment, value)
 import Network.Solana.SplPrograms.Token qualified as Tok
 import Network.Web3 hiding (AccountData, value)
 
@@ -76,6 +76,15 @@ newTransaction signers@(payer : _) instructions = do
 cfgNonceAccountConfirmed :: ConfigurationObject
 cfgNonceAccountConfirmed = cfgJustEncodingBase64 {commitment = Just "confirmed"}
 
+-- | Configuration used to submit the transaction in 'newNonceTransaction':
+-- 'defaultRpcSendTransactionConfig' with the preflight simulation pinned at
+-- the commitment the nonce account is read at ('cfgNonceAccountConfirmed').
+-- The node's default @finalized@ preflight bank may not yet hold the nonce
+-- value the transaction was built against (or the account at all) right
+-- after creation or an advance, and rejects the send with @BlockhashNotFound@.
+cfgNonceSendConfirmed :: ConfigurationObject
+cfgNonceSendConfirmed = defaultRpcSendTransactionConfig {preflightCommitment = commitment cfgNonceAccountConfirmed}
+
 -- | Builds, signs, and submits a durable-nonce transaction with an
 -- explicitly named fee payer that executes the given instructions,
 -- returning its signature.
@@ -87,7 +96,11 @@ cfgNonceAccountConfirmed = cfgJustEncodingBase64 {commitment = Just "confirmed"}
 -- 'newDurableNonceTransactionIntentWithPayer', which prepends the
 -- nonce-advance instruction ahead of the given instructions and uses the
 -- nonce account's durable nonce in place of a recent block hash (so the
--- transaction never expires, unlike 'newTransaction'). The fee payer is
+-- transaction never expires, unlike 'newTransaction'), and submits it with
+-- 'sendTransaction'' under 'cfgNonceSendConfirmed', so the node's preflight
+-- simulation runs at that same @confirmed@ commitment instead of its default
+-- @finalized@ bank (which may not yet contain the nonce value used, or the
+-- account at all, immediately after creation or an advance). The fee payer is
 -- always account 0 (sponsored fees are supported), and the given signers
 -- may be listed in any order — they must include private keys
 -- corresponding to both the payer and the nonce account's authority
@@ -116,7 +129,7 @@ newNonceTransaction payer signers nonceAccount instructions = do
         SP.NonceInitialized authority durableNonce _ -> do
           let newTxInt = newDurableNonceTransactionIntentWithPayer payer signers nonceAccount authority instructions
           signedTx <- either (liftIO . throwIO) pure (newTxInt durableNonce)
-          sendTransaction signedTx
+          sendTransaction' signedTx cfgNonceSendConfirmed
 
 -- | Estimates a priority fee (in micro-lamports per compute unit) for
 -- landing a transaction that writes to the given accounts, as the @p@-th

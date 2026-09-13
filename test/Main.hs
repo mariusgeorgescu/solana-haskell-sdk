@@ -20,6 +20,7 @@ import Test.NativePrograms.Vote qualified
 import Test.RPC.Chain qualified
 import Test.RPC.Parsers qualified
 import Test.RPC.WebSocket qualified
+import Test.SolanaWeb3 qualified
 import Test.SplPrograms.AssociatedTokenAccount qualified
 import Test.SplPrograms.Memo qualified
 import Test.SplPrograms.Token qualified
@@ -50,6 +51,7 @@ main =
           Test.RPC.Chain.tests,
           Test.RPC.Parsers.tests,
           Test.RPC.WebSocket.tests,
+          Test.SolanaWeb3.tests,
           Test.SplPrograms.AssociatedTokenAccount.tests,
           Test.SplPrograms.Memo.tests,
           Test.SplPrograms.Token.tests

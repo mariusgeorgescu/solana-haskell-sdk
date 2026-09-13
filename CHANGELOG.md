@@ -28,6 +28,12 @@
   the explicit-fee-payer counterparts of the v0 compiler and signer
   (mirroring the Rust SDK's `v0::Message::try_compile(payer, ..)`), plus
   `mkNewMessageWithPayer` and `orderSigningKeys` as exported building blocks.
+* Fixed: `newNonceTransaction` now submits with `preflightCommitment =
+  "confirmed"` (new `cfgNonceSendConfirmed`), matching the commitment it reads
+  the nonce account at. Previously the node's default `finalized` preflight
+  rejected the send with `BlockhashNotFound` whenever the nonce account had
+  been created or advanced within the last ~32 slots -- i.e. on every
+  back-to-back use -- unless the caller first waited for finalization.
 
 ## 1.2.0.0 -- 2026-08-03
 
