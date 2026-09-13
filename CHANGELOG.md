@@ -102,13 +102,19 @@
   test keeps the README text identical to them. The README now states that
   the examples also need the `web3-provider` package (`Network.Web3.Provider`)
   in `build-depends`.
+* Corrected the 1.2.0.0 note above, which overstated RPC golden-test coverage.
+  `tools/rpc-record` now records every read-only RPC method the SDK binds,
+  aborts instead of silently skipping a method the node rejects, and requires
+  `solana-test-validator --slots-per-epoch 32` so `getInflationReward` can be
+  captured; `Test.RPC.Parsers` now asserts every RPC-layer `FromJSON`
+  instance, including default-encoding (base58) and `jsonParsed` account data.
 
 ## 1.2.0.0 -- 2026-08-03
 
 * Added on-chain account-state decoders (SPL token accounts and mints, address lookup tables, stake and nonce accounts, Metaplex metadata) with typed SolanaWeb3 fetch helpers; decoded lookup tables feed compileV0Message directly.
 * Added developer-experience helpers: explicit fee-payer transactions with automatic signature ordering (sponsored fees supported), a durable-nonce transaction flow, and priority-fee estimation.
 * Added an opt-in local-validator integration test suite (`integration-tests`, behind the `integration` cabal flag) covering SOL and sponsored transfers, the SPL token lifecycle, durable nonces, address lookup tables with v0 transactions, priority fees, and WebSocket confirmation; the suite skips itself when no validator is running.
-* Added golden tests for the JSON-RPC response parsers, replaying 37 responses recorded from a live validator by `tools/rpc-record`, so every `FromJSON` instance is asserted against JSON a node actually sends.
+* Added golden tests for the JSON-RPC response parsers, replaying 37 responses recorded from a live validator by `tools/rpc-record` (36 of the SDK's 52 RPC methods; every RPC-layer `FromJSON` instance except `HighestSnapshotSlot`, `PrioritizationFee` and `InflationReward`; account data in `base64` encoding only -- see the next release's entry).
 * Added Solana PubSub (WebSocket) support in `Network.Solana.RPC.WebSocket`: signature and account subscribe/unsubscribe requests, notification parsing, and `awaitSignature` — a push-based confirmation that replaces polling. The module is transport-agnostic (`WsTransport`), so the library gains no new dependency and works with both `ws://` and `wss://` endpoints.
 
 ## 1.1.0.0 -- 2026-08-01

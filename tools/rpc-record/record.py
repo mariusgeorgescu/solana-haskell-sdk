@@ -4,16 +4,24 @@
 The SDK's response parsers are the one layer that byte-level golden vectors
 cannot cover: their input is a node's JSON, not a Rust struct's serialization.
 This script drives a local validator into a known state (a funded account, a
-transfer, an SPL mint with a token account holding a balance), calls every RPC
-method the SDK exposes a parser for, and writes the raw responses to
-test/fixtures/rpc_responses.json.
+transfer, an SPL mint with a token account holding a balance and a delegate),
+calls every read-only RPC method the SDK binds (requestAirdrop, sendTransaction
+and simulateTransaction change state and are not recorded), and writes the raw
+responses to test/fixtures/rpc_responses.json.
 
 Recording is additive and deliberate: run it, inspect the diff, commit. The
 test suite then replays the fixtures offline, so CI never needs a validator.
+A method the node rejects aborts the run instead of being skipped, so the
+fixture set cannot silently drift from this description.
 
 Usage:
-    solana-test-validator --reset            # in another terminal
+    solana-test-validator --reset --slots-per-epoch 32   # in another terminal
     python3 tools/rpc-record/record.py
+
+--slots-per-epoch 32 is what makes getInflationReward recordable: on the
+default 432,000-slot epoch the node cannot answer it until the first epoch
+ends, so the script refuses to run on such a validator, waits for epoch 2, and
+queries the bootstrap stake account's reward for the previous epoch.
 
 Requires: solana and spl-token CLIs on PATH (they set up the on-chain state),
 and a reachable validator (SOLANA_RPC_URL, default http://127.0.0.1:8899).
@@ -87,16 +95,21 @@ def setup(workdir):
     mint_output = cli("spl-token", "mint", mint, "42", token_account, "--output", "json", *token_common)
     print("mint", mint, "token account", token_account)
 
+    # A delegate approval gives getTokenAccountsByDelegate a non-empty answer.
+    approve_output = cli("spl-token", "approve", token_account, "1", recipient, "--output", "json", *token_common)
+
     # The token methods are queried at the node's default (finalized)
-    # commitment, so the minted balance must be finalized before recording --
-    # otherwise the fixtures capture a supply of 0.
+    # commitment, so the minted balance and the approval must be finalized
+    # before recording -- otherwise the fixtures capture a supply of 0.
     wait_for_finalized(json.loads(mint_output)["signature"])
+    wait_for_finalized(json.loads(approve_output)["signature"])
 
     # The transfer must be finalized before getTransaction and getBlock will
     # report it at the default commitment.
     wait_for_finalized(signature)
     return {
         "payer": payer,
+        "payer_path": payer_path,
         "recipient": recipient,
         "signature": signature,
         "mint": mint,
@@ -130,6 +143,25 @@ def wait_for_finalized(signature, attempts=60):
     sys.exit("timed out waiting for {} to finalize".format(signature))
 
 
+def wait_for_epoch(target, attempts=600):
+    """Block until the node's epoch reaches target (about 13 s per 32-slot epoch)."""
+    for _ in range(attempts):
+        if rpc("getEpochInfo")["result"]["epoch"] >= target:
+            return
+        time.sleep(1)
+    sys.exit("timed out waiting for epoch {}".format(target))
+
+
+def wait_for_snapshot(attempts=300):
+    """Block until the node has taken its first full snapshot; before that
+    getHighestSnapshotSlot answers with error -32008."""
+    for _ in range(attempts):
+        if "result" in rpc("getHighestSnapshotSlot"):
+            return
+        time.sleep(1)
+    sys.exit("timed out waiting for the first snapshot")
+
+
 def methods(state):
     """Every method/params pair to record, in the order they are written."""
     payer, recipient = state["payer"], state["recipient"]
@@ -140,6 +172,19 @@ def methods(state):
     transaction = rpc("getTransaction", [signature, {"encoding": "json", "maxSupportedTransactionVersion": 0}])
     transaction_slot = transaction.get("result", {}).get("slot", slot)
     blockhash = rpc("getLatestBlockhash")["result"]["value"]["blockhash"]
+    # The bootstrap validator's stake account: the one account that earns an
+    # inflation reward on a fresh test validator.
+    stake_account = rpc(
+        "getProgramAccounts",
+        ["Stake11111111111111111111111111111111111111", {"encoding": "base64", "dataSlice": {"offset": 0, "length": 0}}],
+    )["result"][0]["pubkey"]
+    # A signed-only transfer message (never submitted) gives getFeeForMessage
+    # a real, script-controlled input: one signature at the default fee.
+    fee_message = json.loads(cli(
+        "solana", "transfer", recipient, "0.001", "--allow-unfunded-recipient",
+        "--url", RPC_URL, "--keypair", state["payer_path"], "--sign-only", "--blockhash", blockhash,
+        "--dump-transaction-message", "--output", "json",
+    ))["message"]
 
     return [
         # Cluster and node
@@ -147,6 +192,9 @@ def methods(state):
         ("getIdentity", "getIdentity", None),
         ("getClusterNodes", "getClusterNodes", None),
         ("getHealth", "getHealth", None),
+        ("getHighestSnapshotSlot", "getHighestSnapshotSlot", None),
+        ("getRecentPrioritizationFees", "getRecentPrioritizationFees", None),
+        ("getRecentPrioritizationFees-filtered", "getRecentPrioritizationFees", [[payer]]),
         # Ledger and epoch
         ("getEpochInfo", "getEpochInfo", None),
         ("getEpochSchedule", "getEpochSchedule", None),
@@ -157,6 +205,12 @@ def methods(state):
         ("getFirstAvailableBlock", "getFirstAvailableBlock", None),
         ("getRecentPerformanceSamples", "getRecentPerformanceSamples", [2]),
         ("getStakeMinimumDelegation", "getStakeMinimumDelegation", None),
+        ("getLeaderSchedule", "getLeaderSchedule", None),
+        ("getSlotLeader", "getSlotLeader", None),
+        ("getSlotLeaders", "getSlotLeaders", [transaction_slot, 3]),
+        ("getMaxRetransmitSlot", "getMaxRetransmitSlot", None),
+        ("getMaxShredInsertSlot", "getMaxShredInsertSlot", None),
+        ("minimumLedgerSlot", "minimumLedgerSlot", None),
         # Blocks
         ("getLatestBlockhash", "getLatestBlockhash", None),
         ("isBlockhashValid", "isBlockhashValid", [blockhash, {"commitment": "processed"}]),
@@ -164,10 +218,12 @@ def methods(state):
         ("getBlockCommitment", "getBlockCommitment", [transaction_slot]),
         ("getBlockProduction", "getBlockProduction", None),
         ("getBlocks", "getBlocks", [max(1, transaction_slot - 2), transaction_slot]),
+        ("getBlocksWithLimit", "getBlocksWithLimit", [max(1, transaction_slot - 2), 3]),
+        ("getBlockTime", "getBlockTime", [transaction_slot]),
         # Tokenomics
         ("getInflationGovernor", "getInflationGovernor", None),
         ("getInflationRate", "getInflationRate", None),
-        ("getInflationReward", "getInflationReward", [[payer], {"commitment": "finalized"}]),
+        ("getInflationReward", "getInflationReward", [[stake_account]]),
         ("getSupply", "getSupply", None),
         ("getVoteAccounts", "getVoteAccounts", None),
         ("getMinimumBalanceForRentExemption", "getMinimumBalanceForRentExemption", [165]),
@@ -175,6 +231,13 @@ def methods(state):
         ("getBalance", "getBalance", [payer]),
         ("getAccountInfo", "getAccountInfo", [payer, base64_config]),
         ("getAccountInfo-missing", "getAccountInfo", ["11111111111111111111111111111112", base64_config]),
+        # No configuration: the node's default (bare base58) encoding, offered
+        # only for accounts of at most 128 bytes -- the mint is 82.
+        ("getAccountInfo-base58", "getAccountInfo", [mint]),
+        # jsonParsed: the node's parsed view where it has a parser (SPL Token),
+        # and the base64 pair where it has none (a plain system account).
+        ("getAccountInfo-jsonParsed", "getAccountInfo", [token_account, {"encoding": "jsonParsed"}]),
+        ("getAccountInfo-jsonParsed-fallback", "getAccountInfo", [payer, {"encoding": "jsonParsed"}]),
         ("getMultipleAccounts", "getMultipleAccounts", [[payer, recipient], base64_config]),
         ("getLargestAccounts", "getLargestAccounts", None),
         ("getProgramAccounts", "getProgramAccounts", ["TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", base64_config]),
@@ -182,11 +245,13 @@ def methods(state):
         ("getSignaturesForAddress", "getSignaturesForAddress", [recipient, {"limit": 3}]),
         ("getSignatureStatuses", "getSignatureStatuses", [[signature], {"searchTransactionHistory": True}]),
         ("getTransaction", "getTransaction", [signature, {"encoding": "json", "maxSupportedTransactionVersion": 0}]),
+        ("getFeeForMessage", "getFeeForMessage", [fee_message, {"commitment": "processed"}]),
         # SPL Token
         ("getTokenSupply", "getTokenSupply", [mint]),
         ("getTokenAccountBalance", "getTokenAccountBalance", [token_account]),
         ("getTokenLargestAccounts", "getTokenLargestAccounts", [mint]),
         ("getTokenAccountsByOwner", "getTokenAccountsByOwner", [payer, {"mint": mint}, base64_config]),
+        ("getTokenAccountsByDelegate", "getTokenAccountsByDelegate", [recipient, {"mint": mint}, base64_config]),
     ]
 
 
@@ -197,15 +262,18 @@ def main():
         sys.exit("no validator at {}: {}".format(RPC_URL, err))
     if health.get("result") != "ok":
         sys.exit("validator at {} is not healthy: {}".format(RPC_URL, health))
+    if rpc("getEpochInfo")["result"]["slotsInEpoch"] > 1000:
+        sys.exit("start the validator with --slots-per-epoch 32: getInflationReward needs a completed epoch")
 
     with tempfile.TemporaryDirectory() as workdir:
         state = setup(workdir)
-        recorded, skipped = [], []
+        wait_for_epoch(2)
+        wait_for_snapshot()
+        recorded = []
         for name, method, params in methods(state):
             response = rpc(method, params)
             if "error" in response:
-                skipped.append("{} ({})".format(name, response["error"].get("message", "error")))
-                continue
+                sys.exit("{} failed: {}".format(name, response["error"]))
             entry = {"name": name, "method": method, "response": response}
             if params is not None:
                 entry["params"] = params
@@ -216,8 +284,6 @@ def main():
         handle.write("\n")
 
     print("wrote {} responses to {}".format(len(recorded), os.path.normpath(OUTPUT)))
-    for entry in skipped:
-        print("skipped:", entry)
 
 
 if __name__ == "__main__":

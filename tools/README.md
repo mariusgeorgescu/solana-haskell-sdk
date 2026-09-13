@@ -7,7 +7,15 @@ test suite replays offline, so CI never needs Rust or a validator.
 
 Generates the golden test vectors in `test/fixtures/` from the official Rust
 crates (solana-sdk, spl-token, spl-associated-token-account, mpl-token-metadata), so the Haskell SDK's serialization can be asserted byte-identical
-to the reference implementation.
+to the reference implementation. `Cargo.lock` pins solana-sdk 1.18.26,
+spl-token 4.0.3, spl-associated-token-account 3.0.4 and mpl-token-metadata
+4.1.2.
+
+The `{name, hex}` vectors pin instruction data; account-meta lists are
+Rust-pinned only where an `accounts` entry exists (`create-v3-full-accounts`,
+`master-edition-some-accounts`) or a compiled message/transaction vector in
+`messages.json`/`transactions.json` covers the builder. Other builders' metas
+are asserted against hand-written expectations in the Haskell tests.
 
 Fixtures are committed; regeneration is only needed when adding vectors:
 
@@ -27,14 +35,24 @@ cannot reach, since their input is a node's JSON rather than a Rust struct's
 serialization.
 
 The script drives a local validator into a known state — a funded account, a
-transfer, an SPL mint with a token account holding 42 tokens at 6 decimals —
-then calls every method the SDK exposes a parser for:
+transfer, an SPL mint with a token account holding 42 tokens at 6 decimals and
+a delegate — then calls every read-only method the SDK binds
+(`requestAirdrop`, `sendTransaction` and `simulateTransaction` change state and
+are not recorded; `simulateTransaction`'s result is an untyped `Object`
+anyway):
 
-    solana-test-validator --reset          # in another terminal
+    solana-test-validator --reset --slots-per-epoch 32   # in another terminal
     python3 tools/rpc-record/record.py
 
 Requires the `solana` and `spl-token` CLIs on PATH. Set `SOLANA_RPC_URL` to
 record against a different endpoint.
+
+`--slots-per-epoch 32` is what makes `getInflationReward` recordable: on the
+default 432,000-slot epoch the node cannot answer it until the first epoch
+ends, so the script refuses to run on such a validator, waits for epoch 2, and
+queries the bootstrap stake account's reward for the previous epoch. Any
+method the node rejects aborts the run rather than being skipped, so the
+fixture set cannot drift from this description silently.
 
 Re-recording rewrites the whole file, and pubkeys, slots and blockhashes all
 change from run to run, so the diff is never small. Inspect what changed in

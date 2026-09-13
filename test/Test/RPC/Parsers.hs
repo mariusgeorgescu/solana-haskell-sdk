@@ -19,8 +19,9 @@ module Test.RPC.Parsers (tests) where
 
 import Data.Aeson (FromJSON, Value)
 import Data.Aeson.Types (parseEither, parseJSON)
+import Data.Map.Strict qualified as M
 import Data.Maybe (isJust)
-import Network.Solana.Core.Account (Account, AccountInfo, Lamport (..), executable, lamports)
+import Network.Solana.Core.Account (Account, AccountData (..), AccountInfo, Lamport (..), dataField, executable, lamports)
 import Network.Solana.Core.Block (BlockHash, BlockHeight)
 import Network.Solana.Core.Crypto (SolanaPublicKey)
 import Network.Solana.RPC.HTTP.Account hiding (lamports)
@@ -32,6 +33,7 @@ import Network.Solana.RPC.HTTP.Token
 import Network.Solana.RPC.HTTP.Tokenomics
 import Network.Solana.RPC.HTTP.Transaction
 import Network.Solana.RPC.HTTP.Types
+import Network.Solana.SplPrograms.Token (decodeMint, mDecimals, mSupply)
 import Test.Fixtures
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -79,7 +81,13 @@ clusterTests =
     testCase "getHealth" $ withResult @String "getHealth" $ \health ->
       health @?= "ok",
     testCase "getRecentPerformanceSamples" $ withResult @[PerformanceSample] "getRecentPerformanceSamples" $ \samples ->
-      assertBool "samples cover a non-zero period" (all ((> 0) . samplePeriodSecs) samples)
+      assertBool "samples cover a non-zero period" (all ((> 0) . samplePeriodSecs) samples),
+    testCase "getHighestSnapshotSlot" $ withResult @HighestSnapshotSlot "getHighestSnapshotSlot" $ \s ->
+      assertBool "a full snapshot exists" (full s > 0),
+    testCase "getRecentPrioritizationFees" $ withResult @[PrioritizationFee] "getRecentPrioritizationFees" $ \fees ->
+      assertBool "recent slots are sampled" (not (null fees) && length fees <= 150),
+    testCase "getRecentPrioritizationFees (address filter)" $ withResult @[PrioritizationFee] "getRecentPrioritizationFees-filtered" $ \fees ->
+      assertBool "recent slots are sampled" (not (null fees))
   ]
 
 ledgerTests :: [TestTree]
@@ -99,7 +107,24 @@ ledgerTests =
     testCase "getFirstAvailableBlock" $ withResult @Slot "getFirstAvailableBlock" $ \_ ->
       pure (),
     testCase "getStakeMinimumDelegation" $ withResult @(RPCResponse Lamport) "getStakeMinimumDelegation" $ \r ->
-      assertBool "context slot is populated" (contextSlot (context r) > 0)
+      assertBool "context slot is populated" (contextSlot (context r) > 0),
+    -- A single-validator cluster: the schedule names exactly the node itself.
+    testCase "getLeaderSchedule" $ withResult @NodeIdentity "getIdentity" $ \node ->
+      withResult @(Maybe LeaderSchedule) "getLeaderSchedule" $ \case
+        Nothing -> assertFailure "expected a schedule for the current epoch"
+        Just schedule -> do
+          M.keys schedule @?= [identity node]
+          assertBool "every leader has slots" (all (not . null) (M.elems schedule)),
+    testCase "getSlotLeader" $ withResult @SolanaPublicKey "getSlotLeader" $ \_ ->
+      pure (),
+    testCase "getSlotLeaders" $ withResult @[SolanaPublicKey] "getSlotLeaders" $ \leaders ->
+      length leaders @?= 3, -- the recorder asks for three
+    testCase "getMaxRetransmitSlot" $ withResult @Slot "getMaxRetransmitSlot" $ \_ ->
+      pure (),
+    testCase "getMaxShredInsertSlot" $ withResult @Slot "getMaxShredInsertSlot" $ \_ ->
+      pure (),
+    testCase "minimumLedgerSlot" $ withResult @Slot "minimumLedgerSlot" $ \_ ->
+      pure ()
   ]
 
 blockTests :: [TestTree]
@@ -119,7 +144,11 @@ blockTests =
       case value r of
         BlockProduction identities _ -> assertBool "at least one leader produced blocks" (not (null identities)),
     testCase "getBlocks" $ withResult @[Slot] "getBlocks" $ \slots ->
-      assertBool "the queried range is non-empty" (not (null slots))
+      assertBool "the queried range is non-empty" (not (null slots)),
+    testCase "getBlocksWithLimit" $ withResult @[Slot] "getBlocksWithLimit" $ \slots ->
+      assertBool "at most the requested limit of three" (not (null slots) && length slots <= 3),
+    testCase "getBlockTime" $ withResult @(Maybe Int) "getBlockTime" $ \t ->
+      assertBool "the block carries a timestamp" (maybe False (> 0) t)
   ]
 
 tokenomicsTests :: [TestTree]
@@ -133,7 +162,13 @@ tokenomicsTests =
     testCase "getVoteAccounts" $ withResult @VoteAccounts "getVoteAccounts" $ \accounts ->
       assertBool "the test validator votes" (not (null (current accounts))),
     testCase "getMinimumBalanceForRentExemption" $ withResult @Lamport "getMinimumBalanceForRentExemption" $ \rent ->
-      assertBool "rent exemption for 165 bytes is non-trivial" (rent > Lamport 1000000)
+      assertBool "rent exemption for 165 bytes is non-trivial" (rent > Lamport 1000000),
+    -- The bootstrap stake account's reward for the previous (32-slot) epoch.
+    testCase "getInflationReward" $ withResult @[Maybe InflationReward] "getInflationReward" $ \case
+      [Just r] -> do
+        assertBool "the bootstrap stake earned a reward" (amountReward r > Lamport 0)
+        assertBool "post balance includes the reward" (postBalance r > amountReward r)
+      other -> assertFailure ("expected exactly one reward, got " <> show (length other))
   ]
 
 accountTests :: [TestTree]
@@ -155,7 +190,25 @@ accountTests =
     testCase "getLargestAccounts" $ withResult @(RPCResponse [AddressAndLamports]) "getLargestAccounts" $ \r ->
       assertBool "accounts are listed with balances" (not (null (value r)) && all ((> Lamport 0) . RpcAccount.lamports) (value r)),
     testCase "getProgramAccounts" $ withResult @[Account] "getProgramAccounts" $ \accounts ->
-      assertBool "the token program owns the mint and token account" (length accounts >= 2)
+      assertBool "the token program owns the mint and token account" (length accounts >= 2),
+    -- Recorded with no configuration: the node's default encoding is a bare
+    -- base58 string (the recorder's 82-byte mint).
+    testCase "getAccountInfo (node default encoding: bare base58)" $ withResult @(RPCResponse (Maybe AccountInfo)) "getAccountInfo-base58" $ \r ->
+      case dataField <$> value r of
+        Just (AccountDataBinary bs) -> case decodeMint bs of
+          Left e -> assertFailure e
+          Right m -> do
+            mDecimals m @?= 6
+            mSupply m @?= 42000000
+        other -> assertFailure ("expected binary mint data, got " <> show other),
+    testCase "getAccountInfo (jsonParsed)" $ withResult @(RPCResponse (Maybe AccountInfo)) "getAccountInfo-jsonParsed" $ \r ->
+      case dataField <$> value r of
+        Just (AccountDataJSON prog _ space) -> do
+          prog @?= "spl-token"
+          space @?= 165
+        other -> assertFailure ("expected parsed token account data, got " <> show other),
+    testCase "getAccountInfo (jsonParsed falls back to base64 without a parser)" $ withResult @(RPCResponse (Maybe AccountInfo)) "getAccountInfo-jsonParsed-fallback" $ \r ->
+      fmap dataField (value r) @?= Just (AccountDataBinary "")
   ]
 
 transactionTests :: [TestTree]
@@ -172,7 +225,10 @@ transactionTests =
           confirmationStatusTxStatus s @?= Just "finalized"
         other -> assertFailure ("expected exactly one status, got " <> show (length other)),
     testCase "getTransaction" $ withResult @(Maybe TransactionResult) "getTransaction" $ \result ->
-      assertBool "the recorded transfer is retrievable" (isJust result)
+      assertBool "the recorded transfer is retrievable" (isJust result),
+    -- One signature at the test validator's default fee.
+    testCase "getFeeForMessage" $ withResult @(RPCResponse (Maybe Int)) "getFeeForMessage" $ \r ->
+      value r @?= Just 5000
   ]
 
 tokenTests :: [TestTree]
@@ -190,5 +246,8 @@ tokenTests =
         [] -> assertFailure "expected the minted account to be listed"
         (a : _) -> amount' a @?= "42000000",
     testCase "getTokenAccountsByOwner" $ withResult @(RPCResponse [Account]) "getTokenAccountsByOwner" $ \r ->
+      length (value r) @?= 1,
+    -- The recorder approves the recipient as delegate of the one token account.
+    testCase "getTokenAccountsByDelegate" $ withResult @(RPCResponse [Account]) "getTokenAccountsByDelegate" $ \r ->
       length (value r) @?= 1
   ]
