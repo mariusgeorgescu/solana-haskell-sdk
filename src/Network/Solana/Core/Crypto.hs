@@ -33,6 +33,7 @@ module Network.Solana.Core.Crypto
     readSigningKeyFromFile,
     mkPublicKeyFromString,
     mkPrivateKeyFromString,
+    mkPrivateKeyFromBytes,
   )
 where
 
@@ -46,12 +47,10 @@ import Data.Binary.Put (putByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Base58
 import Data.ByteString.Base64 (decodeBase64Lenient, encodeBase64')
-import Data.ByteString.Char8 qualified as BS8
 import Data.Either.Extra (maybeToEither)
 import Data.String (IsString, fromString)
 import Data.Text qualified as Text
 import GHC.Generics (Generic)
-import Text.Read (readMaybe)
 
 -- | Encode a byte string as Base58 text (Bitcoin alphabet), the encoding
 -- Solana uses for addresses, signatures and hashes.
@@ -200,31 +199,46 @@ mkPublicKeyFromString = mkKeyFromString 32 (SolanaPublicKey . Ed25519.PublicKey)
 mkPrivateKeyFromString :: String -> Either String SolanaPrivateKey
 mkPrivateKeyFromString = mkKeyFromString 64 (SolanaPrivateKey . Ed25519.SecretKey)
 
+-- | Build a 'SolanaPrivateKey' from the raw 64 bytes of a NaCl secret key
+-- (32-byte seed followed by the 32-byte public key). 'Left' unless the input
+-- is exactly 64 bytes and its public-key half is the one derived from the
+-- seed — the checks @solana-sdk@'s @Keypair::from_bytes@ performs.
+mkPrivateKeyFromBytes :: BS.ByteString -> Either String SolanaPrivateKey
+mkPrivateKeyFromBytes bs
+  | BS.length bs /= 64 = Left ("Invalid private key length: expected 64 bytes, got " <> show (BS.length bs))
+  | otherwise = case createSolanaKeypairFromSeed (BS.take 32 bs) of
+      Just (_, sk) | getSolanaPrivateKeyRaw sk == bs -> Right sk
+      _ -> Left "Private key public-key half does not match the key derived from its seed"
+
 unsafeKeyFromString :: forall f. Int -> (BS.ByteString -> f) -> String -> f
 unsafeKeyFromString n cstr str = either error id $ mkKeyFromString n cstr str
 
-unsafeKeyFromWords :: forall f. (BS.ByteString -> f) -> [Word8] -> f
-unsafeKeyFromWords cstr ws = cstr (BS.pack ws)
+unsafeKeyFromWords :: forall f. Int -> (BS.ByteString -> f) -> [Word8] -> f
+unsafeKeyFromWords n cstr ws
+  | length ws == n = cstr (BS.pack ws)
+  | otherwise = error ("Invalid key length: expected " <> show n <> " bytes, got " <> show (length ws))
 
 -- | Partial version of 'mkPublicKeyFromString': calls 'error' on invalid
 -- input. Prefer the total variant outside of literals and tests.
 unsafeSolanaPublicKey :: String -> SolanaPublicKey
 unsafeSolanaPublicKey = unsafeKeyFromString 32 (SolanaPublicKey . Ed25519.PublicKey)
 
--- | Build a 'SolanaPublicKey' directly from raw bytes. No length check is
--- performed — the caller must supply exactly 32 bytes.
+-- | Build a 'SolanaPublicKey' directly from raw bytes. Calls 'error' unless
+-- exactly 32 bytes are supplied.
 unsafeSolanaPublicKeyRaw :: [Word8] -> SolanaPublicKey
-unsafeSolanaPublicKeyRaw = unsafeKeyFromWords (SolanaPublicKey . Ed25519.PublicKey)
+unsafeSolanaPublicKeyRaw = unsafeKeyFromWords 32 (SolanaPublicKey . Ed25519.PublicKey)
 
 -- | Partial version of 'mkPrivateKeyFromString': calls 'error' on invalid
 -- input.
 unsafeSolanaPrivateKey :: String -> SolanaPrivateKey
 unsafeSolanaPrivateKey = unsafeKeyFromString 64 (SolanaPrivateKey . Ed25519.SecretKey)
 
--- | Build a 'SolanaPrivateKey' directly from raw bytes (e.g. the 64 numbers
--- in a @solana-keygen@ keypair file). No length check is performed.
+-- | Build a 'SolanaPrivateKey' directly from the raw 64 bytes of a NaCl
+-- secret key. Calls 'error' on any other length; the public-key half is not
+-- checked — prefer 'mkPrivateKeyFromBytes' (or 'readSigningKeyFromFile' for
+-- @solana-keygen@ files).
 unsafeSolanaPrivateKeyRaw :: [Word8] -> SolanaPrivateKey
-unsafeSolanaPrivateKeyRaw = unsafeKeyFromWords (SolanaPrivateKey . Ed25519.SecretKey)
+unsafeSolanaPrivateKeyRaw = unsafeKeyFromWords 64 (SolanaPrivateKey . Ed25519.SecretKey)
 
 -- | The raw 32 bytes of a public key.
 getSolanaPublicKeyRaw :: SolanaPublicKey -> BS.ByteString
@@ -274,12 +288,13 @@ dverify (SolanaPublicKey pk) bs (SolanaSignature sig) = Ed25519.dverify pk bs si
 ----
 ----
 
--- | Read a private key from a @solana-keygen@-style keypair file containing
--- a list of byte values (e.g. @[1,2,...]@). Throws an 'IOError' if the file
--- cannot be read, or if its contents cannot be parsed as a @[Word8]@ list.
+-- | Read a private key from a @solana-keygen@-style keypair file: a JSON
+-- array of the 64 byte values of the secret key (e.g. @[1,2,...]@). Throws
+-- an 'IOError' if the file cannot be read, is not an array of exactly 64
+-- integers in @0..255@, or fails the checks of 'mkPrivateKeyFromBytes'.
 readSigningKeyFromFile :: FilePath -> IO SolanaPrivateKey
 readSigningKeyFromFile path = do
-  contents <- BS8.readFile path
-  case readMaybe (BS8.unpack contents) of
-    Just word8List -> return $ unsafeSolanaPrivateKeyRaw (word8List :: [Word8])
-    Nothing -> fail ("readSigningKeyFromFile: could not parse " <> path <> " as a list of bytes (e.g. \"[1,2,...]\")")
+  contents <- BS.readFile path
+  case eitherDecodeStrict contents >>= mkPrivateKeyFromBytes . BS.pack of
+    Right sk -> return sk
+    Left err -> fail ("readSigningKeyFromFile: " <> path <> ": " <> err)

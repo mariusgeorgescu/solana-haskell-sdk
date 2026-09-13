@@ -2,9 +2,11 @@
 
 module Test.Core.Crypto (tests) where
 
+import Control.Exception (ErrorCall, IOException, evaluate, try)
 import Data.Aeson (eitherDecode)
 import Data.Binary (decode, encode)
 import Data.ByteString qualified as BS
+import Data.Either (isLeft)
 import Network.Solana.Core.Crypto
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -15,6 +17,13 @@ newtype Bytes32 = Bytes32 BS.ByteString
 
 instance Arbitrary Bytes32 where
   arbitrary = Bytes32 . BS.pack <$> vectorOf 32 arbitrary
+
+-- | The keypair derived from a seed of 32 one-bytes; its 64 secret-key bytes
+-- are what @test/fixtures/keypair.json@ holds in @solana-keygen@ format.
+fixtureKeypair :: (SolanaPublicKey, SolanaPrivateKey)
+fixtureKeypair = case createSolanaKeypairFromSeed (BS.replicate 32 1) of
+  Just kp -> kp
+  Nothing -> error "fixtureKeypair: 32-byte seed rejected"
 
 tests :: TestTree
 tests =
@@ -45,5 +54,56 @@ tests =
       testCase "SolanaSignature FromJSON rejects invalid base58" $
         case eitherDecode "\"0OIl\"" :: Either String SolanaSignature of
           Left _ -> pure ()
-          Right sig -> assertFailure ("expected parse failure, got " <> show sig)
+          Right sig -> assertFailure ("expected parse failure, got " <> show sig),
+      testGroup
+        "mkPrivateKeyFromBytes"
+        [ testCase "accepts a genuine 64-byte secret key" $ do
+            let (pk, sk) = fixtureKeypair
+            mkPrivateKeyFromBytes (getSolanaPrivateKeyRaw sk) @?= Right sk
+            fmap toSolanaPublicKey (mkPrivateKeyFromBytes (getSolanaPrivateKeyRaw sk)) @?= Right pk,
+          testCase "rejects empty, truncated, seed-only and over-long input" $
+            mapM_
+              (\bs -> assertBool ("accepted " <> show (BS.length bs) <> " bytes") (isLeft (mkPrivateKeyFromBytes bs)))
+              [BS.empty, BS.pack [1], BS.replicate 32 1, BS.replicate 63 1, BS.replicate 65 1],
+          testCase "rejects a mismatched public-key half" $ do
+            let raw = getSolanaPrivateKeyRaw (snd fixtureKeypair)
+                corrupted = BS.init raw <> BS.singleton (BS.last raw + 1)
+            assertBool "accepted a key whose public half is not derived from its seed" (isLeft (mkPrivateKeyFromBytes corrupted)),
+          testProperty "rejects every length other than 64" $
+            forAll (choose (0, 130) `suchThat` (/= 64)) $ \n ->
+              forAll (vectorOf n arbitrary) $ \ws -> isLeft (mkPrivateKeyFromBytes (BS.pack ws)),
+          testProperty "rejects random 64-byte input" $
+            forAll (vectorOf 64 arbitrary) $ \ws -> isLeft (mkPrivateKeyFromBytes (BS.pack ws))
+        ],
+      testGroup
+        "readSigningKeyFromFile"
+        [ testCase "loads a solana-keygen keypair file" $ do
+            sk <- readSigningKeyFromFile "test/fixtures/keypair.json"
+            sk @?= snd fixtureKeypair
+            show (toSolanaPublicKey sk) @?= "AKnL4NNf3DGWZJS6cPknBuEGnVsV4A4m5tgebLHaRSZ9"
+            dverify (toSolanaPublicKey sk) "solana-haskell-sdk" (dsign sk "solana-haskell-sdk") @?= True,
+          testCase "rejects a truncated key file" $ do
+            r <- try (readSigningKeyFromFile "test/fixtures/keypair_truncated.json")
+            case r of
+              Left (_ :: IOException) -> pure ()
+              Right _ -> assertFailure "accepted a 1-byte key file",
+          testCase "rejects out-of-range byte values" $ do
+            r <- try (readSigningKeyFromFile "test/fixtures/keypair_out_of_range.json")
+            case r of
+              Left (_ :: IOException) -> pure ()
+              Right _ -> assertFailure "accepted a key file with an entry of 256"
+        ],
+      testGroup
+        "raw constructors"
+        [ testCase "unsafeSolanaPrivateKeyRaw calls error on a wrong-length input" $ do
+            r <- try (evaluate (unsafeSolanaPrivateKeyRaw [1]))
+            case r of
+              Left (_ :: ErrorCall) -> pure ()
+              Right _ -> assertFailure "built a 1-byte private key",
+          testCase "unsafeSolanaPublicKeyRaw calls error on a wrong-length input" $ do
+            r <- try (evaluate (unsafeSolanaPublicKeyRaw (replicate 33 0)))
+            case r of
+              Left (_ :: ErrorCall) -> pure ()
+              Right _ -> assertFailure "built a 33-byte public key"
+        ]
     ]

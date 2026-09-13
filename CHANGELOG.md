@@ -1,5 +1,20 @@
 # Revision history for solana-haskell-sdk
 
+## Unreleased
+
+* Fixed (security): `readSigningKeyFromFile` accepted key files of any length
+  and silently wrapped out-of-range values, producing a malformed
+  `SolanaPrivateKey` whose use in `dsign`/`sign` read past the end of the key
+  buffer in the ed25519 C code. The loader now decodes the file as a JSON
+  array of exactly 64 bytes and verifies the public-key half against the seed
+  (as `solana-sdk`'s `Keypair::from_bytes` does), throwing an `IOError`
+  otherwise.
+* Added `mkPrivateKeyFromBytes`, a total constructor performing those checks
+  on raw bytes.
+* Changed: `unsafeSolanaPublicKeyRaw` and `unsafeSolanaPrivateKeyRaw` now call
+  `error` unless given exactly 32 / 64 bytes, matching the other `unsafe*`
+  constructors.
+
 ## 1.2.0.0 -- 2026-08-03
 
 * Added on-chain account-state decoders (SPL token accounts and mints, address lookup tables, stake and nonce accounts, Metaplex metadata) with typed SolanaWeb3 fetch helpers; decoded lookup tables feed compileV0Message directly.
