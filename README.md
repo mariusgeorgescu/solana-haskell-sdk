@@ -30,7 +30,7 @@
 
 ## Documentation
 
-API documentation is generated with Haddock (`cabal haddock`). Serialization correctness methodology: every instruction, message, and transaction encoder is asserted byte-identical to vectors generated from the official Rust crates (solana-sdk, spl-token, mpl-token-metadata) — see [tools/README.md](https://github.com/mariusgeorgescu/solana-haskell-sdk/blob/main/tools/README.md).
+API documentation is generated with Haddock (`cabal haddock`). Serialization correctness methodology: each instruction, message, and transaction encoder is asserted byte-identical to a golden vector — generated from the official Rust crates (solana-sdk, spl-token, mpl-token-metadata), except for the v1 transaction format, whose vector is a transaction recorded from devnet (the pinned Rust crates predate it) — see [tools/README.md](https://github.com/mariusgeorgescu/solana-haskell-sdk/blob/main/tools/README.md).
 
 ## Integration tests
 
@@ -83,11 +83,11 @@ For `wss://` endpoints use [`wuss`](https://hackage.haskell.org/package/wuss)'s 
   - [x] Metaplex Token Metadata (create/update metadata, master edition)
 - [x] On-chain account state decoders (SPL token accounts and mints, lookup tables, stake and nonce accounts, Metaplex metadata)
 - [x] PubSub (WebSocket) signature and account subscriptions, with push-based confirmation
-- [x] Serialization verified byte-for-byte against the official Rust crates (solana-sdk, spl-token, mpl-token-metadata) (golden-vector tests)
+- [x] Serialization verified byte-for-byte by golden-vector tests, against the official Rust crates (solana-sdk, spl-token, mpl-token-metadata) — and, for v1, against a transaction recorded from devnet
 
 ### Release status
 
-The current stable release is **v1.4.0.0**. Serialization is verified byte-for-byte against the official Rust SDK by golden-vector tests (see test/fixtures/ and [tools/README.md](https://github.com/mariusgeorgescu/solana-haskell-sdk/blob/main/tools/README.md)).
+The current stable release is **v1.4.0.0**. Serialization is verified byte-for-byte by golden-vector tests — against the official Rust SDK, and for the v1 format against a transaction recorded from devnet (see test/fixtures/ and [tools/README.md](https://github.com/mariusgeorgescu/solana-haskell-sdk/blob/main/tools/README.md)).
 
 ## Usage Examples
 

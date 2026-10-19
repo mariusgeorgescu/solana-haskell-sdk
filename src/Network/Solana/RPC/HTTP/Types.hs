@@ -94,9 +94,14 @@ data ConfigurationObject = ConfigurationObject
     minContextSlot :: Maybe Int,
     -- | Whether to search older confirmed transaction history.
     searchTransactionHistory :: Maybe Bool,
-    -- | The maximum transaction version to return in responses. Required to
-    -- fetch blocks or transactions containing versioned (v0) transactions;
-    -- omitting it causes the RPC to reject them with error -32015.
+    -- | The maximum transaction version to return in responses. A node
+    -- rejects a block or transaction whose version exceeds this with error
+    -- -32015, and omitting it admits legacy transactions only, so fetching
+    -- v0 requires at least @0@ and v1 (SIMD-0385) at least @1@. The
+    -- bindings' own defaults send @1@.
+    --
+    -- A value of @1@ or above cannot be combined with @base58@ encoding;
+    -- a current node answers that combination with @invalid_params@.
     maxSupportedTransactionVersion :: Maybe Int
   }
   deriving (Generic, Show)

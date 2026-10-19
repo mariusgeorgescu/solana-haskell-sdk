@@ -79,8 +79,8 @@ hold one real v1 (SIMD-0385) transaction, recorded from devnet slot
 `solana-test-validator` likewise predates the format, so neither can produce
 a v1 vector.
 
-* `v1_transactions.json` is the transaction's wire bytes, as devnet returned
-  them under `encoding: "base64"`. `Test.Core.MessageV1` feeds that
+* `v1_transactions.json` is the transaction's wire bytes, hex-encoded like the
+  other `{name, hex}` vectors (decoded from the base64 devnet returned). `Test.Core.MessageV1` feeds that
   transaction's own inputs back through `compileV1Message` and requires the
   result to equal these bytes minus the trailing 64-byte signature, which is
   what pins the v1 layout.
@@ -96,5 +96,6 @@ and fetch it under both encodings. Any replacement must keep the property the
 golden test depends on: the recorded account order has to be one this SDK's
 builder reproduces, which means the recorded message must order its accounts
 canonically (fee payer first, then each privilege section sorted by raw pubkey
-bytes). Re-recording also changes the slot, signature and blockhash asserted
-in `Test.RPC.Parsers` and `Test.Core.MessageV1`.
+bytes). Re-recording also changes everything both test modules pin by value:
+the slot, the signature, the blockhash, the four account keys, the instruction
+data, the per-transaction account-key counts and the config values.

@@ -4,29 +4,55 @@
 
 * Added v1 transaction support (SIMD-0385), in the new
   `Network.Solana.Core.MessageV1`: `compileV1Message`,
-  `compileV1MessageWithPayer`, `newV1TransactionIntent`,
-  `newV1TransactionIntentWithPayer`, and the `TransactionConfig` record
-  (with `emptyTransactionConfig`) carrying a v1 message's priority fee,
+  `newV1TransactionIntent`, and the `TransactionConfig` record (with
+  `emptyTransactionConfig`) carrying a v1 message's priority fee,
   compute-unit limit, loaded-accounts data size limit and heap size.
   v1 lists every address inline (it has no address lookup tables), moves
   resource requests out of `ComputeBudget` instructions and into a header
   configuration mask, places the signatures after the message rather than
   before it, and raises the transaction size limit to 4096 bytes.
-  Compilation rejects a message that breaks a v1 limit: more than 64
-  addresses or instructions, more than 12 required signatures, an
-  instruction with more than 255 accounts or 65535 data bytes, a heap
-  request that is not a multiple of 1024 within [32768, 262144], or a
-  transaction over 4096 bytes.
+
+  Both entry points take the fee payer explicitly, unlike their legacy and
+  v0 counterparts, which derive it from the instruction list. The reference
+  implementation's only v1 compile path does the same, and the implicit
+  form is a trap in this format: the priority fee travels inside the
+  message, so instruction order alone would decide who pays it.
+
+  Compilation rejects a message the network would refuse, or would accept
+  and charge for without it being able to do any work:
+  `LimitExceeded` for more than 64 addresses, more than 64 instructions,
+  more than 12 required signatures, an instruction with more than 255
+  accounts or 65535 data bytes, or a transaction over 4096 bytes once
+  signed; `InvalidMessage` for no instructions at all, the fee payer named
+  as a program id, a compute-unit or loaded-accounts request of zero, or a
+  heap request that is not a multiple of 1024 within [32768, 262144].
+
+  Note that in v1 an absent resource request means the *minimum*, not the
+  generous default earlier formats use: an absent compute-unit limit means
+  0 rather than a per-instruction allowance, and an absent loaded-accounts
+  data size limit means 0 rather than 64 MiB. `emptyTransactionConfig` is
+  therefore a base for record update rather than a usable configuration,
+  and compiling with it unchanged fails.
+* Changed (breaking): `CompileException` is no longer a newtype over a
+  single `MissingIndex` constructor. It gains `LimitExceeded` and
+  `InvalidMessage`, so the v1 checks above report something other than a
+  missing index, and callers can discriminate without matching on the
+  message text. Existing `MissingIndex` matches still compile but are no
+  longer exhaustive.
 * Changed (behavioural): `getBlock` and `getTransaction` now send
   `maxSupportedTransactionVersion: 1` instead of `0`. Without it a node
   refuses any block holding a v1 transaction with error -32015, which now
   covers most blocks. A v1 message's `transactionConfig` is not surfaced by
   `CompiledMessage`, which drops it as it already drops a v0 message's
-  `addressTableLookups`.
-* Changed (breaking): `Network.Solana.Core.Instruction` now exports
-  `CompiledInstruction`'s fields (`ciProgramIdIndex`, `ciAccounts`,
-  `ciData`), which the v1 serializer needs, since v1 writes the
-  fixed-width instruction headers apart from the variable-width payloads.
+  `addressTableLookups` — and, unlike a legacy transaction's
+  `ComputeBudget` instructions, it is not recoverable from the parsed
+  instruction list either.
+* Added: `Network.Solana.Core.Instruction` now also exports
+  `CompiledInstruction`'s constructor and fields (`ciProgramIdIndex`,
+  `ciAccounts`, `ciData`), which the v1 serializer needs, since v1 writes
+  the fixed-width instruction headers apart from the variable-width
+  payloads. Code importing that module unqualified and defining names of
+  its own that collide will need a `hiding` clause.
 
 ## 1.3.0.0 -- 2026-09-13
 

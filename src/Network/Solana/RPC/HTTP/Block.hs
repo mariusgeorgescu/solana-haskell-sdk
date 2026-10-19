@@ -52,7 +52,7 @@ getBlock' = do
 -- and v1 transactions are now a routine part of blocks.
 --
 -- Versioned transactions are returned without the message parts
--- 'Network.Solana.Core.Message.CompiledMessage' does not model: a v0
+-- t'Network.Solana.Core.Message.CompiledMessage' does not model: a v0
 -- transaction's address-lookup-table data (so instruction account indices
 -- may reference addresses not present in the parsed account keys), and a v1
 -- transaction's @transactionConfig@ resource requests (its priority fee,

@@ -12,7 +12,9 @@ description:
 
   This library is aimed at developers building Solana dApps, tools, or infrastructure in Haskell.
 
-  All serialization is verified byte-for-byte against the official Rust SDK by golden-vector tests.
+  Serialization is verified byte-for-byte by golden-vector tests: against vectors generated
+  from the official Rust crates, except the v1 (SIMD-0385) transaction format, whose vector is
+  a transaction recorded from devnet because the pinned Rust crates predate the format.
 
 license:         Apache-2.0
 license-file:    LICENSE
