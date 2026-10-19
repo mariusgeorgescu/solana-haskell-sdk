@@ -46,16 +46,24 @@ getBlock' = do
 {-# INLINE getBlock' #-}
 
 -- | Returns identity and transaction information about a confirmed block in
--- the ledger. Sets @maxSupportedTransactionVersion@ so that blocks
--- containing versioned (v0) transactions can be decoded (without it, such
--- blocks make the node respond with error -32015); as a result, v0
--- transactions are returned without their address-lookup-table data, so
--- instruction account indices may reference addresses not present in the
--- parsed account keys.
+-- the ledger. Sets @maxSupportedTransactionVersion@ to 1, so that blocks
+-- containing v0 or v1 (SIMD-0385) transactions can be decoded -- without a
+-- high enough value such blocks make the node respond with error -32015,
+-- and v1 transactions are now a routine part of blocks.
+--
+-- Versioned transactions are returned without the message parts
+-- 'Network.Solana.Core.Message.CompiledMessage' does not model: a v0
+-- transaction's address-lookup-table data (so instruction account indices
+-- may reference addresses not present in the parsed account keys), and a v1
+-- transaction's @transactionConfig@ resource requests (its priority fee,
+-- compute-unit limit, loaded-accounts size limit and heap size -- which in
+-- v1 replace the @ComputeBudget@ instructions earlier formats carry, so
+-- unlike a legacy transaction's, they are not visible among the parsed
+-- instructions either).
 -- A slot holding no block is a JSON-RPC error rather than 'Nothing'; see
 -- 'getBlock''.
 getBlock :: (JsonRpc m) => Slot -> m (Maybe BlockInfo)
-getBlock slot = getBlock' slot (defaultConfigObject {encoding = Just "json", maxSupportedTransactionVersion = Just 0})
+getBlock slot = getBlock' slot (defaultConfigObject {encoding = Just "json", maxSupportedTransactionVersion = Just 1})
 {-# INLINE getBlock #-}
 
 -- | Contains identity and transaction information for a block.

@@ -5,8 +5,10 @@
 
 -- | Golden tests for the RPC response parsers.
 --
--- Every fixture here is a real response captured from a local validator by
--- @tools/rpc-record/record.py@ -- not a hand-written sample -- so these tests
+-- Every fixture here is a real response captured from a node -- not a
+-- hand-written sample: the local validator via
+-- @tools/rpc-record/record.py@, and devnet for the v1 responses the pinned
+-- validator cannot produce -- so these tests
 -- pin the @FromJSON@ instances against JSON a node actually produces,
 -- including the fields it omits. That is the one thing the Rust-generated
 -- byte vectors cannot cover, since the RPC layer's input is JSON rather than
@@ -17,7 +19,7 @@
 -- parser wired to the wrong key.
 module Test.RPC.Parsers (tests) where
 
-import Data.Aeson (FromJSON, Value)
+import Data.Aeson (FromJSON, Key, Value, toJSON, withObject, (.:))
 import Data.Aeson.Types (parseEither, parseJSON)
 import Data.Map.Strict qualified as M
 import Data.Maybe (isJust)
@@ -31,6 +33,7 @@ import Network.Solana.Core.Account
     lamports,
   )
 import Network.Solana.Core.Block (BlockHash, BlockHeight)
+import Network.Solana.Core.Transaction (Transaction (..))
 import Network.Solana.Core.Crypto (SolanaPublicKey)
 import Network.Solana.RPC.HTTP.Account hiding (lamports)
 import Network.Solana.RPC.HTTP.Account qualified as RpcAccount
@@ -75,8 +78,48 @@ tests =
       testGroup "tokenomics" tokenomicsTests,
       testGroup "accounts" accountTests,
       testGroup "transactions" transactionTests,
-      testGroup "SPL token" tokenTests
+      testGroup "SPL token" tokenTests,
+      testGroup "v1 transactions (SIMD-0385)" v1Tests
     ]
+
+-- | Responses carrying v1 transactions, recorded from devnet (which runs
+-- them) rather than from the local validator, since the pinned
+-- @solana-test-validator@ predates the format. A v1 message reports its
+-- resource requests in a @transactionConfig@ object and carries no
+-- @addressTableLookups@; these pin that neither shape breaks the parsers.
+v1Tests :: [TestTree]
+v1Tests =
+  [ testCase "getTransaction decodes a v1 transaction" $ withV1Result @(Maybe TransactionResult) "getTransaction-v1" $ \case
+      Nothing -> assertFailure "expected a transaction"
+      Just result -> do
+        slotTx result @?= 512843755
+        map show (signatures (transactionTx result))
+          @?= ["Mq9Qb7wwtfyRtrtGFF4YjjCaUAhaG9iddBu7DquQ84hKe4D4R7ixgkKjz3DxbvS7UpC7Q2SmSK4htWcwu2wjcGZ"]
+        keys <- messageField @[SolanaPublicKey] "accountKeys" (transactionTx result)
+        length keys @?= 4
+        blockhash <- messageField @BlockHash "recentBlockhash" (transactionTx result)
+        show blockhash @?= "4iSS7zQNeY8BTSWZ9VRMBo8B17AyijyLDD8C2EycoW19",
+    testCase "getBlock decodes a block mixing legacy, v0 and v1 transactions" $
+      withV1Result @(Maybe BlockInfo) "getBlock-v1-trimmed" $ \case
+        Nothing -> assertFailure "expected a block"
+        Just block -> length (transactionsBI block) @?= 5
+  ]
+
+-- | As 'withResult', against the devnet-recorded v1 fixtures.
+withV1Result :: forall a. (FromJSON a) => String -> (a -> Assertion) -> Assertion
+withV1Result name check = do
+  fs <- loadRpcFixtures "test/fixtures/v1_rpc_responses.json"
+  case parseEither (parseJSON @a) (requireRpcResult name fs) of
+    Left err -> assertFailure ("failed to parse recorded " <> name <> " response: " <> err)
+    Right parsed -> check parsed
+
+-- | Read one field of a parsed transaction's message. 'CompiledMessage' is
+-- abstract, so its contents are only reachable through its 'ToJSON'
+-- rendering -- which is also all a caller of the RPC bindings gets.
+messageField :: forall a. (FromJSON a) => Key -> Transaction -> IO a
+messageField name tx =
+  either (assertFailure . ((show name <> ": ") <>)) pure $
+    parseEither (withObject "message" (.: name)) (toJSON (message tx))
 
 clusterTests :: [TestTree]
 clusterTests =
