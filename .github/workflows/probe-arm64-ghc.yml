@@ -7,7 +7,7 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Premise 1 — the runner is really arm64
         run: |
@@ -15,13 +15,35 @@ jobs:
           test "${{ runner.arch }}" = "ARM64"
           uname -m | grep -Fx aarch64
 
-      - name: Premise 2 — every system library the Cardano stack links resolves on arm64
+      - name: Premise 2a — distro packages (libblst-dev EXCLUDED; run 1 proved it absent on arm64)
         run: |
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y build-essential pkg-config libffi-dev libgmp-dev \
             libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev libpq-dev liblmdb-dev \
-            libsodium-dev libsecp256k1-dev libblst-dev
+            libsodium-dev libsecp256k1-dev
+
+      - name: Premise 2b — blst v0.3.15 builds from source on arm64 and installs a usable .pc
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch v0.3.15 https://github.com/supranational/blst /tmp/blst
+          cd /tmp/blst && ./build.sh
+          sudo cp bindings/blst_aux.h bindings/blst.h bindings/blst.hpp /usr/include/
+          sudo cp libblst.a /usr/lib/
+          cat <<PC | sudo tee /usr/lib/pkgconfig/libblst.pc >/dev/null
+          prefix=/usr
+          exec_prefix=\${prefix}
+          libdir=\${exec_prefix}/lib
+          includedir=\${prefix}/include
+
+          Name: libblst
+          Description: bls12-381 signature library
+          URL: https://github.com/supranational/blst
+          Version: 0.3.15
+          Cflags: -I\${includedir}
+          Libs: -L\${libdir} -lblst
+          PC
+          pkg-config --modversion libblst | grep -Fx 0.3.15
 
       - uses: haskell-actions/setup@v2
         id: setup
@@ -37,10 +59,13 @@ jobs:
           test -n "${{ steps.setup.outputs.cabal-store }}"
           echo "cabal-store=${{ steps.setup.outputs.cabal-store }}"
 
-      - name: Measurement — pkg-config state (recorded, not asserted for libblst-any)
+      - name: Measurement — pkg-config state, incl. the libblst-any alias cardano-crypto-class wants
         run: |
           set -euo pipefail
           for p in libsodium libsecp256k1 libblst; do
             echo "$p=$(pkg-config --modversion "$p")"
           done
           echo "libblst-any=$(pkg-config --modversion libblst-any 2>/dev/null || echo MISSING)"
+          sed 's/^Name: libblst/Name: libblst-any/' /usr/lib/pkgconfig/libblst.pc \
+            | sudo tee /usr/lib/pkgconfig/libblst-any.pc >/dev/null
+          echo "libblst-any-after-alias=$(pkg-config --modversion libblst-any)"
