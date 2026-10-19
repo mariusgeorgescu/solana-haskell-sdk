@@ -7,6 +7,7 @@ import Test.Core.Compact qualified
 import Test.Core.Crypto qualified
 import Test.Core.Instruction qualified
 import Test.Core.Message qualified
+import Test.Core.MessageV1 qualified
 import Test.Core.Pda qualified
 import Test.Core.VersionedMessage qualified
 import Test.Metaplex.TokenMetadata qualified
@@ -40,6 +41,7 @@ main =
           Test.Core.Crypto.tests,
           Test.Core.Instruction.tests,
           Test.Core.Message.tests,
+          Test.Core.MessageV1.tests,
           Test.Core.Pda.tests,
           Test.Core.VersionedMessage.tests,
           Test.Metaplex.TokenMetadata.tests,

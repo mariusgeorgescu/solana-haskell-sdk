@@ -16,7 +16,7 @@ module Network.Solana.Core.Instruction
     AccountMeta (..),
     InstructionData (..),
     compileInstruction,
-    CompiledInstruction,
+    CompiledInstruction (..),
     CompileException (..),
   )
 where
