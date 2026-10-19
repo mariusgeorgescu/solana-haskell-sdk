@@ -3,6 +3,11 @@
 Two generators feed `test/fixtures/`. Both write committed fixtures that the
 test suite replays offline, so CI never needs Rust or a validator.
 
+Two files have no generator: `v1_transactions.json` and
+`v1_rpc_responses.json` were recorded by hand from devnet (see "v1 fixtures"
+below), because neither the Rust crates pinned here nor the
+`solana-test-validator` this repo records against support SIMD-0385.
+
 ## tools/fixture-gen
 
 Generates the golden test vectors in `test/fixtures/` from the official Rust
@@ -65,3 +70,31 @@ except `isBlockhashValid` and `getFeeForMessage`, which are queried at
 State created during setup is finalized before recording — an earlier version
 of the script skipped that wait and captured a token supply of `0`, which the
 parser tests caught.
+
+## v1 fixtures (no generator)
+
+`test/fixtures/v1_transactions.json` and `test/fixtures/v1_rpc_responses.json`
+hold one real v1 (SIMD-0385) transaction, recorded from devnet slot
+512843755 on 2026-10-19 — `tools/fixture-gen` pins solana-sdk 1.18 and
+`solana-test-validator` likewise predates the format, so neither can produce
+a v1 vector.
+
+* `v1_transactions.json` is the transaction's wire bytes, as devnet returned
+  them under `encoding: "base64"`. `Test.Core.MessageV1` feeds that
+  transaction's own inputs back through `compileV1Message` and requires the
+  result to equal these bytes minus the trailing 64-byte signature, which is
+  what pins the v1 layout.
+* `v1_rpc_responses.json` holds the matching `getTransaction` response and a
+  `getBlock` response, both under `encoding: "json"`, which `Test.RPC.Parsers`
+  replays. The block's `transactions` array is trimmed to five entries (two
+  v1, two legacy, one v0) of the 42 it held, for size; every entry is
+  verbatim, as is the rest of the envelope.
+
+To re-record, query a devnet or testnet node for a block with
+`maxSupportedTransactionVersion: 1`, pick a transaction whose `version` is 1,
+and fetch it under both encodings. Any replacement must keep the property the
+golden test depends on: the recorded account order has to be one this SDK's
+builder reproduces, which means the recorded message must order its accounts
+canonically (fee payer first, then each privilege section sorted by raw pubkey
+bytes). Re-recording also changes the slot, signature and blockhash asserted
+in `Test.RPC.Parsers` and `Test.Core.MessageV1`.
