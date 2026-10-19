@@ -189,11 +189,24 @@ keyToIndex k keys = do
 -- *** CompileException
 
 ------------------------------------------------------------------------------------------------
--- | Compilation failure, carrying a message: an instruction references an
--- account key that is missing from the message's account table, an account
--- or lookup-table index does not fit in a byte, or a signing key does not
--- match the message's required signers.
-newtype CompileException = MissingIndex String
+-- | Compilation failure. Each constructor carries a human-readable
+-- explanation; the constructor says which kind of problem it is, so callers
+-- can react without matching on the text.
+data CompileException
+  = -- | An instruction references an account key that is missing from the
+    -- message's account table, an account or lookup-table index does not
+    -- fit in a byte, or a signing key does not match the message's
+    -- required signers.
+    MissingIndex String
+  | -- | A count or size exceeds what the transaction format allows: how
+    -- many addresses, instructions or signatures a message may carry, how
+    -- large a single instruction may be, or how large the whole signed
+    -- transaction may be.
+    LimitExceeded String
+  | -- | The message is structurally well-formed, but the network would
+    -- reject it at sanitize time -- or would accept it, charge the fee
+    -- payer, and run a transaction that cannot do any work.
+    InvalidMessage String
   deriving (Show)
 
 instance Exception CompileException

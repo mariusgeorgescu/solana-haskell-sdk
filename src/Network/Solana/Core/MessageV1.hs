@@ -10,13 +10,18 @@
 -- signatures /after/ the message rather than before it. See
 -- "Network.Solana.Core.VersionedMessage" for v0, which is the format to use
 -- when lookup tables are needed.
+--
+-- Unlike the legacy and v0 builders, both entry points here take the fee
+-- payer explicitly. The reference implementation's only v1 compile path
+-- does the same (@v1::Message::try_compile_with_config(payer, ..)@), and
+-- deriving the payer implicitly from the instruction list is a trap this
+-- format makes expensive: the priority fee travels inside the message, so
+-- whoever lands in account 0 pays it.
 module Network.Solana.Core.MessageV1
   ( TransactionConfig (..),
     emptyTransactionConfig,
     compileV1Message,
-    compileV1MessageWithPayer,
     newV1TransactionIntent,
-    newV1TransactionIntentWithPayer,
   )
 where
 
@@ -46,30 +51,53 @@ import Network.Solana.Core.Message
 
 -- | The resource requests a v1 message carries in place of the
 -- @ComputeBudget@ instructions earlier formats use. Each field present
--- sets its bit in the message's configuration mask and appends its value;
--- each field absent leaves the network's default in force, and those
--- defaults are not the ones @ComputeBudget@ callers are used to:
--- a missing compute-unit limit means 0 (not a per-instruction allowance),
--- and a missing loaded-accounts size limit means 0 (not 64 MiB).
+-- sets its bit in the message's configuration mask and appends its value.
+--
+-- __An absent field does not mean \"the usual default\"__: SIMD-0385 uses
+-- the /minimum/ value instead, which for two of these fields is zero. A
+-- transaction requesting zero compute units, or zero bytes of loaded
+-- account data, is still accepted into a block and still charges its fee
+-- payer -- it simply fails without doing anything. 'compileV1Message'
+-- therefore refuses to build one; see 'emptyTransactionConfig'.
 --
 -- @ComputeBudget@ instructions placed in a v1 transaction are ignored for
 -- configuration purposes -- they still execute, as successful no-ops that
 -- consume compute units -- so resource requests must be made here.
 data TransactionConfig = TransactionConfig
-  { -- | Total priority fee, in lamports.
+  { -- | Total priority fee, in lamports; absent means 0.
+    --
+    -- __Not the same unit as @ComputeBudget@__: @SetComputeUnitPrice@ takes
+    -- micro-lamports /per compute unit/, while this is a flat total. A
+    -- value carried across unconverted overpays by a factor of up to a
+    -- million, and the network accepts it. To port one, multiply the price
+    -- by the compute-unit limit and divide by 1e6.
     tcPriorityFee :: Maybe Word64,
-    -- | Maximum compute units the transaction may consume.
+    -- | Maximum compute units the transaction may consume. Absent means 0,
+    -- which cannot execute anything, so this is effectively required.
     tcComputeUnitLimit :: Maybe Word32,
-    -- | Maximum bytes of account data the transaction may load.
+    -- | Maximum bytes of account data the transaction may load. Absent
+    -- means 0 -- not the 64 MiB earlier formats default to -- so this is
+    -- effectively required too.
     tcLoadedAccountsDataSizeLimit :: Maybe Word32,
-    -- | Heap size in bytes. Must be a multiple of 1024 and within
-    -- [32768, 262144]; 'compileV1Message' rejects anything else.
+    -- | Heap size in bytes; absent means 32 KiB. When given it must be a
+    -- multiple of 1024 and within [32768, 262144]; 'compileV1Message'
+    -- rejects anything else.
     tcHeapSize :: Maybe Word32
   }
   deriving (Show, Eq, Generic)
 
--- | A configuration requesting nothing, leaving every network default in
--- force (see 'TransactionConfig' for what those defaults are).
+-- | A configuration requesting nothing at all.
+--
+-- This is a base for record update, not a usable configuration:
+-- 'compileV1Message' rejects it, because a v1 message with no compute-unit
+-- limit and no loaded-accounts limit requests zero of both and so is
+-- guaranteed to be charged for and then fail (see 'TransactionConfig').
+-- Fill in at least those two fields:
+--
+-- > emptyTransactionConfig
+-- >   { tcComputeUnitLimit = Just 200000,
+-- >     tcLoadedAccountsDataSizeLimit = Just 131072
+-- >   }
 emptyTransactionConfig :: TransactionConfig
 emptyTransactionConfig =
   TransactionConfig
@@ -85,30 +113,66 @@ emptyTransactionConfig =
 
 ------------------------------------------------------------------------------------------------
 
--- | Compile a v1 message: assemble the account keys exactly as the legacy
--- and v0 builders do (privilege union, then canonical ordering, via
--- 'mkNewMessage'), then serialize them in the v1 layout behind the @129@
--- version byte.
+-- | Compile a v1 message for the given fee payer: assemble the account keys
+-- exactly as the legacy and v0 builders do (privilege union, then canonical
+-- ordering, via 'mkNewMessageWithPayer', which seeds the payer as a writable
+-- signer and pins it to account 0), then serialize them in the v1 layout
+-- behind the @129@ version byte. Naming the payer also supports sponsored
+-- fees: it need not appear in any instruction.
 --
--- Fails with a 'CompileException' when the result would not be a valid v1
--- message: more than 64 addresses or 64 instructions, more than 12
--- required signatures, an instruction with more than 255 accounts or more
--- than 65535 data bytes, or a heap request that is not a multiple of 1024
--- within [32768, 262144].
-compileV1Message :: BlockHash -> [Instruction] -> TransactionConfig -> Either CompileException BS.ByteString
-compileV1Message bh instructions = compileV1FromLegacy (mkNewMessage bh instructions)
-
--- | Like 'compileV1Message', but with an explicitly named fee payer, seeded
--- as a writable signer and pinned to account 0 via 'mkNewMessageWithPayer'.
--- Required when no instruction marks a signer writable (a memo-only or
--- authority-only instruction list) and for sponsored fees.
-compileV1MessageWithPayer ::
+-- Fails with a 'CompileException' when the result would not be a usable v1
+-- message:
+--
+-- * 'LimitExceeded' -- more than 64 addresses, more than 64 instructions,
+--   more than 12 required signatures, an instruction with more than 255
+--   accounts or more than 65535 data bytes, or a transaction that would
+--   exceed 4096 bytes once signed.
+-- * 'InvalidMessage' -- no instructions at all, the fee payer used as a
+--   program id, a compute-unit or loaded-accounts request of zero (see
+--   'TransactionConfig'), or a heap request that is not a multiple of 1024
+--   within [32768, 262144].
+compileV1Message ::
   SolanaPublicKey -> BlockHash -> [Instruction] -> TransactionConfig -> Either CompileException BS.ByteString
-compileV1MessageWithPayer payer bh instructions =
+compileV1Message payer bh instructions =
   compileV1FromLegacy (mkNewMessageWithPayer payer bh instructions)
 
--- | Serialize an assembled legacy message in the v1 layout (shared body of
--- 'compileV1Message' and 'compileV1MessageWithPayer').
+-- | Build and sign a v1 transaction for the given fee payer, returning it
+-- Base64-encoded. A v1 transaction puts the message first and the
+-- signatures last, as a bare sequence of 64-byte signatures with no length
+-- prefix -- the reverse of the legacy and v0 envelopes, and the reason the
+-- signature count has to match the message's required signers exactly:
+-- there is no count on the wire to describe a mismatch.
+--
+-- The given private keys may be listed in any order. They are matched
+-- against the compiled message's required signers and placed in message
+-- order automatically, so a key for the wrong account, a missing key or a
+-- spare key is a 'MissingIndex' failure rather than a silently malformed
+-- transaction.
+newV1TransactionIntent ::
+  SolanaPublicKey ->
+  [SolanaPrivateKey] ->
+  [Instruction] ->
+  TransactionConfig ->
+  BlockHash ->
+  Either CompileException String
+newV1TransactionIntent payer signingKeys instructions config bh = do
+  let legacy = mkNewMessageWithPayer payer bh instructions
+  msg <- compileV1FromLegacy legacy config
+  orderedKeys <- orderSigningKeys legacy signingKeys
+  return $ toBase64String (msg <> signaturesOver msg orderedKeys)
+
+------------------------------------------------------------------------------------------------
+
+-- * Internal helpers
+
+------------------------------------------------------------------------------------------------
+
+-- | Serialize an assembled legacy message in the v1 layout.
+--
+-- The header's @numReadonlySignedAccounts < numRequiredSignatures@ sanitize
+-- rule needs no check here: every caller routes through
+-- 'mkNewMessageWithPayer', which puts the payer in the writable-signer
+-- section and never demotes it, so that section is never empty.
 compileV1FromLegacy :: Message -> TransactionConfig -> Either CompileException BS.ByteString
 compileV1FromLegacy legacy config = do
   compiled <- mapM (compileInstruction keys) (mInstructions legacy)
@@ -129,46 +193,6 @@ compileV1FromLegacy legacy config = do
   where
     keys = mAccountKeys legacy
 
--- | Sign a v1-compiled message with each signer's private key, and return
--- the Base64-encoded signed transaction. A v1 transaction puts the message
--- first and the signatures last, as a bare sequence of 64-byte signatures
--- with no length prefix -- the reverse of the legacy and v0 envelopes.
---
--- The private keys passed here must be ordered to match the resulting
--- account order (fee payer first), otherwise the produced signatures will
--- not correspond to the right account keys. If you would rather name the
--- fee payer explicitly and not worry about signer order, use
--- 'newV1TransactionIntentWithPayer'.
-newV1TransactionIntent ::
-  [SolanaPrivateKey] -> [Instruction] -> TransactionConfig -> BlockHash -> Either CompileException String
-newV1TransactionIntent signers instructions config bh = do
-  msg <- compileV1Message bh instructions config
-  return $ toBase64String (msg <> signaturesOver msg signers)
-
--- | Like 'newV1TransactionIntent', but with an explicitly named fee payer
--- (see 'compileV1MessageWithPayer'); the given private keys may be listed
--- in any order -- they are matched against the message's required signers
--- and placed in message order automatically, with the same 'Left' cases as
--- 'Network.Solana.Core.Message.newTransactionIntentWithPayer'.
-newV1TransactionIntentWithPayer ::
-  SolanaPublicKey ->
-  [SolanaPrivateKey] ->
-  [Instruction] ->
-  TransactionConfig ->
-  BlockHash ->
-  Either CompileException String
-newV1TransactionIntentWithPayer payer signingKeys instructions config bh = do
-  let legacy = mkNewMessageWithPayer payer bh instructions
-  msg <- compileV1FromLegacy legacy config
-  orderedKeys <- orderSigningKeys legacy signingKeys
-  return $ toBase64String (msg <> signaturesOver msg orderedKeys)
-
-------------------------------------------------------------------------------------------------
-
--- * Internal helpers
-
-------------------------------------------------------------------------------------------------
-
 -- | The trailing signature array: each signer's 64 raw signature bytes over
 -- the whole serialized message, concatenated without a length prefix.
 signaturesOver :: BS.ByteString -> [SolanaPrivateKey] -> BS.ByteString
@@ -181,6 +205,11 @@ v1Prefix = 129
 -- | The configuration mask: one bit per requested field, except the
 -- priority fee, which occupies two (both must be set, and its value is
 -- eight bytes wide rather than four).
+--
+-- The compute-unit and loaded-accounts bits are only distinguishable from
+-- each other when exactly one of the two is present, which 'checkLimits'
+-- forbids -- so no test can pin them apart while that guard stands. Relax
+-- the guard and they need pinning.
 configMask :: TransactionConfig -> Word32
 configMask TransactionConfig {..} =
   bitFor tcPriorityFee 0b11
@@ -215,42 +244,67 @@ putInstructionPayload CompiledInstruction {..} = do
   mapM_ putWord8 (unCompact ciAccounts)
   mapM_ putWord8 (unCompact ciData)
 
--- | The v1 sanitization limits this builder can check before serializing.
+-- | Everything the builder can check before serializing: the format's count
+-- caps, the sanitize rules reachable from here, and the resource requests
+-- that would make the transaction pay to do nothing.
 checkLimits :: Message -> [CompiledInstruction] -> TransactionConfig -> Either CompileException ()
 checkLimits legacy compiled TransactionConfig {..} = do
   limit "addresses" maxAddresses (length (mAccountKeys legacy))
   limit "instructions" maxInstructions (length compiled)
   limit "required signatures" maxSignatures (fromIntegral (numRequiredSignatures (mHeader legacy)))
+  checkNonEmpty
   mapM_ checkInstruction compiled
+  checkRequest "compute-unit limit" tcComputeUnitLimit
+  checkRequest "loaded-accounts data size limit" tcLoadedAccountsDataSizeLimit
   mapM_ checkHeapSize tcHeapSize
   where
     limit what cap actual
       | actual <= cap = Right ()
       | otherwise =
-          Left (MissingIndex ("v1 message has " <> show actual <> " " <> what <> ", more than the " <> show cap <> " allowed"))
+          Left
+            ( LimitExceeded
+                ("v1 message has " <> show actual <> " " <> what <> ", more than the " <> show cap <> " allowed")
+            )
+    checkNonEmpty
+      | null compiled = Left (InvalidMessage "v1 message has no instructions, so it would pay a fee to do nothing")
+      | otherwise = Right ()
     checkInstruction CompiledInstruction {..} = do
       limit "accounts in one instruction" maxInstructionAccounts (length (unCompact ciAccounts))
       limit "data bytes in one instruction" maxInstructionData (length (unCompact ciData))
+      if ciProgramIdIndex == 0
+        then Left (InvalidMessage "v1 instruction invokes account 0, but the fee payer cannot be a program id")
+        else Right ()
+    -- Absent or zero are the same request on the wire, and both guarantee
+    -- an included, charged, failing transaction -- so both are refused.
+    checkRequest what request
+      | request `elem` [Nothing, Just 0] =
+          Left
+            ( InvalidMessage
+                ( "v1 message requests a "
+                    <> what
+                    <> " of 0, which cannot execute anything; set it in the TransactionConfig"
+                )
+            )
+      | otherwise = Right ()
     checkHeapSize n
       | n `mod` 1024 /= 0 =
-          Left (MissingIndex ("v1 heap size " <> show n <> " is not a multiple of 1024"))
-      | n < minHeapSize || n > maxHeapSize =
-          Left
-            ( MissingIndex
-                ("v1 heap size " <> show n <> " is outside [" <> show minHeapSize <> ", " <> show maxHeapSize <> "]")
-            )
+          Left (InvalidMessage ("v1 heap size " <> show n <> " is not a multiple of 1024"))
+      | n < minHeapSize =
+          Left (InvalidMessage ("v1 heap size " <> show n <> " is below the minimum of " <> show minHeapSize))
+      | n > maxHeapSize =
+          Left (InvalidMessage ("v1 heap size " <> show n <> " is above the maximum of " <> show maxHeapSize))
       | otherwise = Right ()
 
 -- | Reject a message whose transaction -- the message plus one 64-byte
--- signature per required signer -- would exceed the v1 size cap. Checked
--- on the message, since the header fixes the signature count regardless of
--- how many keys are later passed to sign it.
+-- signature per required signer -- would exceed the v1 size cap. Checked on
+-- the message, since the header fixes the signature count and
+-- 'newV1TransactionIntent' signs exactly that many.
 checkTransactionSize :: Message -> BS.ByteString -> Either CompileException ()
 checkTransactionSize legacy bytes
   | total <= maxTransactionSize = Right ()
   | otherwise =
       Left
-        ( MissingIndex
+        ( LimitExceeded
             ( "v1 transaction is "
                 <> show total
                 <> " bytes, more than the "
