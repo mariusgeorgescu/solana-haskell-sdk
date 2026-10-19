@@ -19,7 +19,7 @@
 -- parser wired to the wrong key.
 module Test.RPC.Parsers (tests) where
 
-import Data.Aeson (FromJSON, Key, Value, toJSON, withObject, (.:))
+import Data.Aeson (FromJSON, Key, Value, toJSON, withObject, (.:), (.:?))
 import Data.Aeson.Types (parseEither, parseJSON)
 import Data.Map.Strict qualified as M
 import Data.Maybe (isJust)
@@ -34,7 +34,9 @@ import Network.Solana.Core.Account
   )
 import Network.Solana.Core.Block (BlockHash, BlockHeight)
 import Network.Solana.Core.Transaction (Transaction (..))
+import Network.Solana.Core.Compact (unCompact)
 import Network.Solana.Core.Crypto (SolanaPublicKey)
+import Network.Solana.Core.Instruction (CompiledInstruction (..))
 import Network.Solana.RPC.HTTP.Account hiding (lamports)
 import Network.Solana.RPC.HTTP.Account qualified as RpcAccount
 import Network.Solana.RPC.HTTP.Block
@@ -98,11 +100,36 @@ v1Tests =
         keys <- messageField @[SolanaPublicKey] "accountKeys" (transactionTx result)
         length keys @?= 4
         blockhash <- messageField @BlockHash "recentBlockhash" (transactionTx result)
-        show blockhash @?= "4iSS7zQNeY8BTSWZ9VRMBo8B17AyijyLDD8C2EycoW19",
+        show blockhash @?= "4iSS7zQNeY8BTSWZ9VRMBo8B17AyijyLDD8C2EycoW19"
+        -- Reach into the v1-specific part: the compiled instruction. These
+        -- are the same values Test.Core.MessageV1 transcribes by hand from
+        -- the wire bytes, so agreement here cross-checks that transcription
+        -- against the node's own JSON rendering of the same transaction.
+        ixs <- messageField @[CompiledInstruction] "instructions" (transactionTx result)
+        case ixs of
+          [ix] -> do
+            ciProgramIdIndex ix @?= 2
+            unCompact (ciAccounts ix) @?= [0, 3, 1]
+            length (unCompact (ciData ix)) @?= 90
+          other -> assertFailure ("expected one instruction, got " <> show (length other))
+        -- Pin the documented loss: the recorded response does carry a
+        -- transactionConfig object, and CompiledMessage drops it.
+        config <- optionalMessageField @Value "transactionConfig" (transactionTx result)
+        assertEqual "transactionConfig is not surfaced" Nothing config,
     testCase "getBlock decodes a block mixing legacy, v0 and v1 transactions" $
       withV1Result @(Maybe BlockInfo) "getBlock-v1-trimmed" $ \case
         Nothing -> assertFailure "expected a block"
-        Just block -> length (transactionsBI block) @?= 5
+        Just block -> do
+          -- The fixture keeps two v1, two legacy and one v0 transaction, in
+          -- that recorded order. Asserting each one's account-key count
+          -- distinguishes the entries from one another, so a mis-trimmed
+          -- fixture or a parser that silently defaulted a message cannot
+          -- pass on the count alone.
+          counts <-
+            mapM
+              (fmap length . messageField @[SolanaPublicKey] "accountKeys" . transaction)
+              (transactionsBI block)
+          counts @?= [4, 4, 10, 19, 10]
   ]
 
 -- | As 'withResult', against the devnet-recorded v1 fixtures.
@@ -120,6 +147,13 @@ messageField :: forall a. (FromJSON a) => Key -> Transaction -> IO a
 messageField name tx =
   either (assertFailure . ((show name <> ": ") <>)) pure $
     parseEither (withObject "message" (.: name)) (toJSON (message tx))
+
+-- | As 'messageField', but 'Nothing' when the rendered message has no such
+-- field -- for asserting that something is absent.
+optionalMessageField :: forall a. (FromJSON a) => Key -> Transaction -> IO (Maybe a)
+optionalMessageField name tx =
+  either (assertFailure . ((show name <> ": ") <>)) pure $
+    parseEither (withObject "message" (.:? name)) (toJSON (message tx))
 
 clusterTests :: [TestTree]
 clusterTests =

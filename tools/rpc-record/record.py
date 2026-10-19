@@ -170,7 +170,7 @@ def methods(state):
     base64_config = {"encoding": "base64"}
 
     slot = rpc("getSlot", [{"commitment": "finalized"}])["result"]
-    transaction = rpc("getTransaction", [signature, {"encoding": "json", "maxSupportedTransactionVersion": 0}])
+    transaction = rpc("getTransaction", [signature, {"encoding": "json", "maxSupportedTransactionVersion": 1}])
     transaction_slot = transaction.get("result", {}).get("slot", slot)
     blockhash = rpc("getLatestBlockhash")["result"]["value"]["blockhash"]
     # The bootstrap validator's stake account: the one account that earns an
@@ -216,7 +216,7 @@ def methods(state):
         # Blocks
         ("getLatestBlockhash", "getLatestBlockhash", None),
         ("isBlockhashValid", "isBlockhashValid", [blockhash, {"commitment": "processed"}]),
-        ("getBlock", "getBlock", [transaction_slot, {"encoding": "json", "maxSupportedTransactionVersion": 0, "transactionDetails": "full", "rewards": False}]),
+        ("getBlock", "getBlock", [transaction_slot, {"encoding": "json", "maxSupportedTransactionVersion": 1, "transactionDetails": "full", "rewards": False}]),
         ("getBlockCommitment", "getBlockCommitment", [transaction_slot]),
         ("getBlockProduction", "getBlockProduction", None),
         ("getBlocks", "getBlocks", [max(1, transaction_slot - 2), transaction_slot]),
@@ -246,7 +246,7 @@ def methods(state):
         # Transactions
         ("getSignaturesForAddress", "getSignaturesForAddress", [recipient, {"limit": 3}]),
         ("getSignatureStatuses", "getSignatureStatuses", [[signature], {"searchTransactionHistory": True}]),
-        ("getTransaction", "getTransaction", [signature, {"encoding": "json", "maxSupportedTransactionVersion": 0}]),
+        ("getTransaction", "getTransaction", [signature, {"encoding": "json", "maxSupportedTransactionVersion": 1}]),
         ("getFeeForMessage", "getFeeForMessage", [fee_message, {"commitment": "processed"}]),
         # SPL Token
         ("getTokenSupply", "getTokenSupply", [mint]),
