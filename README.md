@@ -67,6 +67,7 @@ For `wss://` endpoints use [`wuss`](https://hackage.haskell.org/package/wuss)'s 
 - [x] Transaction building, signing and submission
   - [x] Priority fees via Compute Budget (`setComputeUnitLimit`, `setComputeUnitPrice`)
   - [x] Versioned (v0) transactions and Address Lookup Tables
+  - [x] v1 transactions (SIMD-0385): inline addresses, header config mask, 4096-byte limit
   - [x] Clients for native programs
     - [x] Address Lookup Table
     - [x] BPF Loader (upgradeable)
@@ -86,7 +87,7 @@ For `wss://` endpoints use [`wuss`](https://hackage.haskell.org/package/wuss)'s 
 
 ### Release status
 
-The current stable release is **v1.3.0.0**. Serialization is verified byte-for-byte against the official Rust SDK by golden-vector tests (see test/fixtures/ and [tools/README.md](https://github.com/mariusgeorgescu/solana-haskell-sdk/blob/main/tools/README.md)).
+The current stable release is **v1.4.0.0**. Serialization is verified byte-for-byte against the official Rust SDK by golden-vector tests (see test/fixtures/ and [tools/README.md](https://github.com/mariusgeorgescu/solana-haskell-sdk/blob/main/tools/README.md)).
 
 ## Usage Examples
 

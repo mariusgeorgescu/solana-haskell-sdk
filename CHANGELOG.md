@@ -1,5 +1,33 @@
 # Revision history for solana-haskell-sdk
 
+## 1.4.0.0 -- 2026-10-19
+
+* Added v1 transaction support (SIMD-0385), in the new
+  `Network.Solana.Core.MessageV1`: `compileV1Message`,
+  `compileV1MessageWithPayer`, `newV1TransactionIntent`,
+  `newV1TransactionIntentWithPayer`, and the `TransactionConfig` record
+  (with `emptyTransactionConfig`) carrying a v1 message's priority fee,
+  compute-unit limit, loaded-accounts data size limit and heap size.
+  v1 lists every address inline (it has no address lookup tables), moves
+  resource requests out of `ComputeBudget` instructions and into a header
+  configuration mask, places the signatures after the message rather than
+  before it, and raises the transaction size limit to 4096 bytes.
+  Compilation rejects a message that breaks a v1 limit: more than 64
+  addresses or instructions, more than 12 required signatures, an
+  instruction with more than 255 accounts or 65535 data bytes, a heap
+  request that is not a multiple of 1024 within [32768, 262144], or a
+  transaction over 4096 bytes.
+* Changed (behavioural): `getBlock` and `getTransaction` now send
+  `maxSupportedTransactionVersion: 1` instead of `0`. Without it a node
+  refuses any block holding a v1 transaction with error -32015, which now
+  covers most blocks. A v1 message's `transactionConfig` is not surfaced by
+  `CompiledMessage`, which drops it as it already drops a v0 message's
+  `addressTableLookups`.
+* Changed (breaking): `Network.Solana.Core.Instruction` now exports
+  `CompiledInstruction`'s fields (`ciProgramIdIndex`, `ciAccounts`,
+  `ciData`), which the v1 serializer needs, since v1 writes the
+  fixed-width instruction headers apart from the variable-width payloads.
+
 ## 1.3.0.0 -- 2026-09-13
 
 * Fixed (security): `readSigningKeyFromFile` accepted key files of any length
